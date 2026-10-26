@@ -28,6 +28,7 @@ import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.domain.WorkoutMetricsCalculator
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
+import com.gymwp.free.ui.components.ConfirmDeleteDialog
 import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.components.GoogleDriveSyncDialog
 import com.gymwp.free.ui.components.UserSwitcherDialog
@@ -60,6 +61,9 @@ fun HomeWorkoutsScreen(
     var showAddExerciseForDay by remember { mutableStateOf<Long?>(null) }
     var editingWorkoutExercise by remember { mutableStateOf<WorkoutExerciseEntity?>(null) }
     var inspectingCatalogExercise by remember { mutableStateOf<CatalogExercise?>(null) }
+    var planPendingDelete by remember { mutableStateOf<WorkoutPlanEntity?>(null) }
+    var dayPendingDelete by remember { mutableStateOf<WorkoutDayEntity?>(null) }
+    var exercisePendingDelete by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
 
     // Trigger Smart Plan onboarding wizard automatically if no plans exist yet
     LaunchedEffect(profile, plans) {
@@ -268,7 +272,7 @@ fun HomeWorkoutsScreen(
                                         )
                                     }
                                 }
-                                IconButton(onClick = { viewModel.deleteWorkoutPlan(activePlan.id) }) {
+                                IconButton(onClick = { planPendingDelete = activePlan }) {
                                     Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar Plan", tint = Color.Gray)
                                 }
                             }
@@ -352,7 +356,7 @@ fun HomeWorkoutsScreen(
                                     ) {
                                         Icon(Icons.Default.Palette, contentDescription = "Cambiar Color", tint = Color.White)
                                     }
-                                    IconButton(onClick = { viewModel.deleteWorkoutDay(day.id) }) {
+                                    IconButton(onClick = { dayPendingDelete = day }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Eliminar Día", tint = Color.White)
                                     }
                                 }
@@ -428,7 +432,7 @@ fun HomeWorkoutsScreen(
                                         IconButton(onClick = { editingWorkoutExercise = wEx }) {
                                             Icon(Icons.Default.Edit, contentDescription = "Editar series/carga", tint = Color.LightGray)
                                         }
-                                        IconButton(onClick = { viewModel.deleteWorkoutExercise(wEx.id) }) {
+                                        IconButton(onClick = { exercisePendingDelete = wEx to exName }) {
                                             Icon(Icons.Default.Close, contentDescription = "Quitar", tint = Color.Gray)
                                         }
                                     }
@@ -635,6 +639,39 @@ fun HomeWorkoutsScreen(
             history = allFinishedEx.filter { it.exerciseId == ex.id },
             onToggleFavorite = { viewModel.toggleFavorite(ex.id) },
             onDismiss = { inspectingCatalogExercise = null }
+        )
+    }
+
+    planPendingDelete?.let { targetPlan ->
+        ConfirmDeleteDialog(
+            itemTitle = "el plan \"${targetPlan.name}\" y todos sus días de entrenamiento",
+            onConfirm = {
+                viewModel.deleteWorkoutPlan(targetPlan.id)
+                planPendingDelete = null
+            },
+            onDismiss = { planPendingDelete = null }
+        )
+    }
+
+    dayPendingDelete?.let { targetDay ->
+        ConfirmDeleteDialog(
+            itemTitle = "la rutina \"${targetDay.name}\" y sus ejercicios",
+            onConfirm = {
+                viewModel.deleteWorkoutDay(targetDay.id)
+                dayPendingDelete = null
+            },
+            onDismiss = { dayPendingDelete = null }
+        )
+    }
+
+    exercisePendingDelete?.let { (targetEx, targetExName) ->
+        ConfirmDeleteDialog(
+            itemTitle = "el ejercicio \"$targetExName\" de esta rutina",
+            onConfirm = {
+                viewModel.deleteWorkoutExercise(targetEx.id)
+                exercisePendingDelete = null
+            },
+            onDismiss = { exercisePendingDelete = null }
         )
     }
 }

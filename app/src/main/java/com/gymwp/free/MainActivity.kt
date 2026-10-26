@@ -1,8 +1,13 @@
 package com.gymwp.free
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -13,12 +18,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gymwp.free.data.WorkoutDayEntity
 import com.gymwp.free.data.WorkoutExerciseEntity
 import com.gymwp.free.data.WorkoutPlanEntity
 import com.gymwp.free.ui.GymWpViewModel
+import com.gymwp.free.ui.components.AppUpdateDialogIfNeeded
 import com.gymwp.free.ui.screens.*
 import com.gymwp.free.ui.theme.GymCardBg
 import com.gymwp.free.ui.theme.GymOrange
@@ -44,6 +52,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             GymWpTheme {
                 val vm: GymWpViewModel = viewModel()
+                val context = LocalContext.current
+                val notifPermissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission()
+                ) { _ ->
+                    vm.checkForAppUpdates(notifyIfAvailable = true)
+                }
+
+                LaunchedEffect(Unit) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val granted = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (!granted) {
+                            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                }
+
+                // Diálogo automático de actualización si existe una nueva versión en GitHub
+                AppUpdateDialogIfNeeded(viewModel = vm)
+
                 var currentTab by remember { mutableStateOf(BottomNavTab.HOME) }
                 var liveSession by remember { mutableStateOf<ActiveLiveSession?>(null) }
 

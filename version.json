@@ -1,0 +1,6 @@
+{
+  "versionCode": 201,
+  "versionName": "2.1.0",
+  "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
+  "releaseNotes": "Confirmación antes de eliminar en todas las secciones y sistema de actualización automática OTA desde GitHub sin pérdida de datos."
+}

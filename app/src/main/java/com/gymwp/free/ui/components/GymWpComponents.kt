@@ -39,9 +39,12 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.gymwp.free.R
+import com.gymwp.free.data.AppUpdateManager
+import com.gymwp.free.data.AppUpdateState
 import com.gymwp.free.data.CatalogExercise
 import com.gymwp.free.data.DriveSyncState
 import com.gymwp.free.data.FinishedExerciseEntity
+import com.gymwp.free.data.UserProfileEntity
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.theme.*
@@ -503,6 +506,7 @@ fun GoogleDriveSyncCard(
 ) {
     val syncState by viewModel.driveSyncState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()) }
+    var showConfirmUnlink by remember { mutableStateOf(false) }
 
     val createDriveDocLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -619,12 +623,25 @@ fun GoogleDriveSyncCard(
                     TextButton(onClick = { createDriveDocLauncher.launch("Chukaros_GymPlanner_Backup.json") }) {
                         Text("Cambiar carpeta/archivo en Drive", color = Color.LightGray, fontSize = 11.sp)
                     }
-                    TextButton(onClick = { viewModel.unlinkGoogleDrive() }) {
+                    TextButton(onClick = { showConfirmUnlink = true }) {
                         Text("Desvincular", color = Color.Gray, fontSize = 11.sp)
                     }
                 }
             }
         }
+    }
+
+    if (showConfirmUnlink) {
+        ConfirmDeleteDialog(
+            itemTitle = "vínculo con Google Drive (${syncState.linkedFileName})",
+            customQuestion = "¿Estás seguro que quieres desvincular el guardado automático en Google Drive?",
+            confirmButtonText = "Sí, Desvincular",
+            onConfirm = {
+                viewModel.unlinkGoogleDrive()
+                showConfirmUnlink = false
+            },
+            onDismiss = { showConfirmUnlink = false }
+        )
     }
 }
 
@@ -666,7 +683,7 @@ fun UserSwitcherDialog(
     var showCreateForm by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     var newGender by remember { mutableIntStateOf(1) }
-    var newColorIdx by remember { mutableIntStateOf(1) }
+    var userPendingDelete by remember { mutableStateOf<UserProfileEntity?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -753,7 +770,7 @@ fun UserSwitcherDialog(
                                 Text("Activo", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                             if (allUsers.size > 1) {
-                                IconButton(onClick = { viewModel.deleteUserProfile(user.id) }) {
+                                IconButton(onClick = { userPendingDelete = user }) {
                                     Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar usuario", tint = Color.Gray)
                                 }
                             }
@@ -762,7 +779,7 @@ fun UserSwitcherDialog(
                 }
 
                 if (showCreateForm) {
-                    Divider(color = Color.DarkGray)
+                    HorizontalDivider(color = Color.DarkGray)
                     Text("Nuevo Perfil de Usuario", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     OutlinedTextField(
                         value = newName,
@@ -817,6 +834,243 @@ fun UserSwitcherDialog(
                         Text("Añadir Nuevo Usuario")
                     }
                 }
+            }
+        }
+    }
+
+    userPendingDelete?.let { targetUser ->
+        ConfirmDeleteDialog(
+            itemTitle = "el usuario \"${targetUser.name}\" y todas sus rutinas",
+            onConfirm = {
+                viewModel.deleteUserProfile(targetUser.id)
+                userPendingDelete = null
+            },
+            onDismiss = { userPendingDelete = null }
+        )
+    }
+}
+
+@Composable
+fun ConfirmDeleteDialog(
+    itemTitle: String,
+    customQuestion: String? = null,
+    confirmButtonText: String = "Sí, Eliminar",
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.WarningAmber,
+                contentDescription = null,
+                tint = FatigueRed,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "¿Estás seguro que lo quieres eliminar?",
+                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 17.sp
+            )
+        },
+        text = {
+            Text(
+                text = customQuestion ?: "Se eliminará permanentemente $itemTitle. Esta acción no se puede deshacer.",
+                color = Color.LightGray,
+                fontSize = 13.sp
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = FatigueRed)
+            ) {
+                Text(confirmButtonText, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color.LightGray)
+            }
+        },
+        containerColor = GymCardBg
+    )
+}
+
+@Composable
+fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
+    val updateState by viewModel.appUpdateState.collectAsState()
+    val context = LocalContext.current
+
+    when (val state = updateState) {
+        is AppUpdateState.UpdateAvailable -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissUpdatePrompt() },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = null,
+                        tint = GymOrange,
+                        modifier = Modifier.size(34.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "¡Nueva Versión Disponible (v${state.remote.versionName})!",
+                        color = GymOrange,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Versión instalada: v${state.currentVersionName} → Nueva: v${state.remote.versionName}",
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                        if (state.remote.releaseNotes.isNotBlank()) {
+                            Text(
+                                text = state.remote.releaseNotes,
+                                color = Color.LightGray,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Text(
+                            text = "✅ Tus usuarios, rutinas, cargas, fatiga muscular, historial y mediciones se conservarán intactos al actualizar.",
+                            color = FatigueGreen,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.downloadAndInstallUpdate(state.remote) },
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Actualizar Ahora")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissUpdatePrompt() }) {
+                        Text("Más tarde", color = Color.LightGray)
+                    }
+                },
+                containerColor = GymCardBg
+            )
+        }
+        is AppUpdateState.Downloading -> {
+            AlertDialog(
+                onDismissRequest = {},
+                title = {
+                    Text(
+                        text = "Descargando v${state.remote.versionName} (${state.progressPercent}%)",
+                        color = GymOrange,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "Respaldando datos y descargando el instalador desde GitHub...",
+                            color = Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                        LinearProgressIndicator(
+                            progress = { (state.progressPercent / 100f).coerceIn(0f, 1f) },
+                            color = GymOrange,
+                            trackColor = GymSurfaceElevated,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                },
+                confirmButton = {},
+                containerColor = GymCardBg
+            )
+        }
+        is AppUpdateState.ReadyToInstall -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissUpdatePrompt() },
+                title = {
+                    Text("Instalador Listo (v${state.remote.versionName})", color = FatigueGreen, fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Text(
+                        text = "Si el instalador de Android no se abrió automáticamente, toca \"Instalar APK\" para aplicar la actualización sin perder tus datos.",
+                        color = Color.LightGray,
+                        fontSize = 13.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { AppUpdateManager.launchApkInstaller(context, state.apkFile) },
+                        colors = ButtonDefaults.buttonColors(containerColor = FatigueGreen)
+                    ) {
+                        Text("Instalar APK", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissUpdatePrompt() }) {
+                        Text("Cerrar")
+                    }
+                },
+                containerColor = GymCardBg
+            )
+        }
+        else -> {}
+    }
+}
+
+@Composable
+fun AppUpdateCard(viewModel: GymWpViewModel) {
+    val updateState by viewModel.appUpdateState.collectAsState()
+    val context = LocalContext.current
+    val (installedCode, installedName) = remember { AppUpdateManager.getInstalledVersion(context) }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = GymCardBg),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Versión de la App: v$installedName (Build $installedCode)",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                val statusText = when (val s = updateState) {
+                    is AppUpdateState.Checking -> "Buscando actualizaciones en GitHub..."
+                    is AppUpdateState.UpToDate -> "✅ Tienes la última versión instalada"
+                    is AppUpdateState.UpdateAvailable -> "🚀 Nueva versión v${s.remote.versionName} disponible"
+                    is AppUpdateState.Error -> s.message
+                    else -> "Actualizaciones automáticas OTA desde GitHub activas"
+                }
+                Text(statusText, color = Color.LightGray, fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = { viewModel.checkForAppUpdates(notifyIfAvailable = true) }
+            ) {
+                Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Buscar Update", color = GymOrange, fontSize = 12.sp)
             }
         }
     }

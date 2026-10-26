@@ -28,6 +28,7 @@ import com.gymwp.free.ui.CompletedExerciseLog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnatomyFatigueBodyMap
 import com.gymwp.free.ui.components.AnimatedExerciseGif
+import com.gymwp.free.ui.components.ConfirmDeleteDialog
 import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.theme.*
 import kotlinx.coroutines.delay
@@ -42,6 +43,7 @@ fun LiveWorkoutAssistantScreen(
 ) {
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     var isPaused by remember { mutableStateOf(false) }
+    var confirmingExitSession by remember { mutableStateOf(false) }
 
     // Rest timer state
     var restRemainingSeconds by remember { mutableIntStateOf(0) }
@@ -114,7 +116,7 @@ fun LiveWorkoutAssistantScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onExitSession) {
+                IconButton(onClick = { confirmingExitSession = true }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Salir", tint = Color.White)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -452,6 +454,19 @@ fun LiveWorkoutAssistantScreen(
                     Text("Volver a Mis Rutinas")
                 }
             }
+        )
+    }
+
+    if (confirmingExitSession) {
+        ConfirmDeleteDialog(
+            itemTitle = "la sesión en curso de \"${day.name}\"",
+            customQuestion = "Salir ahora cerrará el entrenamiento en curso de \"${day.name}\" sin registrar la sesión finalizada.",
+            confirmButtonText = "Sí, Salir",
+            onConfirm = {
+                confirmingExitSession = false
+                onExitSession()
+            },
+            onDismiss = { confirmingExitSession = false }
         )
     }
 }

@@ -41,6 +41,9 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     private val _driveSyncState = MutableStateFlow(GoogleDriveBackupManager.loadSyncState(appContext))
     val driveSyncState: StateFlow<DriveSyncState> = _driveSyncState.asStateFlow()
 
+    private val _appUpdateState = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
+    val appUpdateState: StateFlow<AppUpdateState> = _appUpdateState.asStateFlow()
+
     val userProfile: StateFlow<UserProfileEntity?> = _activeUserId
         .flatMapLatest { uid -> dao.observeUserProfile(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -113,7 +116,31 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             ensureUserMuscleFatigueInitialized(_activeUserId.value)
+            _appUpdateState.value = AppUpdateManager.checkForUpdates(appContext, notifyIfAvailable = true)
         }
+    }
+
+    fun checkForAppUpdates(notifyIfAvailable: Boolean = true) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _appUpdateState.value = AppUpdateState.Checking
+            _appUpdateState.value = AppUpdateManager.checkForUpdates(appContext, notifyIfAvailable = notifyIfAvailable)
+        }
+    }
+
+    fun downloadAndInstallUpdate(remote: RemoteVersionInfo) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Sincronizar con Google Drive antes de actualizar como respaldo adicional
+            triggerAutoDriveSync()
+            _appUpdateState.value = AppUpdateState.Downloading(remote, 0)
+            _appUpdateState.value = AppUpdateManager.downloadAndTriggerInstall(appContext, remote) { pct ->
+                _appUpdateState.value = AppUpdateState.Downloading(remote, pct)
+            }
+        }
+    }
+
+    fun dismissUpdatePrompt() {
+        val (code, name) = AppUpdateManager.getInstalledVersion(appContext)
+        _appUpdateState.value = AppUpdateState.UpToDate(name, code)
     }
 
     private suspend fun ensureUserMuscleFatigueInitialized(uid: Int) {

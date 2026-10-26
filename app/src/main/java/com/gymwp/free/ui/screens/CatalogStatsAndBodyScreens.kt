@@ -27,6 +27,8 @@ import com.gymwp.free.domain.BodyMetricsCalculator
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
+import com.gymwp.free.ui.components.AppUpdateCard
+import com.gymwp.free.ui.components.ConfirmDeleteDialog
 import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.components.GoogleDriveSyncCard
 import com.gymwp.free.ui.components.ProgressionLineChart
@@ -379,6 +381,7 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
     val measurements by viewModel.bodyMeasurements.collectAsState()
     var showAddMeasurementModal by remember { mutableStateOf(false) }
     var showUserSwitcherModal by remember { mutableStateOf(false) }
+    var measurementPendingDelete by remember { mutableStateOf<BodyMeasurementEntity?>(null) }
 
     val currentWeight = measurements.firstOrNull()?.weightKg ?: profile?.weightKg ?: 75f
     val currentHeight = measurements.firstOrNull()?.heightCm ?: profile?.heightCm ?: 175f
@@ -471,6 +474,11 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
             GoogleDriveSyncCard(viewModel = viewModel)
         }
 
+        // OTA GitHub App Update Card
+        item {
+            AppUpdateCard(viewModel = viewModel)
+        }
+
         // BMI, Ideal Weight & Deurenberg Body Fat Card
         item {
             Card(
@@ -542,7 +550,7 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
-                        IconButton(onClick = { viewModel.deleteBodyMeasurement(m.id) }) {
+                        IconButton(onClick = { measurementPendingDelete = m }) {
                             Icon(Icons.Default.DeleteOutline, contentDescription = "Borrar", tint = Color.Gray)
                         }
                     }
@@ -590,6 +598,17 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
             viewModel = viewModel,
             onDismiss = { showUserSwitcherModal = false },
             onOpenWizardForNewUser = {}
+        )
+    }
+
+    measurementPendingDelete?.let { targetMeasurement ->
+        ConfirmDeleteDialog(
+            itemTitle = "el registro corporal del ${dateFormat.format(Date(targetMeasurement.timestampMillis))} (${targetMeasurement.weightKg} kg)",
+            onConfirm = {
+                viewModel.deleteBodyMeasurement(targetMeasurement.id)
+                measurementPendingDelete = null
+            },
+            onDismiss = { measurementPendingDelete = null }
         )
     }
 }

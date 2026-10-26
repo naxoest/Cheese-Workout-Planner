@@ -28,6 +28,7 @@ import com.gymwp.free.domain.MuscleFatigueCalculator
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnatomyFatigueBodyMap
 import com.gymwp.free.ui.components.AnimatedExerciseGif
+import com.gymwp.free.ui.components.ConfirmDeleteDialog
 import com.gymwp.free.ui.theme.*
 
 @Composable
@@ -263,6 +264,7 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
         fatigueList.associate { it.muscleId to it.fatiguePercent }
     }
     var editingMuscle by remember { mutableStateOf<MuscleFatigueEntity?>(null) }
+    var showConfirmResetFatigue by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -291,7 +293,7 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
                         fontSize = 12.sp
                     )
                 }
-                TextButton(onClick = { viewModel.resetAllMuscleFatigue() }) {
+                TextButton(onClick = { showConfirmResetFatigue = true }) {
                     Icon(Icons.Default.Refresh, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Recuperar 100%", color = GymOrange, fontSize = 12.sp)
@@ -425,6 +427,19 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
             dismissButton = {
                 TextButton(onClick = { editingMuscle = null }) { Text("Cancelar") }
             }
+        )
+    }
+
+    if (showConfirmResetFatigue) {
+        ConfirmDeleteDialog(
+            itemTitle = "toda la fatiga acumulada de los 17 grupos musculares",
+            customQuestion = "¿Estás seguro que quieres reiniciar la fatiga muscular al 0% (100% recuperado)?",
+            confirmButtonText = "Sí, Reiniciar",
+            onConfirm = {
+                viewModel.resetAllMuscleFatigue()
+                showConfirmResetFatigue = false
+            },
+            onDismiss = { showConfirmResetFatigue = false }
         )
     }
 }
