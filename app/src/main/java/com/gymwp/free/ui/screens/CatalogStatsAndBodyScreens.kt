@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.gymwp.free.data.BodyMeasurementEntity
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.FinishedWorkoutDayEntity
 import com.gymwp.free.domain.BodyMetricsCalculator
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.ui.GymWpViewModel
@@ -47,6 +48,8 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
     var selectedEquipment by remember { mutableStateOf<String?>(null) }
     var onlyFavorites by remember { mutableStateOf(false) }
     var inspectingExercise by remember { mutableStateOf<CatalogExercise?>(null) }
+    var finishedWorkoutPendingDelete by remember { mutableStateOf<FinishedWorkoutDayEntity?>(null) }
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
 
     val favorites by viewModel.favoriteIds.collectAsState()
     val finishedWorkouts by viewModel.finishedWorkouts.collectAsState()
@@ -54,8 +57,8 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
 
     val equipmentOptions = remember {
         listOf(
-            "Mancuernas", "Barra", "Aparato / Máquina", "Polea / Cable",
-            "Peso Corporal", "Barra Fija", "Banco", "Pelota Suiza", "Banda Elástica", "Kettlebell"
+            "Mancuernas", "Barra", "Aparato / Máquina", "Polea / Cable", "Máquina Smith",
+            "Peso Corporal", "Barra Fija", "Banco", "TRX / Suspensión", "Pelota Suiza", "Tobillera / Peso Libre"
         )
     }
 
@@ -340,27 +343,53 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(fw.dayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text(dateFormat.format(Date(fw.timestampMillis)), color = Color.LightGray, fontSize = 11.sp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(fw.dayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(dateFormat.format(Date(fw.timestampMillis)), color = Color.LightGray, fontSize = 11.sp)
+                                    }
+                                    Text(fw.planName, color = GymOrange, fontSize = 12.sp)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series (${fw.totalReps} reps)",
+                                        color = Color.LightGray,
+                                        fontSize = 12.sp
+                                    )
                                 }
-                                Text(fw.planName, color = GymOrange, fontSize = 12.sp)
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series (${fw.totalReps} reps)",
-                                    color = Color.LightGray,
-                                    fontSize = 12.sp
-                                )
+                                IconButton(onClick = { finishedWorkoutPendingDelete = fw }) {
+                                    Icon(
+                                        imageVector = Icons.Default.DeleteOutline,
+                                        contentDescription = "Eliminar entrenamiento del historial",
+                                        tint = Color.Gray
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    finishedWorkoutPendingDelete?.let { targetFw ->
+        ConfirmDeleteDialog(
+            itemTitle = "el entrenamiento realizado \"${targetFw.dayName}\" (${targetFw.planName}) del ${dateFormat.format(Date(targetFw.timestampMillis))}",
+            onConfirm = {
+                viewModel.deleteFinishedWorkoutDay(targetFw.id)
+                finishedWorkoutPendingDelete = null
+            },
+            onDismiss = { finishedWorkoutPendingDelete = null }
+        )
     }
 
     inspectingExercise?.let { ex ->

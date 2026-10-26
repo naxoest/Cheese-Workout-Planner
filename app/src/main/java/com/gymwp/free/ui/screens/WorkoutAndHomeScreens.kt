@@ -33,6 +33,9 @@ import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.components.GoogleDriveSyncDialog
 import com.gymwp.free.ui.components.UserSwitcherDialog
 import com.gymwp.free.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeWorkoutsScreen(
@@ -45,9 +48,11 @@ fun HomeWorkoutsScreen(
     val allDays by viewModel.allWorkoutDays.collectAsState()
     val allExercises by viewModel.allWorkoutExercises.collectAsState()
     val favorites by viewModel.favoriteIds.collectAsState()
+    val finishedWorkouts by viewModel.finishedWorkouts.collectAsState()
     val allFinishedEx by viewModel.allFinishedExercises.collectAsState()
     val fatigueList by viewModel.muscleFatigueList.collectAsState()
     val driveSyncState by viewModel.driveSyncState.collectAsState()
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
 
     var selectedPlanId by remember(plans) {
         mutableStateOf(plans.firstOrNull { it.isActive }?.id ?: plans.firstOrNull()?.id)
@@ -64,6 +69,7 @@ fun HomeWorkoutsScreen(
     var planPendingDelete by remember { mutableStateOf<WorkoutPlanEntity?>(null) }
     var dayPendingDelete by remember { mutableStateOf<WorkoutDayEntity?>(null) }
     var exercisePendingDelete by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
+    var finishedWorkoutPendingDelete by remember { mutableStateOf<FinishedWorkoutDayEntity?>(null) }
 
     // Trigger Smart Plan onboarding wizard automatically if no plans exist yet
     LaunchedEffect(profile, plans) {
@@ -467,6 +473,67 @@ fun HomeWorkoutsScreen(
                         }
                     }
                 }
+
+                // Historial de Entrenamientos Realizados con opción de eliminar
+                if (finishedWorkouts.isNotEmpty()) {
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Historial de Entrenamientos Realizados (${finishedWorkouts.size})",
+                            color = GymOrange,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp
+                        )
+                    }
+                    items(finishedWorkouts, key = { "fw_${it.id}" }) { fw ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = GymCardBg),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = fw.dayName,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = dateFormat.format(Date(fw.timestampMillis)),
+                                            color = Color.LightGray,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                    Text(fw.planName, color = GymOrange, fontSize = 12.sp)
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(
+                                        text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series",
+                                        color = Color.LightGray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                IconButton(onClick = { finishedWorkoutPendingDelete = fw }) {
+                                    Icon(
+                                        imageVector = Icons.Default.DeleteOutline,
+                                        contentDescription = "Eliminar entrenamiento realizado",
+                                        tint = Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -672,6 +739,17 @@ fun HomeWorkoutsScreen(
                 exercisePendingDelete = null
             },
             onDismiss = { exercisePendingDelete = null }
+        )
+    }
+
+    finishedWorkoutPendingDelete?.let { targetFw ->
+        ConfirmDeleteDialog(
+            itemTitle = "el entrenamiento realizado \"${targetFw.dayName}\" (${targetFw.planName}) del ${dateFormat.format(Date(targetFw.timestampMillis))}",
+            onConfirm = {
+                viewModel.deleteFinishedWorkoutDay(targetFw.id)
+                finishedWorkoutPendingDelete = null
+            },
+            onDismiss = { finishedWorkoutPendingDelete = null }
         )
     }
 }
@@ -916,12 +994,21 @@ fun ExercisePickerModal(
 ) {
     var search by remember { mutableStateOf("") }
     var selectedMuscle by remember { mutableStateOf<Int?>(null) }
+    var selectedEquipment by remember { mutableStateOf<String?>(null) }
 
-    val filtered = remember(catalog, search, selectedMuscle) {
+    val equipmentOptions = remember {
+        listOf(
+            "Mancuernas", "Barra", "Aparato / Máquina", "Polea / Cable", "Máquina Smith",
+            "Peso Corporal", "Barra Fija", "Banco", "TRX / Suspensión", "Pelota Suiza", "Tobillera / Peso Libre"
+        )
+    }
+
+    val filtered = remember(catalog, search, selectedMuscle, selectedEquipment) {
         catalog.filter { ex ->
             val matchesQuery = search.isBlank() || ex.name.contains(search, ignoreCase = true)
             val matchesMuscle = selectedMuscle == null || (selectedMuscle!! < ex.muscles.length && ex.muscles[selectedMuscle!!] >= '2')
-            matchesQuery && matchesMuscle
+            val matchesEquip = selectedEquipment == null || ex.equipment.contains(selectedEquipment)
+            matchesQuery && matchesMuscle && matchesEquip
         }
     }
 
@@ -929,7 +1016,7 @@ fun ExercisePickerModal(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f),
+                .fillMaxHeight(0.88f),
             shape = RoundedCornerShape(18.dp),
             color = GymCardBg
         ) {
@@ -953,13 +1040,32 @@ fun ExercisePickerModal(
                     FilterChip(
                         selected = selectedMuscle == null,
                         onClick = { selectedMuscle = null },
-                        label = { Text("Todos") }
+                        label = { Text("Todos los Músculos", fontSize = 11.sp) }
                     )
-                    MuscleCatalog.ALL_MUSCLES.take(16).forEach { m ->
+                    MuscleCatalog.ALL_MUSCLES.forEach { m ->
                         FilterChip(
                             selected = selectedMuscle == m.id,
                             onClick = { selectedMuscle = if (selectedMuscle == m.id) null else m.id },
                             label = { Text(m.nameEs, fontSize = 11.sp) }
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedEquipment == null,
+                        onClick = { selectedEquipment = null },
+                        label = { Text("Todo Equipamiento", fontSize = 11.sp) }
+                    )
+                    equipmentOptions.forEach { eq ->
+                        FilterChip(
+                            selected = selectedEquipment == eq,
+                            onClick = { selectedEquipment = if (selectedEquipment == eq) null else eq },
+                            label = { Text(eq, fontSize = 11.sp) }
                         )
                     }
                 }
@@ -969,6 +1075,9 @@ fun ExercisePickerModal(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filtered, key = { it.id }) { ex ->
+                        val primaryMuscles = (0..16)
+                            .filter { it < ex.muscles.length && ex.muscles[it] >= '2' }
+                            .joinToString(", ") { MuscleCatalog.getName(it) }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -985,7 +1094,10 @@ fun ExercisePickerModal(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(ex.name, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                Text(ex.equipment.joinToString(" • "), color = GymOrange, fontSize = 11.sp)
+                                if (primaryMuscles.isNotBlank()) {
+                                    Text(primaryMuscles, color = GymOrange, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                Text(ex.equipment.joinToString(" • "), color = Color.LightGray, fontSize = 11.sp)
                             }
                             Icon(Icons.Default.Add, contentDescription = null, tint = GymOrange)
                         }

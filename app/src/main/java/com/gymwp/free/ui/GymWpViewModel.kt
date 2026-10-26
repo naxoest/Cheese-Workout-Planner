@@ -662,4 +662,23 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             triggerAutoDriveSync()
         }
     }
+
+    fun deleteFinishedWorkoutDay(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val target = dao.getFinishedWorkoutDay(id)
+            dao.deleteFinishedExercisesForDay(id)
+            dao.deleteFinishedWorkoutDay(id)
+            if (target != null) {
+                val matchingPlan = workoutPlans.value.firstOrNull {
+                    it.userId == target.userId && it.name == target.planName
+                }
+                if (matchingPlan != null && matchingPlan.completedSessionsCount > 0) {
+                    dao.updateWorkoutPlan(
+                        matchingPlan.copy(completedSessionsCount = (matchingPlan.completedSessionsCount - 1).coerceAtLeast(0))
+                    )
+                }
+            }
+            triggerAutoDriveSync()
+        }
+    }
 }

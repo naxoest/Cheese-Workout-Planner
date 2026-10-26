@@ -101,65 +101,64 @@ fun LiveWorkoutAssistantScreen(
     val totalSetsCount = setsDoneState.sumOf { it.size }
     val completedSetsCount = setsDoneState.sumOf { list -> list.count { it } }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(GymDarkBg)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top Live Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(GymSurfaceElevated)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = { confirmingExitSession = true }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Salir", tint = Color.White)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = day.name,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                    val mins = elapsedSeconds / 60
-                    val secs = elapsedSeconds % 60
-                    Text(
-                        text = "⏱ %02d:%02d • %d/%d series".format(mins, secs, completedSetsCount, totalSetsCount),
-                        color = GymOrange,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 14.sp
-                    )
-                }
-                IconButton(onClick = { isPaused = !isPaused }) {
-                    Icon(
-                        imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        contentDescription = "Pausar",
-                        tint = GymOrange
-                    )
-                }
+        // Top Live Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(GymSurfaceElevated)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = { confirmingExitSession = true }) {
+                Icon(Icons.Default.Close, contentDescription = "Salir", tint = Color.White)
             }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = day.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+                val mins = elapsedSeconds / 60
+                val secs = elapsedSeconds % 60
+                Text(
+                    text = "⏱ %02d:%02d • %d/%d series".format(mins, secs, completedSetsCount, totalSetsCount),
+                    color = GymOrange,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 14.sp
+                )
+            }
+            IconButton(onClick = { isPaused = !isPaused }) {
+                Icon(
+                    imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    contentDescription = "Pausar",
+                    tint = GymOrange
+                )
+            }
+        }
 
-            LinearProgressIndicator(
-                progress = { (completedSetsCount.toFloat() / totalSetsCount.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                color = GymOrange,
-                trackColor = GymCardBg,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-            )
+        LinearProgressIndicator(
+            progress = { (completedSetsCount.toFloat() / totalSetsCount.coerceAtLeast(1)).coerceIn(0f, 1f) },
+            color = GymOrange,
+            trackColor = GymCardBg,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+        )
 
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 140.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
                 itemsIndexed(exercises, key = { _, item -> item.id }) { exIdx, wEx ->
                     val catEx = viewModel.getCatalogExercise(wEx.exerciseId)
                     val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
@@ -295,15 +294,13 @@ fun LiveWorkoutAssistantScreen(
                     }
                 }
             }
-        }
 
-        // Bottom Floating Rest Timer + Finish Workout Button
+            // Bottom Docked Rest Timer + Finish Workout Button (inside safe Column)
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(GymSurfaceElevated)
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (restRemainingSeconds > 0) {

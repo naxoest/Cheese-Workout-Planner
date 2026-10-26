@@ -170,6 +170,9 @@ interface GymWpDao {
     @Query("SELECT * FROM finished_workout_day WHERE userId = :userId ORDER BY timestampMillis DESC")
     fun observeFinishedWorkouts(userId: Int): Flow<List<FinishedWorkoutDayEntity>>
 
+    @Query("SELECT * FROM finished_workout_day WHERE id = :id")
+    suspend fun getFinishedWorkoutDay(id: Long): FinishedWorkoutDayEntity?
+
     @Query("SELECT * FROM finished_workout_day")
     suspend fun getAllFinishedWorkoutsSnapshot(): List<FinishedWorkoutDayEntity>
 
@@ -178,6 +181,9 @@ interface GymWpDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFinishedWorkoutDays(days: List<FinishedWorkoutDayEntity>)
+
+    @Query("DELETE FROM finished_workout_day WHERE id = :id")
+    suspend fun deleteFinishedWorkoutDay(id: Long)
 
     @Query("DELETE FROM finished_workout_day")
     suspend fun clearFinishedWorkoutDays()
@@ -190,6 +196,12 @@ interface GymWpDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFinishedExercises(items: List<FinishedExerciseEntity>)
+
+    @Query("DELETE FROM finished_exercise WHERE finishedDayId = :finishedDayId")
+    suspend fun deleteFinishedExercisesForDay(finishedDayId: Long)
+
+    @Query("DELETE FROM finished_exercise WHERE id = :id")
+    suspend fun deleteFinishedExercise(id: Long)
 
     @Query("DELETE FROM finished_exercise")
     suspend fun clearFinishedExercises()

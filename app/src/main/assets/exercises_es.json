@@ -8,7 +8,7 @@
     "muscles": "30100000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_0.gif"
   },
@@ -21,7 +21,8 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_1.gif"
   },
@@ -34,7 +35,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_2.gif"
   },
@@ -47,7 +48,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_3.gif"
   },
@@ -60,7 +61,8 @@
     "muscles": "03010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_4.gif"
   },
@@ -73,7 +75,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_5.gif"
   },
@@ -86,7 +89,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_6.gif"
   },
@@ -99,7 +103,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_7.gif"
   },
@@ -112,7 +117,7 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_8.gif"
   },
@@ -125,7 +130,8 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_9.gif"
   },
@@ -138,7 +144,8 @@
     "muscles": "13000000001200000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_10.gif"
   },
@@ -151,7 +158,7 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_11.gif"
   },
@@ -164,7 +171,9 @@
     "muscles": "13000000002000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Barra Fija",
+      "Peso Corporal",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_12.gif"
   },
@@ -177,7 +186,7 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_13.gif"
   },
@@ -190,7 +199,7 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_14.gif"
   },
@@ -203,7 +212,7 @@
     "muscles": "00330000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_15.gif"
   },
@@ -216,7 +225,8 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_16.gif"
   },
@@ -229,7 +239,7 @@
     "muscles": "00330000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_17.gif"
   },
@@ -242,7 +252,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_18.gif"
   },
@@ -255,7 +265,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_19.gif"
   },
@@ -268,7 +278,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_20.gif"
   },
@@ -281,7 +291,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_21.gif"
   },
@@ -294,7 +304,7 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_22.gif"
   },
@@ -307,7 +317,8 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_23.gif"
   },
@@ -320,7 +331,8 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_24.gif"
   },
@@ -331,9 +343,9 @@
     "namePt": "Side plank",
     "description": "Preparación \n \nAcostarse de lado, apoyar el codo en el suelo y mantener las piernas unidas. Apoye la otra mano en la cintura o en la cabeza y levante la cadera. \n \nEjecución \n \n1- Quédate en esta posición con el abdomen contraído el máximo de tiempo que puedas. \n \n 2- Repita el movimiento con el otro lado del cuerpo. \n \nDetalles \n \n• En ese ejercicio, los músculos se trabajan sin movimiento, mantenga el cuerpo estirado durante todo el ejercicio. \n \n• Marque el tiempo que pueda para evaluar su progreso. \n \n• Sostener una mancuerna o arandela junto al cuerpo para intensificar el ejercicio. \n",
     "muscles": "00003300000000000",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_25.gif"
   },
@@ -346,7 +358,8 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_26.gif"
   },
@@ -359,7 +372,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_27.gif"
   },
@@ -372,7 +385,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_28.gif"
   },
@@ -385,7 +398,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_29.gif"
   },
@@ -398,7 +411,7 @@
     "muscles": "00000031000001100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_30.gif"
   },
@@ -410,7 +423,9 @@
     "description": "Preparación \n \nDe pie, dé un paso largo adelante y apoye el pie en el suelo. Levante el talón del pie opuesto, dejando solamente la punta del pie apoyada en el suelo. Sostenga las pestillos con las palmas de las manos boca abajo. \n \nEjecución \n \n1- Baje la cadera lentamente manteniendo el cuerpo equilibrado y la espalda recta. \n \n3- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• No toque las rodillas en el suelo al realizar el movimiento. \n \n• Después de las repeticiones, cambie el orden de las piernas. \n \n• Durante el ejercicio se pueden colocar las manos en la cintura, o detrás de la cabeza, para dificultar el ejercicio y trabajar más los glúteos. \n \n• Este ejercicio se puede hacer parado, dando saltos, o moviéndose a lo largo del ambiente. \n",
     "muscles": "00000031000003100",
     "defaultUnitType": 0,
-    "equipment": [],
+    "equipment": [
+      "Mancuernas"
+    ],
     "gifAssetPath": "gifs/ex_31.gif"
   },
   {
@@ -422,7 +437,7 @@
     "muscles": "00000030000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_32.gif"
   },
@@ -435,7 +450,7 @@
     "muscles": "00000000300002000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_33.gif"
   },
@@ -448,7 +463,7 @@
     "muscles": "00000000300002000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_34.gif"
   },
@@ -461,7 +476,7 @@
     "muscles": "00000000300002000",
     "defaultUnitType": 0,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_35.gif"
   },
@@ -474,7 +489,7 @@
     "muscles": "00000003000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_36.gif"
   },
@@ -487,7 +502,7 @@
     "muscles": "00000023000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_37.gif"
   },
@@ -500,7 +515,7 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_38.gif"
   },
@@ -513,7 +528,7 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_39.gif"
   },
@@ -523,10 +538,10 @@
     "nameEn": "",
     "namePt": "Bent-Over Rear Lateral",
     "description": "Preparación \n \nManténgase de pie al medio de la polea e incline el tronco hacia adelante, formando un ángulo de 90 grados con el cuerpo. Sostenga los cables de la polea con las palmas de las manos hacia adentro. \n \nEjecución \n \n1- Cruzar los brazos, manteniéndolos ligeramente flexionados \n \n2- Vuelva a las manos a la posición inicial y repita el movimiento. \n \nDetalles \n \n• No se recomienda estirar completamente los brazos durante el ejercicio si la carga es elevada. \n \n• Si opta por hacer el ejercicio en la polea alta, mantenga el tronco recto. \n",
-    "muscles": "00000000030000000",
+    "muscles": "30000000030100000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_40.gif"
   },
@@ -536,10 +551,11 @@
     "nameEn": "",
     "namePt": "Reverse Fly",
     "description": "Preparación \n \nSe acostará en el asiento con la espalda hacia arriba. Sostenga las mancuernas con las palmas de las manos boca abajo, en un agarre neutro. \n \nEjecución \n \n1- Con los brazos ligeramente flexionados, levante las mancuernas hasta que queden paralelos a sus hombros. \n \n2- Baje las mancuernas de vuelta a la posición inicial y repita el movimiento. \n \nDetalles \n \n• No se recomienda estirar completamente los brazos durante el ejercicio si la carga es elevada. \n \n• Durante el ejercicio, mantenga las puntas de los pies apoyados en el suelo. \n",
-    "muscles": "00000000030000000",
+    "muscles": "30000000030100000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_41.gif"
   },
@@ -552,7 +568,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_42.gif"
   },
@@ -565,7 +582,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_43.gif"
   },
@@ -578,7 +595,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_44.gif"
   },
@@ -591,7 +609,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_45.gif"
   },
@@ -604,7 +622,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_46.gif"
   },
@@ -617,7 +635,7 @@
     "muscles": "00010030010333300",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_47.gif"
   },
@@ -630,7 +648,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_48.gif"
   },
@@ -643,7 +661,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_49.gif"
   },
@@ -656,7 +674,8 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Polea / Cable",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_50.gif"
   },
@@ -669,7 +688,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_51.gif"
   },
@@ -682,7 +701,7 @@
     "muscles": "00000000000033300",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_52.gif"
   },
@@ -692,10 +711,12 @@
     "nameEn": "",
     "namePt": "Hyperextensions (Back Extensions)",
     "description": "Preparación \n \nSe coloca boca abajo en el banco de hiperextensiones. Apoye los talones en los soportes acolchados del asiento y sostenga una arandela junto a su pecho. \n \nEjecución \n \n1- Levante la parte superior del cuerpo hasta que la cadera y la cintura estén extendidas. \n \n2- Baje la parte superior del cuerpo manteniendo la espalda recta. \nVuelva a la posición inicial y repita el movimiento \n \nDetalles \n \n• Ajuste los soportes acolchados de la parte inferior de las piernas de forma que la presión quede distribuida de forma equilibrada por la parte inferior del cuerpo. \n \n• No forme en el movimiento de descenso si siente un ligero estiramiento de los isquiotibiales y en la zona lumbar. \n \n• La amplitud completa del movimiento variará de persona a persona. \n",
-    "muscles": "00003000000030000",
+    "muscles": "00000000000032100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Banco",
+      "Aparato / Máquina",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_53.gif"
   },
@@ -708,7 +729,7 @@
     "muscles": "00003000000030000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_54.gif"
   },
@@ -718,10 +739,10 @@
     "nameEn": "",
     "namePt": "Superman",
     "description": "Preparación \n \nAcuéstate boca abajo en el suelo con los brazos y las piernas extendidas. \n \nEjecución \n \n1- Contraer los glúteos y la lumbar y levante del suelo la parte superior e inferior del cuerpo, manteniendo sólo la región central del cuerpo en el suelo. \n \n2- Permanece en esa posición durante dos segundos. \n \n3- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Cuando esté en la parte superior del movimiento deje los glúteos completamente contraídos. \n \n• Mantenga la cabeza alineada con su cuerpo. \n",
-    "muscles": "00003000000030000",
+    "muscles": "00000000000032100",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_55.gif"
   },
@@ -734,7 +755,9 @@
     "muscles": "00001030000003100",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Barra",
+      "Banco",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_56.gif"
   },
@@ -747,7 +770,7 @@
     "muscles": "00000000000003000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_57.gif"
   },
@@ -760,7 +783,8 @@
     "muscles": "00000000000003000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_58.gif"
   },
@@ -773,7 +797,7 @@
     "muscles": "00000000000003100",
     "defaultUnitType": 0,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_59.gif"
   },
@@ -786,7 +810,7 @@
     "muscles": "00000000000003300",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_60.gif"
   },
@@ -799,7 +823,7 @@
     "muscles": "00000000000000310",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_61.gif"
   },
@@ -812,7 +836,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_62.gif"
   },
@@ -825,7 +849,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_63.gif"
   },
@@ -838,7 +862,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_64.gif"
   },
@@ -851,7 +875,7 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_65.gif"
   },
@@ -864,7 +888,8 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_66.gif"
   },
@@ -877,7 +902,8 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_67.gif"
   },
@@ -890,7 +916,8 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_68.gif"
   },
@@ -903,7 +930,8 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_69.gif"
   },
@@ -916,7 +944,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_70.gif"
   },
@@ -929,7 +957,7 @@
     "muscles": "30100000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_71.gif"
   },
@@ -942,7 +970,8 @@
     "muscles": "31100000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_72.gif"
   },
@@ -955,7 +984,7 @@
     "muscles": "30100000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_73.gif"
   },
@@ -968,7 +997,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_74.gif"
   },
@@ -981,7 +1010,7 @@
     "muscles": "30100000031000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_75.gif"
   },
@@ -992,9 +1021,9 @@
     "namePt": "Running machine",
     "description": "Detalles \n \n• Trote o camine a un ritmo lento por 5 minutos para calentar \n \n• Terminado el entrenamiento, no descuida el descenso. Así como la del cuerpo en la fase inicial de la carrera, enfriar la musculatura es igualmente importante, para que usted baje el ritmo cardíaco, lo que previene mareos o incluso la sensación de que usted todavía se está moviendo incluso fuera de la estera. \n \n• Para mejorar la respuesta de su cuerpo al entrenamiento, defina una inclinación hasta el 2%. Como no hay resistencia del aire en ambientes cerrados, esta suave inclinación simula la carrera al aire libre. Al mismo tiempo, no defina inclinaciones muy empinadas (más del 7%), ya que esto puede sobrecargar el tendón de Aquiles y las pantorrillas. \n \n• El pasamanos está ahí, sólo, para dar más seguridad a su entrenamiento. Al correr en la cinta, mantenga la misma postura de la carrera en la calle, con los brazos en un ángulo de 90 grados. Y asegúrese de mantener el cuerpo en posición vertical. No es necesario inclinarse hacia adelante, ya que la estera tira de los pies hacia atrás automáticamente. \n \n• Dividir la distancia total en dos sesiones en el día pueden dejar el kilometraje y el tiempo en la cinta más soportable. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_76.gif"
   },
@@ -1005,9 +1034,9 @@
     "namePt": "Bicycle machine",
     "description": "Detalles \n \n• El peso es uno de los recursos para intensificar el trabajo muscular. Cuanto más pesada está la bicicleta, mayor es el estímulo en los músculos de las piernas y del gluteos. \n \n• Lo que va a determinar la intensidad de los pedales es su frecuencia cardíaca. Es importante monitorearla y mantenerla dentro del rango indicado en el entrenamiento. \n \n• Es importante estirar los músculos, principalmente de las piernas, antes y después de pedalear, para evitar lesiones. Los estiramientos iniciales también ayudan a proporcionar más rendimiento de la musculatura durante la práctica. \n \n• Tenga una botella de agua siempre a mano y beba poco a poco durante todo el ejercicio. Su cuerpo deshidratado pierde rendimiento y hasta la contracción muscular queda perjudicada. \n \n• Use camisetas que permitan la transpiración. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_77.gif"
   },
@@ -1018,9 +1047,9 @@
     "namePt": "Elliptical machine",
     "description": "Detalles \n \n• Si usted pedalea adelante, estimulará más los músculos de la parte anterior del muslo, como el cuadriceps. Si pedalea hacia atrás, la musculatura de la parte posterior del muslo será más solicitada, como glúteos, isquiotibiales y pantorrilla. \n \n• El aumento de la carga requerirá más esfuerzo y, consecuentemente, promover una mejora en el acondicionamiento físico y también muscular de las piernas. \n \n• Cuanto mayor esté la velocidad que el alumno realice el movimiento, más intensidad cardiovascular va a tener y, en consecuencia, el adelgazamiento será más rápido. \n \n• Los pies deben estar siempre en contacto total con el suelo. También es fundamental mantener la postura erguida, sin inclinar el cuerpo hacia adelante, y mantener las rodillas alineadas a la línea del cuerpo \n \n• El tronco, debe estar parado y estable. De esta manera, la sobrecarga muscular quedará sólo con los miembros inferiores y superiores \n \n• Los brazos deben apoyarse en el soporte para brazos (móvil o estático, depende de la opción de entrenamiento), pues así se evita que el practicante quede con una postura errada durante el ejercicio. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_78.gif"
   },
@@ -1033,7 +1062,8 @@
     "muscles": "00320000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_79.gif"
   },
@@ -1046,7 +1076,7 @@
     "muscles": "00330000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_80.gif"
   },
@@ -1059,7 +1089,7 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_81.gif"
   },
@@ -1072,7 +1102,7 @@
     "muscles": "00000000000003300",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_82.gif"
   },
@@ -1085,7 +1115,7 @@
     "muscles": "00000000000000310",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_83.gif"
   },
@@ -1098,7 +1128,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_84.gif"
   },
@@ -1111,7 +1141,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_85.gif"
   },
@@ -1124,7 +1155,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_86.gif"
   },
@@ -1137,7 +1169,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_87.gif"
   },
@@ -1150,7 +1183,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_88.gif"
   },
@@ -1163,7 +1196,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_89.gif"
   },
@@ -1176,7 +1209,7 @@
     "muscles": "00003300000030000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_90.gif"
   },
@@ -1189,7 +1222,9 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Barra"
+      "Barra Fija",
+      "Peso Corporal",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_91.gif"
   },
@@ -1200,9 +1235,9 @@
     "namePt": "Plank",
     "description": "Preparación \n \nAcuéstese en el suelo y apoye el peso del cuerpo con antebrazos y las puntas de los pies. \n \nEjecución \n \n1- Levante el cuerpo manteniéndolo en línea recta. Permanezca en esta posición contrayendo el abdomen. \n \nDetalles \n \n• Mantenga el abdomen contraído durante todo el ejercicio. \n \n• Controle la respiración para mayor resistencia del ejercicio. \n \n• Anote el tiempo que puede permanecer en este ejercicio y cree una meta. \n \n• Para facilitar el ejercicio, apoye las rodillas en el suelo. \n",
     "muscles": "00003300000030000",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_92.gif"
   },
@@ -1215,7 +1250,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_93.gif"
   },
@@ -1228,7 +1264,7 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_94.gif"
   },
@@ -1241,7 +1277,8 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_95.gif"
   },
@@ -1254,7 +1291,7 @@
     "muscles": "00000031000001100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_96.gif"
   },
@@ -1267,7 +1304,8 @@
     "muscles": "00000031000001100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_97.gif"
   },
@@ -1280,7 +1318,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_98.gif"
   },
@@ -1293,7 +1331,7 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_99.gif"
   },
@@ -1306,7 +1344,7 @@
     "muscles": "03010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_100.gif"
   },
@@ -1318,7 +1356,11 @@
     "description": "Preparación \n \nAcuéstese en el banco recto, colocado en la máquina del smith, y sostenga la barra con las palmas de las manos boca abajo en la altura del pectoral. \n \nEjecución \n \n1- Levante la barra hasta que los codos estén ligeramente flexionados. \n \n2- Baje la barra, sin tocar el pectoral, y repita el movimiento. \n \nDetalles \n \n• La barra debe quedar en la línea de su pectoral. \n \n• Durante todo el ejercicio, mantenga la espalda ligeramente arqueada tirando de los hombros hacia atrás. \n \n• Cuidado al elegir cargas altas, como la barra es fija, el ejercicio se vuelve más peligroso que el tradicional. \n",
     "muscles": "03010000001000000",
     "defaultUnitType": 0,
-    "equipment": [],
+    "equipment": [
+      "Máquina Smith",
+      "Aparato / Máquina",
+      "Banco"
+    ],
     "gifAssetPath": "gifs/ex_101.gif"
   },
   {
@@ -1330,7 +1372,9 @@
     "muscles": "03010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_102.gif"
   },
@@ -1343,7 +1387,8 @@
     "muscles": "11111000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_103.gif"
   },
@@ -1356,7 +1401,8 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_104.gif"
   },
@@ -1369,7 +1415,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_105.gif"
   },
@@ -1382,7 +1429,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_106.gif"
   },
@@ -1395,7 +1442,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_107.gif"
   },
@@ -1405,10 +1452,10 @@
     "nameEn": "",
     "namePt": "Burpee",
     "description": "Preparación \n \nManténgase de pie en un lugar con espacio adecuado para el ejercicio. \n \nEjecución \n \n1- Apoye los brazos en el suelo, y enseguida los pies, en un movimiento de flexión. \n \n2- Después de la flexión, proyecte los pies hacia adelante rápidamente para ponerse de pie. \n \n3- Al ponerse de pie, salte elevando los brazos por encima de la cabeza. \n \n4- Después del salto, repita rápidamente el movimiento. \n \nDetalles \n \n• Para aumentar la intensidad del ejercicio, haga también flexiones y movimientos con pesos. \n \n• El burpee es un ejercicio de cardio, fortalece los músculos e incluso órganos internos. \n",
-    "muscles": "00001020000012022",
+    "muscles": "02002030000002023",
     "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_108.gif"
   },
@@ -1421,7 +1468,8 @@
     "muscles": "10100000000300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_109.gif"
   },
@@ -1434,7 +1482,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_110.gif"
   },
@@ -1447,7 +1495,8 @@
     "muscles": "11111000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_111.gif"
   },
@@ -1460,7 +1509,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_112.gif"
   },
@@ -1473,7 +1522,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_113.gif"
   },
@@ -1486,7 +1535,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_114.gif"
   },
@@ -1499,20 +1548,20 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_115.gif"
   },
   {
     "id": 116,
-    "name": "Butt Kicks",
+    "name": "Talones al glúteo (Butt Kicks)",
     "nameEn": "",
     "namePt": "Butt kicks",
     "description": "Preparación \n \nManténgase de pie en una ubicación con espacio adecuado para realizar el ejercicio \n \nEjecución \n \n1- Hacer un movimiento de carrera, pero mantenga su cuerpo parado. \n \n2- Durante el movimiento de carrera, levante el talón hasta que toque el glúteo. \n \nDetalles \n \n• Mantenga una postura neutra durante el ejercicio. \n \n• Haga el movimiento con un ritmo sincronizado. \n",
     "muscles": "00000000000000003",
     "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_116.gif"
   },
@@ -1525,20 +1574,22 @@
     "muscles": "11111000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_117.gif"
   },
   {
     "id": 118,
-    "name": "Dominadas con agarre supino y medido",
+    "name": "Dominadas con agarre supino y medio",
     "nameEn": "",
     "namePt": "Wide Grip Chin-ups",
     "description": "Preparación \n \nSostenga la barra fija en un agarre supinado, con las palmas de las manos boca abajo. Deje las manos juntas para hacer el agarre cerrado. Permanezca suspendido en la barra para comenzar el movimiento \n \nEjecución \n \n1- Con los brazos, levante su cuerpo hasta que su barbilla quede a la misma altura que la barra, \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Durante el ejercicio, mantenga el abdomen y glúteos contraídos. \n \n• No empuje el cuerpo a la subida y baje lentamente. \n \n• Para facilitar el ejercicio, comience haciendo la mitad del movimiento \n \n• Para dificultar el ejercicio, utilice pesas de tobillo o amarre peso en la cintura. \n",
-    "muscles": "11211000000200000",
+    "muscles": "21321000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_118.gif"
   },
@@ -1548,10 +1599,11 @@
     "nameEn": "",
     "namePt": "Close Grip Chin-ups",
     "description": "Preparación \n \nSostenga la barra fija en un agarre supinado, con las palmas de las manos boca abajo. Deje las manos lejos en la distancia de sus hombros (agarre medio). Manténgase suspendido en la barra para comenzar el movimiento. \n \nEjecución \n \n1- Con los brazos, levante su cuerpo hasta que su barbilla quede a la misma altura que la barra, \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Durante el ejercicio, mantenga el abdomen y glúteos contraídos. \n \n• No empuje el cuerpo a la subida y baje lentamente. \n \n• Para facilitar el ejercicio, comience haciendo la mitad del movimiento \n \n• Para dificultar el ejercicio, utilice pesas de tobillo o amarre peso en la cintura. \n",
-    "muscles": "11211000000200000",
+    "muscles": "21321000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_119.gif"
   },
@@ -1564,7 +1616,8 @@
     "muscles": "11111000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_120.gif"
   },
@@ -1577,7 +1630,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_121.gif"
   },
@@ -1590,7 +1644,8 @@
     "muscles": "11312000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_122.gif"
   },
@@ -1603,7 +1658,8 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_123.gif"
   },
@@ -1616,7 +1672,8 @@
     "muscles": "11112000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_124.gif"
   },
@@ -1629,7 +1686,8 @@
     "muscles": "12011000003000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_125.gif"
   },
@@ -1642,7 +1700,8 @@
     "muscles": "11212000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_126.gif"
   },
@@ -1652,10 +1711,11 @@
     "nameEn": "",
     "namePt": "Behind the Neck Pull-ups",
     "description": "Preparación \n \nSostenga la barra fija en un agarre pronado, con las palmas de las manos boca abajo. Deje las manos lejos en un asa abierta. Manténgase suspendido en la barra para comenzar el movimiento. \n \nEjecución \n \n1- Con los brazos, levante su cuerpo proyectando el tronco hacia delante de la barra. Suba hasta la nuca o el trapecio tocar la barra. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Durante el ejercicio, mantenga el abdomen y glúteos contraídos. \n \n• No empuje el cuerpo a la subida y baje lentamente. \n \n• Para facilitar el ejercicio, comience haciendo la mitad del movimiento \n \n• Para dificultar el ejercicio, utilice pesas de tobillo o amarre peso en la cintura. \n",
-    "muscles": "11111000010200000",
+    "muscles": "20210000020300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_127.gif"
   },
@@ -1668,7 +1728,8 @@
     "muscles": "11111000000300000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banco"
+      "Barra Fija",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_128.gif"
   },
@@ -1681,7 +1742,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_129.gif"
   },
@@ -1694,7 +1755,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_130.gif"
   },
@@ -1707,7 +1768,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_131.gif"
   },
@@ -1720,7 +1781,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_132.gif"
   },
@@ -1733,7 +1794,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_133.gif"
   },
@@ -1746,7 +1807,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_134.gif"
   },
@@ -1759,7 +1820,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_135.gif"
   },
@@ -1772,7 +1833,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_136.gif"
   },
@@ -1785,7 +1846,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_137.gif"
   },
@@ -1798,7 +1859,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_138.gif"
   },
@@ -1811,7 +1872,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_139.gif"
   },
@@ -1824,7 +1885,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_140.gif"
   },
@@ -1837,7 +1898,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_141.gif"
   },
@@ -1850,7 +1911,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_142.gif"
   },
@@ -1861,9 +1922,9 @@
     "namePt": "Crucifix hold",
     "description": "Preparación \n \nSe acostará en el suelo con las piernas estiradas. \n \nEjecución \n \n1- Levante la parte superior de la espalda y las piernas del suelo. \n \n2- Sostener la posición lo máximo que puedas \n \nDetalles \n \n• Mantenga el abdomen contraído durante todo el ejercicio. \n \n• Mantenga las piernas unidas y elevadas durante todo el movimiento. \n \n• Utilice las manos para estabilizar el tronco. \n",
     "muscles": "00003000000000000",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_143.gif"
   },
@@ -1876,7 +1937,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_144.gif"
   },
@@ -1889,7 +1950,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_145.gif"
   },
@@ -1902,7 +1963,8 @@
     "muscles": "00000000000000310",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Tobillera / Peso Libre",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_146.gif"
   },
@@ -1912,10 +1974,10 @@
     "nameEn": "",
     "namePt": "Machine Reverse Fly",
     "description": "Preparación \n \nSiéntese en el banco de la máquina con el pectoral apoyado en el respaldo del asiento. Sostenga los pegadores con los brazos estirados. \n \nEjecución \n \n1- Abra los brazos empujando los pegadores hacia los lados. \n \n2- Vuelva lentamente a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Mantenga el pectoral en el respaldo durante todo el ejercicio. \n \n• Mantenga los pies totalmente apoyados en el suelo durante el ejercicio. \n \n• No abra los brazos más allá del nivel de su tronco. \n",
-    "muscles": "00000000030000000",
+    "muscles": "30000000030100000",
     "defaultUnitType": 1,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_147.gif"
   },
@@ -1928,7 +1990,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_148.gif"
   },
@@ -1941,7 +2003,7 @@
     "muscles": "00000000000003100",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_149.gif"
   },
@@ -1954,7 +2016,7 @@
     "muscles": "00000031000003100",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_150.gif"
   },
@@ -1965,9 +2027,9 @@
     "namePt": "StairClimber Machine",
     "description": "Preparación física y muscular. A pesar de que las personas conocen el ejercicio, poca gente practica subida de escalera en el día a día, por lo que el entrenamiento en la máquina acaba siendo difícil. \n \n• Mantenga la postura erecta y utilice el apoyo ligeramente si es necesario. Manténgase atento a la velocidad y pise con el pie entero en el escalón para no sobrecargar la pantorrilla. \n \n• Hacer el ejercicio a una velocidad rápida ayuda en el gasto calórico y en la activación muscular, pero siempre respetando los límites. Si no puede hacer mucho tiempo a una velocidad avanzada, la sugerencia es que usted haga el entrenamiento de forma intervalada. \n \n• Subida con agachamiento: suba un escalón, pare, haga un agachamiento. A continuación, repita el movimiento, suba un escalón y repita el agachamiento, importante y siempre mantener la posición correcta, dé el mayor número de pasos que pueda. \n",
     "muscles": "00000020000000023",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_151.gif"
   },
@@ -1980,7 +2042,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_152.gif"
   },
@@ -1991,9 +2053,9 @@
     "namePt": "Rowing Machines",
     "description": "Preparación \n \nSiéntese en la máquina de remo, coloque los pies en la plataforma y sostenga la barra que está sujeta la máquina con las palmas de las manos boca abajo. \n \nEjecución \n \n1- Tire de la barra mientras estira las piernas, proyectando el cuerpo hacia atrás. \n \n2- Vuelva la barra de vuelta a la posición inicial, flexionando las rodillas y proyectando el cuerpo hacia adelante, y repita el movimiento. \n \nDetalles \n \n• Cuando tire de la barra, tire hasta que su tronco quede ligeramente inclinado hacia atrás. \n \n• Cuando vuelva la barra a la posición inicial, deje que su espalda se curve ligeramente. \n",
     "muscles": "00000000020200003",
-    "defaultUnitType": 0,
+    "defaultUnitType": 3,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_153.gif"
   },
@@ -2006,7 +2068,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_154.gif"
   },
@@ -2019,7 +2082,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_155.gif"
   },
@@ -2032,7 +2096,7 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_156.gif"
   },
@@ -2045,7 +2109,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_157.gif"
   },
@@ -2058,7 +2122,8 @@
     "muscles": "00000000000003000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_158.gif"
   },
@@ -2071,7 +2136,7 @@
     "muscles": "00010030010333300",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_159.gif"
   },
@@ -2084,7 +2149,7 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_160.gif"
   },
@@ -2097,7 +2162,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_161.gif"
   },
@@ -2110,7 +2175,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_162.gif"
   },
@@ -2123,7 +2188,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_163.gif"
   },
@@ -2136,7 +2201,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_164.gif"
   },
@@ -2149,7 +2214,8 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_165.gif"
   },
@@ -2162,7 +2228,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_166.gif"
   },
@@ -2175,7 +2241,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_167.gif"
   },
@@ -2188,7 +2254,7 @@
     "muscles": "30000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_168.gif"
   },
@@ -2200,7 +2266,9 @@
     "description": "Preparación \n \nManténgase de pie frente a la polea baja. Sostenga la barra con los brazos ligeramente extendidos y las palmas de las manos hacia arriba, en un agarre supinado. \n \nEjecución \n \n1- Levante la barra lentamente hasta la altura de los hombros. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• un agarre más abierto concentra el esfuerzo en la región interna del bíceps (cabeza corta), mientras que un agarre cerrado trabaja el exterior del bíceps (cabeza larga). \n \n• Para aislar el bíceps, el movimiento debe ocurrir en el codo y no en el hombro. \n \n• Mantenga el cuerpo firme durante el movimiento, evite balancearse hacia atrás. \n",
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
-    "equipment": [],
+    "equipment": [
+      "Polea / Cable"
+    ],
     "gifAssetPath": "gifs/ex_169.gif"
   },
   {
@@ -2212,20 +2280,21 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_170.gif"
   },
   {
     "id": 171,
-    "name": "Curl de bíceps unilateral con mancuerna en banco scott",
+    "name": "Curl de bíceps unilateral en máquina Scott",
     "nameEn": "",
     "namePt": "Dumbbell Scott Curl",
     "description": "Preparación \n \nSiéntese en la máquina y sostenga la barra del aparato con una mano. \n \nEjecución \n \n1- Levante el brazo a trabajar la dirección de los hombros, flexionando solamente los codos. \n \n2- Vuelva la barra a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Mantenga la otra mano apoyada para estabilizar el movimiento. \n \n• Mantenga los codos ligeramente flexionados durante el ejercicio. \n \n• Mantenga los pies totalmente apoyados en el suelo. \n \n• Enfoque movimiento en los antebrazos, los brazos y el tronco deben permanecer estáticos. \n",
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_171.gif"
   },
@@ -2238,7 +2307,8 @@
     "muscles": "00330000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_172.gif"
   },
@@ -2251,7 +2321,8 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_173.gif"
   },
@@ -2264,7 +2335,7 @@
     "muscles": "11111000000300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_174.gif"
   },
@@ -2277,7 +2348,8 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_175.gif"
   },
@@ -2290,7 +2362,7 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_176.gif"
   },
@@ -2303,7 +2375,7 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_177.gif"
   },
@@ -2316,7 +2388,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_178.gif"
   },
@@ -2329,7 +2402,8 @@
     "muscles": "13010000001000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_179.gif"
   },
@@ -2342,7 +2416,8 @@
     "muscles": "03000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_180.gif"
   },
@@ -2355,7 +2430,8 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_181.gif"
   },
@@ -2368,7 +2444,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_182.gif"
   },
@@ -2381,7 +2457,8 @@
     "muscles": "00000031000003100",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_183.gif"
   },
@@ -2394,7 +2471,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_184.gif"
   },
@@ -2407,7 +2484,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_185.gif"
   },
@@ -2420,7 +2497,7 @@
     "muscles": "00010030010333300",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_186.gif"
   },
@@ -2433,33 +2510,35 @@
     "muscles": "00010030010333300",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_187.gif"
   },
   {
     "id": 188,
-    "name": "Adductores con bola",
+    "name": "Aductores con pelota suiza",
     "nameEn": "",
     "namePt": "Adductors with ball",
     "description": "Preparación \n \nSiéntese con la cadera y los pies apoyados en el suelo. Deje las rodillas flexionadas y utilice las manos para dar apoyo al tronco alto. Coloque el balón entre sus rodillas. \n \nEjecución \n \n1- Aprieta las rodillas contra la bola lo máximo que puedas. \n \n2- Deje de apretar la bola, pero no deje que la bola caiga, y repita el movimiento. \n \nDetalles \n \n• Mantenga sus pies y sus piernas firmes en el suelo durante el ejercicio. \n \n• Mantenga sus pies unidos el uno al otro. \n",
     "muscles": "00000023000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_188.gif"
   },
   {
     "id": 189,
-    "name": "Adductores con espinillera",
+    "name": "Aductores con tobillera lastrada",
     "nameEn": "",
     "namePt": "Adductor with ankle weights",
     "description": "Preparación \n \nManténgase cerca de una superficie fija. Flexione levemente la rodilla de la pierna a ser trabajada, elevándola del suelo. \n \nEjecución \n \n1- Mover la pierna trabajada hacia la otra pierna, pasando el frente del cuerpo, lo máximo posible. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Mantenga la columna siempre erecta durante todo el ejercicio. \n \n• Para intensificar el ejercicio, utilice la pesas de tobillo. \n \n• Controle el movimiento, haga el ejercicio levantando y bajando las piernas lentamente. \n \n• Sostenga con la mano sobre una superficie fija. \n",
     "muscles": "00000023000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Tobillera / Peso Libre",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_189.gif"
   },
@@ -2472,7 +2551,8 @@
     "muscles": "00000023000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_190.gif"
   },
@@ -2485,7 +2565,8 @@
     "muscles": "00000023000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_191.gif"
   },
@@ -2498,7 +2579,8 @@
     "muscles": "00000000300002000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_192.gif"
   },
@@ -2511,7 +2593,8 @@
     "muscles": "00000003300000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_193.gif"
   },
@@ -2524,7 +2607,8 @@
     "muscles": "00000000000000310",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_194.gif"
   },
@@ -2535,9 +2619,9 @@
     "namePt": "Jumping Rope",
     "description": "Detalles \n \n• La cuerda del tamaño correcto te permite completar sus saltos sin prender tu pie en la cuerda durante las vueltas. \n \n• Intervalos son la mejor forma de saltar la cuerda para adelgazar, aumentando la quema de calorías y conseguir los resultados que usted quiere. Intervalos mezclan pequeñas explosiones de alta intensidad con pequeños períodos de intensidad moderada para aumentar y disminuir su tasa cardiaca. \n \n• Las personas que sufren lesiones en los tobillos, rodillas, cadera y columna deben tener cuidado antes de iniciar el entrenamiento con cuerda. \n \n• Procure dar ritmo a la cuerda con movimientos circulares del puño, dejando brazos y hombros estabilizados durante el movimiento. \n \n• Al principio, realice saltos más amplios y, a medida que se siente más cómodo, haga saltos más cortos, rápidos y con alternancia de piernas. \n",
     "muscles": "00000020000000023",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_195.gif"
   },
@@ -2550,7 +2634,7 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_196.gif"
   },
@@ -2563,7 +2647,9 @@
     "muscles": "13000000002000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Barra"
+      "Barra Fija",
+      "Peso Corporal",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_197.gif"
   },
@@ -2576,7 +2662,8 @@
     "muscles": "13000000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_198.gif"
   },
@@ -2589,7 +2676,7 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_199.gif"
   },
@@ -2602,7 +2689,8 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_200.gif"
   },
@@ -2615,7 +2703,8 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_201.gif"
   },
@@ -2628,7 +2717,7 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_202.gif"
   },
@@ -2641,7 +2730,7 @@
     "muscles": "00030000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_203.gif"
   },
@@ -2654,7 +2743,7 @@
     "muscles": "10100000000300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_204.gif"
   },
@@ -2667,7 +2756,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_205.gif"
   },
@@ -2680,7 +2769,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_206.gif"
   },
@@ -2693,7 +2782,8 @@
     "muscles": "10100000000300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_207.gif"
   },
@@ -2706,7 +2796,8 @@
     "muscles": "00000000000033300",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_208.gif"
   },
@@ -2719,7 +2810,7 @@
     "muscles": "00000031000001100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_209.gif"
   },
@@ -2732,7 +2823,7 @@
     "muscles": "00010030010333300",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_210.gif"
   },
@@ -2745,7 +2836,8 @@
     "muscles": "00000000000000310",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Aparato / Máquina",
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_211.gif"
   },
@@ -2758,7 +2850,8 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_212.gif"
   },
@@ -2771,7 +2864,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_213.gif"
   },
@@ -2784,7 +2877,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_214.gif"
   },
@@ -2797,7 +2890,8 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_215.gif"
   },
@@ -2810,7 +2904,8 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_216.gif"
   },
@@ -2823,7 +2918,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_217.gif"
   },
@@ -2836,7 +2932,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_218.gif"
   },
@@ -2849,7 +2945,7 @@
     "muscles": "02000000003000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_219.gif"
   },
@@ -2862,7 +2958,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_220.gif"
   },
@@ -2875,7 +2971,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_221.gif"
   },
@@ -2888,7 +2985,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_222.gif"
   },
@@ -2901,7 +2999,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_223.gif"
   },
@@ -2914,7 +3012,8 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_224.gif"
   },
@@ -2927,7 +3026,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_225.gif"
   },
@@ -2940,7 +3039,8 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_226.gif"
   },
@@ -2953,7 +3053,7 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_227.gif"
   },
@@ -2966,7 +3066,7 @@
     "muscles": "30100000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_228.gif"
   },
@@ -2979,7 +3079,7 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_229.gif"
   },
@@ -2992,7 +3092,8 @@
     "muscles": "00000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_230.gif"
   },
@@ -3005,7 +3106,8 @@
     "muscles": "30100000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_231.gif"
   },
@@ -3018,7 +3120,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_232.gif"
   },
@@ -3031,7 +3133,7 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_233.gif"
   },
@@ -3044,7 +3146,7 @@
     "muscles": "30101031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_234.gif"
   },
@@ -3057,7 +3159,7 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_235.gif"
   },
@@ -3070,7 +3172,7 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_236.gif"
   },
@@ -3083,7 +3185,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_237.gif"
   },
@@ -3096,7 +3198,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_238.gif"
   },
@@ -3109,7 +3211,9 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_239.gif"
   },
@@ -3122,7 +3226,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_240.gif"
   },
@@ -3135,7 +3239,8 @@
     "muscles": "30000000030000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_241.gif"
   },
@@ -3148,7 +3253,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_242.gif"
   },
@@ -3158,10 +3263,10 @@
     "nameEn": "",
     "namePt": "Cable Rear Delt Fly",
     "description": "Preparación \n \nManténgase de pie al medio de la polea, incline el tronco ligeramente hacia adelante y flexione levemente las rodillas. Sostenga los cables de la polea con las palmas de las manos hacia adentro. \n \nEjecución \n \n1- Cruzar los brazos, manteniéndolos ligeramente flexionados \n \n2- Vuelva a las manos a la posición inicial y repita el movimiento. \n \nDetalles \n \n• No se recomienda estirar completamente los brazos durante el ejercicio si la carga es elevada. \n \n• Si opta por hacer el ejercicio en la polea baja, mantenga el tronco inclinado en 90 grados. \n",
-    "muscles": "00000000030000000",
+    "muscles": "30000000030100000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_243.gif"
   },
@@ -3174,7 +3279,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_244.gif"
   },
@@ -3187,7 +3292,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_245.gif"
   },
@@ -3200,7 +3305,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_246.gif"
   },
@@ -3213,7 +3318,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_247.gif"
   },
@@ -3223,10 +3329,11 @@
     "nameEn": "",
     "namePt": "Smith Machine Hip Raise",
     "description": "Preparación \n \nAcuéstese en la máquina y apoye los pies en la plataforma. Sostener en los tirantes de la máquina y mantener la espalda apoyada en el respaldo. \n \nEjecución \n \n1- Empuje el peso de la cadera hacia arriba, elevándolo desde el asiento. Manteniendo las piernas estiradas. \n \n2- Deje el peso volver y repita el movimiento. \n \nDetalles \n \n• No dejen que sus rodillas se extiendan totalmente. \n \n• No dejes que tu cuerpo vaya a los lados. \n \n• Elija la carga con conciencia, ya que este ejercicio puede ser peligroso con cargas elevadas. \n",
-    "muscles": "00003000000000000",
+    "muscles": "00001000000003200",
     "defaultUnitType": 0,
     "equipment": [
-      "Kettlebell"
+      "Máquina Smith",
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_248.gif"
   },
@@ -3239,7 +3346,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_249.gif"
   },
@@ -3252,7 +3359,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_250.gif"
   },
@@ -3265,7 +3372,8 @@
     "muscles": "00000000000003100",
     "defaultUnitType": 1,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_251.gif"
   },
@@ -3278,7 +3386,7 @@
     "muscles": "00000000000003100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_252.gif"
   },
@@ -3291,7 +3399,7 @@
     "muscles": "30310000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_253.gif"
   },
@@ -3301,36 +3409,36 @@
     "nameEn": "",
     "namePt": "Close-Grip EZ Bar Curl",
     "description": "Preparación \n \nManténgase de pie con los pies alineados con los hombros. Sostenga la barra con los brazos ligeramente extendidos y las palmas de las manos hacia arriba, en un agarre supinado. Deje la distancia entre las manos de aproximadamente un palmo, para hacer el agarre cerrado. \n \nEjecución \n \n1- Levante la barra lentamente hasta la altura de los hombros. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Un agarre más abierto concentra el esfuerzo en la región interna del bíceps (cabeza corta), mientras que un agarre cerrado trabaja el exterior del bíceps (cabeza larga). \n \n• En la rosca directa con barra, la barra debe moverse hacia arriba y hacia abajo en un arco cerca del cuerpo. Para aislar el bíceps, el movimiento debe ocurrir en el codo y no en el hombro. \n \n• Mantenga el cuerpo firme durante el movimiento, evite balancearse hacia atrás. \n \n• Puede ejecutarse con la barra W (o EZ). La barra recta va a activar más el bíceps mientras que la barra W va a activar menos, pero, en cambio, permite una ejecución del ejercicio más segura. \n",
-    "muscles": "30310000030000000",
+    "muscles": "00320000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_254.gif"
   },
   {
     "id": 255,
-    "name": "Groiners",
+    "name": "Saltos Groiners",
     "nameEn": "",
     "namePt": "Groiners",
     "description": "Preparación \n \nAcuéstate y apoya las manos y los pies en el suelo. Alinee los brazos con los hombros. \n \nEjecución \n \n1- Impulsar el cuerpo hacia arriba hasta elevar sus piernas del suelo. \n \n2- Lleve sus piernas hacia adelante y apoye de nuevo en el suelo. \n \n3- Impulsar el cuerpo hacia arriba hasta elevar sus piernas del suelo. \n \n4- Lleve sus piernas de nuevo y repita el movimiento. \n \nDetalles \n \n• Este ejercicio trabaja todo el cuerpo. \n \n• Mantenga los brazos estáticos, no flexione o estire los brazos durante el movimiento. \n",
     "muscles": "00000020000000023",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_255.gif"
   },
   {
     "id": 256,
-    "name": "Jog In Place",
+    "name": "Trote en el sitio",
     "nameEn": "",
     "namePt": "Jog In Place",
     "description": "Detalles \n \n• La respiración correcta debe ser hecha por el abdomen, no por la parte superior del pecho. \n \n• Beba agua antes, durante y después del entrenamiento, pero sin excesos. El exceso de agua puede causar calambres musculares. \n \n• Caliente el cuerpo antes de iniciar el entrenamiento siguiendo una rutina ligera de estiramientos. \n \n• Al final de la carrera, haga series más largas de estiramientos. \n",
     "muscles": "00000020000000023",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_256.gif"
   },
@@ -3343,33 +3451,33 @@
     "muscles": "10100000000000003",
     "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_257.gif"
   },
   {
     "id": 258,
-    "name": "Jumping Jack",
+    "name": "Saltos de tijera (Jumping Jacks)",
     "nameEn": "",
     "namePt": "Jumping Jack",
     "description": "Preparación \n \nManténgase de pie en un lugar con espacio para el ejercicio. Mantenga las piernas juntas y brazos bajados. \n \nEjecución \n \n1- Abra las piernas con un leve salto y al mismo tiempo eleve las manos por encima de la cabeza. \n \n2- Cierre las piernas con un leve salto y baje los brazos. \n \n3- Repita el movimiento. \n \nDetalles \n \n• Este ejercicio puede sustituir los aparatos de cardio como la bicicleta y la estera. \n \n• Haga el movimiento sincronizado de abre y cierra de los brazos y piernas abriendo un arco paralelo al sentido longitudinal del cuerpo, de forma que las palmas de las manos se junten sobre la cabeza. \n \n• Procure dejar sus piernas levemente flexionadas. \n \n• Las series de polichinelo deberán ser realizadas de acuerdo con la resistencia de quien esté realizando los ejercicios. Con una buena resistencia física, es recomendable hacer series de 30 repeticiones. \n",
     "muscles": "00000000000000003",
     "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_258.gif"
   },
   {
     "id": 259,
-    "name": "Slow jog",
+    "name": "Trote suave",
     "nameEn": "",
     "namePt": "slow jog",
     "description": "Detalles \n \n• La respiración correcta debe ser hecha por el abdomen, no por la parte superior del pecho. \n \n• Beba agua antes, durante y después del entrenamiento, pero sin excesos. El exceso de agua puede causar calambres musculares. \n \n• Caliente el cuerpo antes de iniciar el entrenamiento siguiendo una rutina ligera de estiramientos. \n \n• Al final de la carrera, haga series más largas de estiramientos. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_259.gif"
   },
@@ -3382,7 +3490,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_260.gif"
   },
@@ -3395,7 +3504,8 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_261.gif"
   },
@@ -3408,7 +3518,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_262.gif"
   },
@@ -3418,10 +3529,11 @@
     "nameEn": "",
     "namePt": "Weighted Ball Hyperextension",
     "description": "Preparación \n \nSe coloca apoyando el área abdominal en una bola de ejercicios. Apoye la punta de los pies en el suelo para estabilizar el cuerpo y sujetar una arandela cerca del cuerpo. \n \nEjecución \n \n1- Levante la parte superior del cuerpo hasta que la cadera y la cintura estén extendidas. \n \n2- Baje la parte superior del cuerpo manteniendo la espalda recta. Vuelva a la posición inicial y repita el movimiento \n \nDetalles \n \n• No forme en el movimiento de descenso si siente un ligero estiramiento de los isquiotibiales y en la zona lumbar. \n \n• La amplitud completa del movimiento variará de persona a persona. \n",
-    "muscles": "00003000000030000",
+    "muscles": "00000000000032100",
     "defaultUnitType": 0,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_263.gif"
   },
@@ -3434,7 +3546,8 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_264.gif"
   },
@@ -3447,7 +3560,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_265.gif"
   },
@@ -3460,7 +3573,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_266.gif"
   },
@@ -3473,7 +3586,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_267.gif"
   },
@@ -3486,7 +3599,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_268.gif"
   },
@@ -3499,7 +3612,8 @@
     "muscles": "00001030000003100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_269.gif"
   },
@@ -3512,7 +3626,7 @@
     "muscles": "03110000002000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_270.gif"
   },
@@ -3525,7 +3639,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_271.gif"
   },
@@ -3538,7 +3652,7 @@
     "muscles": "00000031000003102",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_272.gif"
   },
@@ -3551,7 +3665,7 @@
     "muscles": "00001031000002102",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_273.gif"
   },
@@ -3562,9 +3676,9 @@
     "namePt": "Cross Plank",
     "description": "Preparación \n \nAcuéstate y apoya las manos y los pies en el suelo. Estirar los brazos. \n \nEjecución \n \n1- Levante y flexione una pierna, proyectándola hacia el codo del lado opuesto. \n \n2 - Vuelva a la posición inicial y repita el movimiento con la otra pierna. \n \nDetalles \n \n• Mantenga el abdomen contraído durante todo el ejercicio. \n \n• No estire completamente los codos, manténgalos ligeramente flexionados. \n \n• Se pueden usar pesas de tobillo para intensificar el ejercicio. \n",
     "muscles": "00003300000000000",
-    "defaultUnitType": 1,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_274.gif"
   },
@@ -3577,7 +3691,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_275.gif"
   },
@@ -3590,20 +3704,21 @@
     "muscles": "00000000000000310",
     "defaultUnitType": 1,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_276.gif"
   },
   {
     "id": 277,
-    "name": "Switch Kick",
+    "name": "Patadas alternas (Switch Kick)",
     "nameEn": "",
     "namePt": "Switch Kick",
     "description": "Preparación \n \nDe pie, estira los brazos delante del cuerpo. \n \nEjecución \n \n1- Eleve una de las piernas hacia el brazo estirado. Haga un movimiento de patada. \n \n2- Vuelva con la pierna a la posición inicial y repita el movimiento con la pierna opuesta. \n \nDetalles \n \n• Mantenga la cabeza alineada con su cuerpo. \n \n• Mantenga el abdomen contraído durante todo el ejercicio. \n \n• Se pueden usar pesas de tobillo para intensificar el ejercicio. \n",
     "muscles": "00000020000000023",
     "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_277.gif"
   },
@@ -3616,7 +3731,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_278.gif"
   },
@@ -3629,20 +3744,21 @@
     "muscles": "00010030010333300",
     "defaultUnitType": 1,
     "equipment": [
-      "Polea / Cable"
+      "Peso Corporal",
+      "Tobillera / Peso Libre"
     ],
     "gifAssetPath": "gifs/ex_279.gif"
   },
   {
     "id": 280,
-    "name": "Tuck Jumps",
+    "name": "Saltos con rodillas al pecho (Tuck Jumps)",
     "nameEn": "",
     "namePt": "Tuck Jumps",
     "description": "Preparación \n \nManténgase de pie con las rodillas ligeramente flexionadas y el tronco proyectado hacia adelante. \n \nEjecución \n \n1- Salte llevando las rodillas hacia el pecho. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Apoye la punta de los pies antes del talón para absorber el impacto del salto. \n \n• Para intensificar el ejercicio, utilice pesas de tobillo. \n",
     "muscles": "00000020000000023",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_280.gif"
   },
@@ -3653,9 +3769,9 @@
     "namePt": "Chair Pose",
     "description": "Preparación \n \nManténgase de pie, con alejamiento de los pies igual a la distancia de la cadera. Flexione las rodillas proyectando la cadera hacia atrás. Deje las rodillas flexionadas en un ángulo cercano a 90 grados. \n \nEjecución \n \n1-Mantenga la posición de agachamiento lo máximo que pueda. \n \nDetalles \n \n• Si es necesario, eleve los brazos para dar estabilidad al cuerpo. \n \n• Es muy importante que la punta de los pies esté en la misma dirección que las rodillas para evitar rotaciones de esta articulación, ya que pueden causar lesiones. \n \n• Mantenga el abdomen contraído y la espalda recta durante todo el ejercicio. \n",
     "muscles": "00001031000002100",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_281.gif"
   },
@@ -3668,7 +3784,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_282.gif"
   },
@@ -3679,9 +3795,9 @@
     "namePt": "Extended Plank",
     "description": "Preparación \n \nAcuéstese en el suelo y apoye el peso del cuerpo con los brazos y las puntas de los pies. Mantenga los brazos casi estirados \n \nEjecución \n \n1- Levante el cuerpo manteniéndolo en línea recta. Permanezca en esta posición contrayendo el abdomen. \n \nDetalles \n \n• Mantenga el abdomen contraído durante todo el ejercicio. \n \n• Controle la respiración para mayor resistencia del ejercicio. \n \n• Anote el tiempo que puede permanecer en este ejercicio y cree una meta. \n \n• Para facilitar el ejercicio, apoye las rodillas en el suelo. \n",
     "muscles": "00003300000000000",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_283.gif"
   },
@@ -3694,7 +3810,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_284.gif"
   },
@@ -3707,7 +3823,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_285.gif"
   },
@@ -3720,7 +3836,7 @@
     "muscles": "03110000002000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_286.gif"
   },
@@ -3731,9 +3847,9 @@
     "namePt": "L Seat",
     "description": "Preparación \n \nSiéntese en el suelo y apoye sus manos al lado de la cadera. Estire los brazos suspendiendo el cuerpo del suelo y levante las piernas formando un L. \n \nEjecución \n \n1- Permanece en esta posición contrayendo el abdomen. \n \nDetalles \n \n• Mantenga la columna en su postura natural durante el ejercicio. \n \n• No dejes que tu cuerpo se incline hacia los lados, mantén firme. \n \n• Mantenga el abdomen contraído durante el ejercicio. \n",
     "muscles": "00003300000000000",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_287.gif"
   },
@@ -3746,7 +3862,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_288.gif"
   },
@@ -3756,10 +3872,10 @@
     "nameEn": "",
     "namePt": "Seated Back Extension Machine",
     "description": "Preparación \n \nSiéntese en la máquina y apoye la espalda al rodillo del aparato. \n \nEjecución \n \n1- Levante el tronco, proyectándolo hacia atrás. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Sujete en el lateral del aparato para estabilizar el cuerpo. \n \n• No fuerce en el movimiento de ascenso si siente un ligero estiramiento en la zona lumbar. \n \n• La amplitud completa del movimiento variará de persona a persona. \n",
-    "muscles": "00003000000030000",
+    "muscles": "00000000000032100",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_289.gif"
   },
@@ -3772,7 +3888,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_290.gif"
   },
@@ -3785,7 +3901,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_291.gif"
   },
@@ -3798,7 +3915,8 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_292.gif"
   },
@@ -3811,7 +3929,8 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 0,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_293.gif"
   },
@@ -3824,7 +3943,8 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_294.gif"
   },
@@ -3835,9 +3955,10 @@
     "namePt": "Plank on Ball",
     "description": "Preparación \n \nApoye el peso del cuerpo con antebrazos sobre la bola y las puntas de los pies en el suelo. \n \nEjecución \n \n1- Levante el cuerpo manteniéndolo en línea recta. Permanezca en esta posición contrayendo el abdomen. \n \nDetalles \n \n• Mantenga el abdomen contraído durante todo el ejercicio. \n \n• Controle la respiración para mayor resistencia del ejercicio. \n \n• Anote el tiempo que puede permanecer en este ejercicio y cree una meta \n \n• Para facilitar el ejercicio, apoye las rodillas en el suelo. \n",
     "muscles": "00003300000000000",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_295.gif"
   },
@@ -3850,7 +3971,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_296.gif"
   },
@@ -3863,7 +3985,8 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Pelota Suiza"
+      "Pelota Suiza",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_297.gif"
   },
@@ -3876,7 +3999,7 @@
     "muscles": "30100000011000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_298.gif"
   },
@@ -3886,10 +4009,11 @@
     "nameEn": "",
     "namePt": "Dumbbell Bench press with neutral grip",
     "description": "Preparación \n \nSe acostará en un banco recto con la espalda apoyada, manteniendo el cuerpo rígido. Sostenga las mancuernas con las palmas de las manos boca abajo, en un agarre neutro. La apertura de los brazos debe ser cerrada, es decir, con los brazos cercanos al cuerpo \n \nEjecución \n \n1- Levante las mancuernas hasta que los brazos estén casi estirados. \n \n2- Baje las mancuernas lentamente hasta la altura del pectoral y repita el movimiento. \n \nDetalles \n \n• Al ejecutar con un agarre más cerrado, el ejercicio tiene énfasis mayor en el tríceps. \n \n• Para estabilizar el cuerpo, mantenga los hombros y las nalgas apoyadas en el asiento y los pies firmes en el suelo. \n \n• Expire manteniendo el tronco firme mientras levanta las mancuernas. \n \n• Evite abrir demasiados brazos en el descenso del movimiento para prevenir lesiones. \n \n• Estirar completamente los brazos en la subida del movimiento crea un punto de descanso del pectoral durante el ejercicio, por lo que no es adecuado. \n",
-    "muscles": "00000000003000000",
+    "muscles": "23000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_299.gif"
   },
@@ -3899,10 +4023,11 @@
     "nameEn": "",
     "namePt": "Incline Dumbbell Bench Press with Neutral Grip",
     "description": "Preparación \n \nAcuéstese en un banco inclinado con la espalda apoyada, manteniendo el cuerpo rígido. Sostenga las mancuernas con las palmas de las manos boca abajo, en un agarre neutro. La apertura de los brazos debe ser cerrada, es decir, con los brazos cercanos al cuerpo \n \nEjecución \n \n1- Levante las mancuernas hasta que los brazos estén casi estirados. \n \n2- Baje las mancuernas lentamente hasta la altura del pectoral y repita el movimiento. \n \nDetalles \n \n• Al ejecutar con un agarre más cerrado, el ejercicio tiene énfasis mayor en el tríceps. \n \n• Para estabilizar el cuerpo, mantenga los hombros y las nalgas apoyadas en el asiento y los pies firmes en el suelo. \n \n• Expire manteniendo el tronco firme mientras levanta las mancuernas. \n \n• Evite abrir demasiados brazos en el descenso del movimiento para prevenir lesiones. \n \n• Estirar completamente los brazos en la subida del movimiento crea un punto de descanso del pectoral durante el ejercicio, por lo que no es adecuado. \n",
-    "muscles": "00000000003000000",
+    "muscles": "23000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_300.gif"
   },
@@ -3912,10 +4037,11 @@
     "nameEn": "",
     "namePt": "Decline Neutral Grip Dumbbell Bench Press",
     "description": "Preparación \n \nSe acostará en un banco declinado con la espalda apoyada, manteniendo el cuerpo rígido. Sostenga las mancuernas con las palmas de las manos boca abajo, en un agarre neutro. La apertura de los brazos debe ser cerrada, es decir, con los brazos cercanos al cuerpo \n \nEjecución \n \n1- Levante las mancuernas hasta que los brazos estén casi estirados. \n \n2- Baje las mancuernas lentamente hasta la altura del pectoral y repita el movimiento. \n \nDetalles \n \n• Al ejecutar con un agarre más cerrado, el ejercicio tiene énfasis mayor en el tríceps. \n \n• Para estabilizar el cuerpo, mantenga los hombros y las nalgas apoyadas en el asiento y los pies firmes en el suelo. \n \n• Expire manteniendo el tronco firme mientras levanta las mancuernas. \n \n• Evite abrir demasiados brazos en el descenso del movimiento para prevenir lesiones. \n \n• Estirar completamente los brazos en la subida del movimiento crea un punto de descanso del pectoral durante el ejercicio, por lo que no es adecuado. \n",
-    "muscles": "00000000003000000",
+    "muscles": "23000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_301.gif"
   },
@@ -3928,7 +4054,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_302.gif"
   },
@@ -3941,7 +4067,8 @@
     "muscles": "00330000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra Fija"
+      "Barra",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_303.gif"
   },
@@ -3954,7 +4081,8 @@
     "muscles": "00330000000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_304.gif"
   },
@@ -3967,7 +4095,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Aparato / Máquina"
+      "Polea / Cable"
     ],
     "gifAssetPath": "gifs/ex_305.gif"
   },
@@ -3980,7 +4108,7 @@
     "muscles": "10100000030300000",
     "defaultUnitType": 0,
     "equipment": [
-      "Barra"
+      "Aparato / Máquina"
     ],
     "gifAssetPath": "gifs/ex_306.gif"
   },
@@ -3993,7 +4121,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Barra Fija"
+      "Barra"
     ],
     "gifAssetPath": "gifs/ex_307.gif"
   },
@@ -4006,7 +4134,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_308.gif"
   },
@@ -4019,7 +4147,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Banda Elástica"
+      "Mancuernas"
     ],
     "gifAssetPath": "gifs/ex_309.gif"
   },
@@ -4032,7 +4160,8 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 0,
     "equipment": [
-      "Banda Elástica"
+      "Banco",
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_310.gif"
   },
@@ -4043,9 +4172,9 @@
     "namePt": "Bike",
     "description": "Detalles \n \n• Cuando vaya a pedalear, preste atención a sus rodillas. Ellas no deben, en ningún caso, estar abiertas, pues eso las obligará aún más. Compruebe siempre que su cadera y sus rodillas están alineadas con la bicicleta. \n \n• Usted debe mantener su columna recta, sin dejar el pecho más adelante que el resto del cuerpo. Por supuesto, para conseguir agarrar el manillar, tendrás que mantener una ligera inclinación. Pero eso no impide que usted mantenga la espalda siempre erguida, con la cabeza siempre mirando hacia adelante. \n \n• Sus piernas no deben, al final del pedal, estar completamente extendidas. Es necesario tener una ligera flexión, de aproximadamente 15º, del muslo con la pierna. \n \n• Así también debe ser con los brazos, que no pueden ser extendidos por completo, lo que causa sobrecargas innecesarias. Es importante que estén semiflexionados. \n \n• El sillín debe estar exactamente horizontal en relación al suelo. Si está inclinado hacia adelante o hacia atrás, su cuerpo intentará compensar la tendencia a resbalar sin que usted se dé cuenta, lo que le puede causar dolores y comprometer su estabilidad en la bicicleta en situaciones como subidas o frenadas fuertes. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_311.gif"
   },
@@ -4056,9 +4185,9 @@
     "namePt": "Running",
     "description": "Detalles \n \n• La respiración correcta debe ser hecha por el abdomen, no por la parte superior del pecho. \n \n• Beba agua antes, durante y después del entrenamiento, pero sin excesos. El exceso de agua puede causar calambres musculares. \n \n• Caliente el cuerpo antes de iniciar el entrenamiento siguiendo una rutina ligera de estiramientos. \n \n• Al final de la carrera, haga series más largas de estiramientos. \n \n• Los brazos funcionan como péndulos y ayudan al cuerpo a impulsarse hacia adelante. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_312.gif"
   },
@@ -4069,9 +4198,9 @@
     "namePt": "Walking",
     "description": "Detalles \n \n• El estiramiento hace la caminata más segura y eficiente, por reducir el riesgo de lesiones y calambres y ayudar en la agilidad del practicante. Se debe hacer antes y después de la caminata. \n \n• Antes de caminar, trate de hacer una comida ligera, a base de frutas y jugos. Y no olvide mantener la hidratación adecuada antes, durante y después de la actividad física. \n \n• Busque caminar siempre con la cabeza centrada en los hombros y la mirada orientada hacia el horizonte, en línea recta. Los hombros deben estar relajados y no deben inclinarse hacia adelante o hacia los lados. Durante la caminata, se debe alternar el movimiento de los pies y los brazos. Cuando el pie derecho va delante, es el brazo izquierdo que va también y viceversa. \n \n• Usted puede aumentar su paso y añadir fuerza a su caminata si mueve sus brazos correctamente. \n \n• Caminar en pistas irregulares recluta músculos que no serían solicitados al andar en un terreno liso. \n",
     "muscles": "00000000000000003",
-    "defaultUnitType": 2,
+    "defaultUnitType": 3,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_313.gif"
   },
@@ -4084,6 +4213,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_314.gif"
@@ -4094,9 +4224,10 @@
     "nameEn": "",
     "namePt": "TRX Rows",
     "description": "Preparación \n \nDe pie, sujete las cintas y estire los brazos, proyectando el cuerpo hacia atrás. Mantenga una línea recta entre el tronco y las piernas. \n \nEjecución \n \n• Tire de las cintas, flexionando los brazos, y eleve el cuerpo hacia adelante. \n \n• Extienda los brazos para volver a la posición inicial. \n \nDetalles \n \n• Cuanto mayor es la inclinación del cuerpo, mayor es la intensidad del ejercicio. \n \n• Mantenga los pies apoyados en el suelo. \n \n• Mantenga el cuerpo siempre recto. \n \n• La amplitud de movimiento puede variar de persona a persona. \n",
-    "muscles": "30100000030000000",
+    "muscles": "20200000030300000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_315.gif"
@@ -4107,9 +4238,10 @@
     "nameEn": "",
     "namePt": "TRX Fly",
     "description": "Preparación \n \nDe pie, sujete las cintas y estire los brazos, proyectando el cuerpo hacia atrás. Mantenga una línea recta entre el tronco y las piernas. \n \nEjecución \n \n1- Eleve el cuerpo abriendo los brazos por encima de la cabeza. \n \n2- Vuelva a la posición inicial y repita el movimiento. \n \nDetalles \n \n• Cuanto mayor es la inclinación del cuerpo, mayor es la intensidad del ejercicio. \n \n• Mantenga los pies apoyados en el suelo y los brazos estirados. \n \n• Mantenga el cuerpo siempre recto. \n \n• No abra demasiado los brazos para evitar lesiones. \n",
-    "muscles": "10000000030000000",
+    "muscles": "23001000000000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_316.gif"
@@ -4123,6 +4255,7 @@
     "muscles": "00001031000002100",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_317.gif"
@@ -4136,6 +4269,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_318.gif"
@@ -4149,6 +4283,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_319.gif"
@@ -4162,6 +4297,7 @@
     "muscles": "00310000000000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_320.gif"
@@ -4175,6 +4311,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_321.gif"
@@ -4188,6 +4325,7 @@
     "muscles": "13000000001200000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_322.gif"
@@ -4201,6 +4339,7 @@
     "muscles": "00000031000003100",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_323.gif"
@@ -4214,6 +4353,7 @@
     "muscles": "00000000000003100",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_324.gif"
@@ -4227,6 +4367,7 @@
     "muscles": "00003000000000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_325.gif"
@@ -4240,6 +4381,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_326.gif"
@@ -4253,6 +4395,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_327.gif"
@@ -4266,6 +4409,7 @@
     "muscles": "00000000003000000",
     "defaultUnitType": 1,
     "equipment": [
+      "TRX / Suspensión",
       "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_328.gif"
@@ -4277,9 +4421,9 @@
     "namePt": "Plank Standing Leg",
     "description": "Preparación \n  \nAcuéstese en el piso, apoye su peso corporal con los brazos y los dedos de los pies. \n  \nEjecución \n  \n1 - Levanta tu cuerpo en línea recta manteniendo solo los brazos y dedos de los pies apoyados en el suelo. \n  \n2 - Flexiona una pierna, adelantando el muslo. \n  \n3 - Regrese a la posición inicial y repita el movimiento con la otra pierna. \n  \nDetalles \n  \n• Mantenga el abdomen contraído durante todo el movimiento. \n   \n• No extienda los brazos por completo para evitar forzar las articulaciones.",
     "muscles": "00003010000030000",
-    "defaultUnitType": 1,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_329.gif"
   },
@@ -4292,7 +4436,7 @@
     "muscles": "00003010000030000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_330.gif"
   },
@@ -4305,7 +4449,7 @@
     "muscles": "00003000000030010",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_331.gif"
   },
@@ -4318,7 +4462,7 @@
     "muscles": "00001030000012022",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_332.gif"
   },
@@ -4331,7 +4475,7 @@
     "muscles": "00001030000012002",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_333.gif"
   },
@@ -4344,7 +4488,7 @@
     "muscles": "00001030000012022",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_334.gif"
   },
@@ -4357,7 +4501,7 @@
     "muscles": "00001030000012012",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_335.gif"
   },
@@ -4370,20 +4514,20 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_336.gif"
   },
   {
     "id": 337,
-    "name": "Oblíquos em Pé",
+    "name": "Oblicuos de pie",
     "nameEn": "",
     "namePt": "Standing Oblique Abs",
     "description": "nPreparación \n  \nPárese con los pies separados y las rodillas ligeramente dobladas. Coloque sus manos en la parte posterior de su cuello y mantenga su cuerpo recto para comenzar el movimiento. \n  \nEjecución \n  \n1 - Con la mano en la parte posterior de su cuello, levante una rodilla lateralmente contra su codo. Al mismo tiempo, mueve el torso hacia las rodillas. \n  \n2 - Repita el movimiento para el otro lado. \n  \nDetalles \n  \n• Mantenga las rodillas ligeramente dobladas durante todo el movimiento. ",
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_337.gif"
   },
@@ -4396,7 +4540,7 @@
     "muscles": "00001030000012012",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_338.gif"
   },
@@ -4409,7 +4553,7 @@
     "muscles": "00001030000012030",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_339.gif"
   },
@@ -4422,7 +4566,8 @@
     "muscles": "00000020000003300",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_340.gif"
   },
@@ -4435,7 +4580,8 @@
     "muscles": "00000031000003100",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal",
+      "Banco"
     ],
     "gifAssetPath": "gifs/ex_341.gif"
   },
@@ -4448,7 +4594,7 @@
     "muscles": "00000031000003100",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_342.gif"
   },
@@ -4459,9 +4605,9 @@
     "namePt": "Wall Squat",
     "description": "Preparación \n  \nDe pie, apoya tu espalda contra la pared \n  \nEjecución \n  \n1 - Apoyado en la pared, haga la sentadilla flexionando las piernas y ajustando la posición de los pies para que los muslos estén paralelos al piso. \n  \n2 - Estira una pierna. \n  \n3 - Permanezca en esta posición el mayor tiempo posible y repita el movimiento hacia el otro lado. \n  \nDetalles \n  \n• Es importante que los muslos estén paralelos al suelo. \n  \n• Apoye sus manos en la pared para mantener el equilibrio. ",
     "muscles": "00001031000002100",
-    "defaultUnitType": 3,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_343.gif"
   },
@@ -4474,7 +4620,7 @@
     "muscles": "00000000000000030",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_344.gif"
   },
@@ -4485,9 +4631,9 @@
     "namePt": "Plank Shoulders",
     "description": "Preparación \n  \nAcuéstese en el piso, apoye su peso corporal con los brazos y los dedos de los pies. \n  \nEjecución \n  \n1 - Levanta tu cuerpo en línea recta manteniendo solo los brazos y dedos de los pies apoyados en el suelo. \n  \n2 - Con un cuerpo firme, coloque una mano en el hombro opuesto \n  \n3 - Regrese a la posición inicial y repita el movimiento hacia el otro lado. \n  \nDetalles \n  \n• Mantenga un apoyo firme para las manos sobre una superficie antideslizante. \n  \n• Mantenga el abdomen contraído durante todo el movimiento. \n  \n• No extienda los brazos por completo para evitar forzar las articulaciones. ",
     "muscles": "20003000000000000",
-    "defaultUnitType": 1,
+    "defaultUnitType": 2,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_345.gif"
   },
@@ -4500,7 +4646,7 @@
     "muscles": "00001030000013022",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_346.gif"
   },
@@ -4513,7 +4659,7 @@
     "muscles": "00003300000000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_347.gif"
   },
@@ -4523,10 +4669,10 @@
     "nameEn": "",
     "namePt": "Burpee with Jump",
     "description": "Preparación \n  \nPararse en un lugar con espacio adecuado para realizar el ejercicio. \n  \nEjecución \n  \n1 - Apoye los brazos en el suelo e, inmediatamente después, flexione los pies. \n  \n2 - Después de flexionar, mueve rápidamente los pies hacia adelante y párate \n  \n3 - Al pararte, usa el impulso para saltar. \n  \n4 - Durante el salto, flexiona las rodillas y lleva los muslos hacia el cuerpo. \n  \n5 - Repite el movimiento.",
-    "muscles": "00001020000012022",
+    "muscles": "02002030000002023",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_348.gif"
   },
@@ -4539,7 +4685,7 @@
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_349.gif"
   },
@@ -4552,7 +4698,7 @@
     "muscles": "33110000001000000",
     "defaultUnitType": 1,
     "equipment": [
-      "Mancuernas"
+      "Peso Corporal"
     ],
     "gifAssetPath": "gifs/ex_350.gif"
   },
@@ -4564,7 +4710,10 @@
     "description": "Preparación \n  \nAcuéstese y coloque sus manos en la mesa y pies en el piso. Mantén tus manos alejadas. \n  \nEjecución \n  \n1 - Levanta el peso de tu cuerpo hasta que tus codos estén cerca de estirarse. \n  \n2 - Baje el cuerpo hasta que su pecho esté a unos centímetros de la mesa \n  \n3 - Repite el movimiento \n  \nDetalles \n  \n• Mantenga el abdomen contraído durante todo el movimiento. \n  \n• No estires completamente los codos en el movimiento hacia arriba \n  \n• Si es necesario, use una mochila con pesas para intensificar el ejercicio.",
     "muscles": "03110000001000000",
     "defaultUnitType": 1,
-    "equipment": [],
+    "equipment": [
+      "Peso Corporal",
+      "Banco"
+    ],
     "gifAssetPath": "gifs/ex_351.gif"
   },
   {
@@ -4575,7 +4724,9 @@
     "description": "Preparación \n  \nAcuéstese y coloque sus manos y pies en el piso. Mantén tus manos alejadas. \n  \nEjecución \n  \n1 - Levanta el peso de tu cuerpo hasta que tus codos estén cerca de estirarse. \n  \n2 - Baje el cuerpo hasta que su cabeza esté a unos centímetros del suelo. \n  \n3 - Repite el movimiento \n  \nDetalles \n  \n• Mantenga el abdomen contraído durante todo el movimiento. \n  \n• No estires completamente los codos en el movimiento hacia arriba \n  \n• Si es necesario, use una mochila con pesas para intensificar el ejercicio.",
     "muscles": "31110000001000000",
     "defaultUnitType": 0,
-    "equipment": [],
+    "equipment": [
+      "Peso Corporal"
+    ],
     "gifAssetPath": "gifs/ex_352.gif"
   }
 ]

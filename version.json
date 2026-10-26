@@ -1,6 +1,6 @@
 {
-  "versionCode": 201,
-  "versionName": "2.1.0",
+  "versionCode": 202,
+  "versionName": "2.2.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "Confirmación antes de eliminar en todas las secciones y sistema de actualización automática OTA desde GitHub sin pérdida de datos."
+  "releaseNotes": "• Corrección completa del equipamiento y músculos de los 353 ejercicios.\n• Ajuste de dimensiones seguras (systemBarsPadding) en todas las pantallas (compatible con Motorola Edge 50 Fusion).\n• Opción para eliminar entrenamientos del historial con confirmación.\n• Nuevo ícono oficial del quesito levantando la barra."
 }

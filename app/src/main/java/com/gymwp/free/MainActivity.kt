@@ -8,9 +8,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -29,6 +33,7 @@ import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AppUpdateDialogIfNeeded
 import com.gymwp.free.ui.screens.*
 import com.gymwp.free.ui.theme.GymCardBg
+import com.gymwp.free.ui.theme.GymDarkBg
 import com.gymwp.free.ui.theme.GymOrange
 import com.gymwp.free.ui.theme.GymWpTheme
 
@@ -78,65 +83,77 @@ class MainActivity : ComponentActivity() {
                 var liveSession by remember { mutableStateOf<ActiveLiveSession?>(null) }
 
                 val currentLive = liveSession
-                if (currentLive != null) {
-                    LiveWorkoutAssistantScreen(
-                        viewModel = vm,
-                        plan = currentLive.plan,
-                        day = currentLive.day,
-                        exercises = currentLive.exercises,
-                        onExitSession = { liveSession = null }
-                    )
-                } else {
-                    Scaffold(
-                        bottomBar = {
-                            NavigationBar(
-                                containerColor = GymCardBg,
-                                contentColor = Color.White
-                            ) {
-                                BottomNavTab.entries.forEach { tab ->
-                                    val selected = currentTab == tab
-                                    NavigationBarItem(
-                                        selected = selected,
-                                        onClick = { currentTab = tab },
-                                        icon = {
-                                            Icon(
-                                                imageVector = tab.icon,
-                                                contentDescription = tab.label
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(GymDarkBg)
+                        .systemBarsPadding()
+                        .imePadding(),
+                    color = GymDarkBg
+                ) {
+                    if (currentLive != null) {
+                        LiveWorkoutAssistantScreen(
+                            viewModel = vm,
+                            plan = currentLive.plan,
+                            day = currentLive.day,
+                            exercises = currentLive.exercises,
+                            onExitSession = { liveSession = null }
+                        )
+                    } else {
+                        Scaffold(
+                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                            containerColor = GymDarkBg,
+                            bottomBar = {
+                                NavigationBar(
+                                    containerColor = GymCardBg,
+                                    contentColor = Color.White,
+                                    windowInsets = WindowInsets(0, 0, 0, 0)
+                                ) {
+                                    BottomNavTab.entries.forEach { tab ->
+                                        val selected = currentTab == tab
+                                        NavigationBarItem(
+                                            selected = selected,
+                                            onClick = { currentTab = tab },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = tab.icon,
+                                                    contentDescription = tab.label
+                                                )
+                                            },
+                                            label = { Text(tab.label, fontSize = 11.sp) },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                selectedIconColor = GymOrange,
+                                                selectedTextColor = GymOrange,
+                                                indicatorColor = GymOrange.copy(alpha = 0.16f),
+                                                unselectedIconColor = Color.Gray,
+                                                unselectedTextColor = Color.Gray
                                             )
-                                        },
-                                        label = { Text(tab.label, fontSize = 11.sp) },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = GymOrange,
-                                            selectedTextColor = GymOrange,
-                                            indicatorColor = GymOrange.copy(alpha = 0.16f),
-                                            unselectedIconColor = Color.Gray,
-                                            unselectedTextColor = Color.Gray
                                         )
-                                    )
+                                    }
                                 }
                             }
-                        }
-                    ) { innerPadding ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                        ) {
-                            when (currentTab) {
-                                BottomNavTab.HOME -> HomeWorkoutsScreen(
-                                    viewModel = vm,
-                                    onStartLiveWorkout = { plan, day, exs ->
-                                        liveSession = ActiveLiveSession(plan, day, exs)
-                                    },
-                                    onNavigateToExplore = { currentTab = BottomNavTab.EXPLORE }
-                                )
-                                BottomNavTab.EXPLORE -> ExplorePrebuiltPlansScreen(
-                                    viewModel = vm,
-                                    onPlanImported = { currentTab = BottomNavTab.HOME }
-                                )
-                                BottomNavTab.FATIGUE -> MuscleFatigueScreen(viewModel = vm)
-                                BottomNavTab.EXERCISES -> CatalogAndStatsScreen(viewModel = vm)
-                                BottomNavTab.BODY -> MyBodyScreen(viewModel = vm)
+                        ) { innerPadding ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                            ) {
+                                when (currentTab) {
+                                    BottomNavTab.HOME -> HomeWorkoutsScreen(
+                                        viewModel = vm,
+                                        onStartLiveWorkout = { plan, day, exs ->
+                                            liveSession = ActiveLiveSession(plan, day, exs)
+                                        },
+                                        onNavigateToExplore = { currentTab = BottomNavTab.EXPLORE }
+                                    )
+                                    BottomNavTab.EXPLORE -> ExplorePrebuiltPlansScreen(
+                                        viewModel = vm,
+                                        onPlanImported = { currentTab = BottomNavTab.HOME }
+                                    )
+                                    BottomNavTab.FATIGUE -> MuscleFatigueScreen(viewModel = vm)
+                                    BottomNavTab.EXERCISES -> CatalogAndStatsScreen(viewModel = vm)
+                                    BottomNavTab.BODY -> MyBodyScreen(viewModel = vm)
+                                }
                             }
                         }
                     }
