@@ -28,6 +28,7 @@ import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
 import com.gymwp.free.ui.components.ExerciseDetailDialog
+import com.gymwp.free.ui.components.GoogleDriveSyncCard
 import com.gymwp.free.ui.components.ProgressionLineChart
 import com.gymwp.free.ui.components.StatMiniCard
 import com.gymwp.free.ui.theme.*
@@ -424,6 +425,11 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                     Text("Registrar")
                 }
             }
+        }
+
+        // Google Drive 4 TB Auto-Sync Card
+        item {
+            GoogleDriveSyncCard(viewModel = viewModel)
         }
 
         // BMI, Ideal Weight & Deurenberg Body Fat Card

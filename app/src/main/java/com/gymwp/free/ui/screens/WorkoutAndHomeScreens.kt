@@ -29,6 +29,7 @@ import com.gymwp.free.domain.WorkoutMetricsCalculator
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
 import com.gymwp.free.ui.components.ExerciseDetailDialog
+import com.gymwp.free.ui.components.GoogleDriveSyncDialog
 import com.gymwp.free.ui.theme.*
 
 @Composable
@@ -44,12 +45,14 @@ fun HomeWorkoutsScreen(
     val favorites by viewModel.favoriteIds.collectAsState()
     val allFinishedEx by viewModel.allFinishedExercises.collectAsState()
     val fatigueList by viewModel.muscleFatigueList.collectAsState()
+    val driveSyncState by viewModel.driveSyncState.collectAsState()
 
     var selectedPlanId by remember(plans) {
         mutableStateOf(plans.firstOrNull { it.isActive }?.id ?: plans.firstOrNull()?.id)
     }
     var showSmartWizard by remember { mutableStateOf(false) }
     var showFreestyleDialog by remember { mutableStateOf(false) }
+    var showDriveSyncDialog by remember { mutableStateOf(false) }
     var showNewPlanDialog by remember { mutableStateOf(false) }
     var showAddDayDialogForPlan by remember { mutableStateOf<Long?>(null) }
     var showAddExerciseForDay by remember { mutableStateOf<Long?>(null) }
@@ -95,7 +98,18 @@ fun HomeWorkoutsScreen(
                     color = Color.LightGray
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { showDriveSyncDialog = true }) {
+                    val isLinked = !driveSyncState.linkedUri.isNullOrBlank()
+                    Icon(
+                        imageVector = if (isLinked) Icons.Default.CloudDone else Icons.Default.CloudUpload,
+                        contentDescription = "Google Drive Auto-Sync",
+                        tint = if (isLinked) FatigueGreen else GymOrange
+                    )
+                }
                 FilledTonalButton(
                     onClick = { showFreestyleDialog = true },
                     colors = ButtonDefaults.filledTonalButtonColors(containerColor = GymSurfaceElevated)
@@ -460,6 +474,13 @@ fun HomeWorkoutsScreen(
                     }
                 }
             }
+        )
+    }
+
+    if (showDriveSyncDialog) {
+        GoogleDriveSyncDialog(
+            viewModel = viewModel,
+            onDismiss = { showDriveSyncDialog = false }
         )
     }
 

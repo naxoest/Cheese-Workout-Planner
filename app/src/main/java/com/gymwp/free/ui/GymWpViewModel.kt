@@ -1,6 +1,7 @@
 package com.gymwp.free.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymwp.free.data.*
@@ -21,12 +22,16 @@ data class CompletedExerciseLog(
 
 class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val appContext = application.applicationContext
     private val db = GymWpDatabase.getInstance(application)
     private val dao = db.dao()
 
     val catalogExercises: List<CatalogExercise> = AssetCatalogRepository.getExercises(application)
     val prebuiltPlans: List<PrebuiltPlan> = AssetCatalogRepository.getPrebuiltPlans(application)
     private val catalogMap: Map<Int, CatalogExercise> = catalogExercises.associateBy { it.id }
+
+    private val _driveSyncState = MutableStateFlow(GoogleDriveBackupManager.loadSyncState(appContext))
+    val driveSyncState: StateFlow<DriveSyncState> = _driveSyncState.asStateFlow()
 
     val userProfile: StateFlow<UserProfileEntity?> = dao.observeUserProfile()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -69,13 +74,11 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            // Seed 17 muscles if empty
             val existingFatigue = dao.getAllMuscleFatigue()
             if (existingFatigue.isEmpty()) {
                 val now = System.currentTimeMillis()
                 dao.upsertMuscleFatigueList((0..16).map { MuscleFatigueEntity(it, 0, now) })
             } else {
-                // Persist hourly recovery decay
                 val now = System.currentTimeMillis()
                 val decayed = existingFatigue.map {
                     it.copy(
@@ -86,11 +89,51 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 dao.upsertMuscleFatigueList(decayed)
             }
 
-            // Ensure default profile exists
             if (dao.getUserProfile() == null) {
                 dao.saveUserProfile(UserProfileEntity())
             }
         }
+    }
+
+    private suspend fun triggerAutoDriveSync() {
+        GoogleDriveBackupManager.autoSyncIfEnabled(appContext, dao)?.let { updated ->
+            _driveSyncState.value = updated
+        }
+    }
+
+    fun linkAndExportToGoogleDrive(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            GoogleDriveBackupManager.persistDriveUriPermission(appContext, uri)
+            GoogleDriveBackupManager.exportBackupToUri(appContext, dao, uri)
+            _driveSyncState.value = GoogleDriveBackupManager.loadSyncState(appContext)
+        }
+    }
+
+    fun syncNowToGoogleDrive() {
+        val currentUriStr = _driveSyncState.value.linkedUri ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val uri = Uri.parse(currentUriStr)
+            GoogleDriveBackupManager.exportBackupToUri(appContext, dao, uri)
+            _driveSyncState.value = GoogleDriveBackupManager.loadSyncState(appContext)
+        }
+    }
+
+    fun restoreFromGoogleDrive(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            GoogleDriveBackupManager.restoreBackupFromUri(appContext, dao, uri, linkAsDefaultDriveFile = true)
+            _driveSyncState.value = GoogleDriveBackupManager.loadSyncState(appContext)
+        }
+    }
+
+    fun toggleGoogleDriveAutoBackup(enabled: Boolean) {
+        _driveSyncState.value = GoogleDriveBackupManager.setAutoBackupEnabled(appContext, enabled)
+        if (enabled) {
+            syncNowToGoogleDrive()
+        }
+    }
+
+    fun unlinkGoogleDrive() {
+        _driveSyncState.value = GoogleDriveBackupManager.unlinkGoogleDrive(appContext)
     }
 
     fun getCatalogExercise(id: Int): CatalogExercise? = catalogMap[id]
@@ -100,7 +143,6 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             val updated = profile.copy(onboardingDone = true)
             dao.saveUserProfile(updated)
             if (regeneratePlan) {
-                // Remove old custom periodized plans
                 val currentPlans = workoutPlans.value.filter { it.isCustomPeriodized }
                 for (p in currentPlans) {
                     dao.deleteWorkoutPlan(p.id)
@@ -146,6 +188,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+            triggerAutoDriveSync()
         }
     }
 
@@ -193,6 +236,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             }
+            triggerAutoDriveSync()
             launch(Dispatchers.Main) { onImported(planId) }
         }
     }
@@ -215,12 +259,14 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     orderIndex = 0
                 )
             )
+            triggerAutoDriveSync()
         }
     }
 
     fun deleteWorkoutPlan(planId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteWorkoutPlan(planId)
+            triggerAutoDriveSync()
         }
     }
 
@@ -235,18 +281,21 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     orderIndex = currentDays.size
                 )
             )
+            triggerAutoDriveSync()
         }
     }
 
     fun updateWorkoutDayColorOrName(day: WorkoutDayEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.updateWorkoutDay(day)
+            triggerAutoDriveSync()
         }
     }
 
     fun deleteWorkoutDay(dayId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteWorkoutDay(dayId)
+            triggerAutoDriveSync()
         }
     }
 
@@ -276,18 +325,21 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     orderIndex = existing.size
                 )
             )
+            triggerAutoDriveSync()
         }
     }
 
     fun updateWorkoutExercise(exercise: WorkoutExerciseEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.updateWorkoutExercise(exercise)
+            triggerAutoDriveSync()
         }
     }
 
     fun deleteWorkoutExercise(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteWorkoutExercise(id)
+            triggerAutoDriveSync()
         }
     }
 
@@ -307,8 +359,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 catalog = catalogExercises
             )
 
-            // Find or create Freestyle container plan
-            var freestylePlan = workoutPlans.value.firstOrNull { it.name == "Entrenamientos Libres (Freestyle)" }
+            val freestylePlan = workoutPlans.value.firstOrNull { it.name == "Entrenamientos Libres (Freestyle)" }
             val planId = freestylePlan?.id ?: dao.insertWorkoutPlan(
                 WorkoutPlanEntity(
                     name = "Entrenamientos Libres (Freestyle)",
@@ -340,6 +391,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 )
             }
+            triggerAutoDriveSync()
             launch(Dispatchers.Main) {
                 onDayCreated(dayId)
             }
@@ -353,6 +405,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 dao.addFavorite(FavoriteExerciseEntity(exerciseId))
             }
+            triggerAutoDriveSync()
         }
     }
 
@@ -365,6 +418,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     lastUpdatedMillis = System.currentTimeMillis()
                 )
             )
+            triggerAutoDriveSync()
         }
     }
 
@@ -372,6 +426,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             dao.upsertMuscleFatigueList((0..16).map { MuscleFatigueEntity(it, 0, now) })
+            triggerAutoDriveSync()
         }
     }
 
@@ -431,7 +486,6 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             }
             dao.insertFinishedExercises(finishedExEntities)
 
-            // Increment plan completed count if applicable
             if (planId != null) {
                 val plan = dao.getWorkoutPlan(planId)
                 if (plan != null) {
@@ -439,7 +493,6 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            // Update Muscle Fatigue (+10% / +20% / +30%)
             val currentMap = muscleFatigueList.value.associate { it.muscleId to it.fatiguePercent }
             val updatedMap = MuscleFatigueCalculator.accumulateFatigueForExercises(
                 currentFatigueMap = currentMap,
@@ -451,6 +504,9 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 }
             )
 
+            // Automatically push full snapshot to linked Google Drive file!
+            triggerAutoDriveSync()
+
             launch(Dispatchers.Main) {
                 onFinished(calories, updatedMap)
             }
@@ -460,17 +516,18 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun saveBodyMeasurement(measurement: BodyMeasurementEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertBodyMeasurement(measurement)
-            // Also sync latest weight & height to UserProfile
             val prof = dao.getUserProfile()
             if (prof != null) {
                 dao.saveUserProfile(prof.copy(weightKg = measurement.weightKg, heightCm = measurement.heightCm))
             }
+            triggerAutoDriveSync()
         }
     }
 
     fun deleteBodyMeasurement(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteBodyMeasurement(id)
+            triggerAutoDriveSync()
         }
     }
 }

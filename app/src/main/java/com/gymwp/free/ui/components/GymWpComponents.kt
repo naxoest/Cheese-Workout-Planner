@@ -1,6 +1,8 @@
 package com.gymwp.free.ui.components
 
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,9 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,9 +40,14 @@ import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.gymwp.free.R
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.DriveSyncState
 import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.domain.MuscleCatalog
+import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun rememberGifImageLoader(): ImageLoader {
@@ -83,10 +88,6 @@ fun AnimatedExerciseGif(
     )
 }
 
-/**
- * Clean-room implementation of BuildMuscleFatigueView.java (Lzk/b;)
- * Stacks the 26 anatomical PNG layers extracted from the APK and tints each muscle by its fatigue level.
- */
 @Composable
 fun AnatomyFatigueBodyMap(
     fatigueByMuscleId: Map<Int, Int>,
@@ -132,7 +133,6 @@ fun AnatomyFatigueBodyMap(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Front Anatomy View
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
             Text("Frente", style = MaterialTheme.typography.labelMedium, color = Color.LightGray)
             Spacer(Modifier.height(4.dp))
@@ -158,7 +158,6 @@ fun AnatomyFatigueBodyMap(
             }
         }
 
-        // Back Anatomy View
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
             Text("Espalda", style = MaterialTheme.typography.labelMedium, color = Color.LightGray)
             Spacer(Modifier.height(4.dp))
@@ -194,9 +193,8 @@ fun ExerciseDetailDialog(
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Instrucciones y Músculos, 1: Estadísticas e Historial
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-    // Convert exercise 17-char string to highlight map (3->90%, 2->55%, 1->30%, 0->0%)
     val muscleHighlightMap = remember(exercise.muscles) {
         (0..16).associateWith { mId ->
             when (exercise.muscles.getOrNull(mId)) {
@@ -220,7 +218,6 @@ fun ExerciseDetailDialog(
             color = GymCardBg
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -271,7 +268,6 @@ fun ExerciseDetailDialog(
                         .padding(16.dp)
                 ) {
                     if (selectedTab == 0) {
-                        // Animated GIF
                         AnimatedExerciseGif(
                             gifAssetPath = exercise.gifAssetPath,
                             contentDescription = exercise.name,
@@ -282,7 +278,6 @@ fun ExerciseDetailDialog(
 
                         Spacer(Modifier.height(12.dp))
 
-                        // Equipment chips
                         if (exercise.equipment.isNotEmpty()) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -302,7 +297,6 @@ fun ExerciseDetailDialog(
                             Spacer(Modifier.height(10.dp))
                         }
 
-                        // Execution instructions in Spanish
                         Text(
                             "Instrucciones de Ejecución",
                             style = MaterialTheme.typography.titleSmall,
@@ -319,7 +313,6 @@ fun ExerciseDetailDialog(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Muscle Involvement Badges
                         Text(
                             "Grupos Musculares Reclutados",
                             style = MaterialTheme.typography.titleSmall,
@@ -372,7 +365,6 @@ fun ExerciseDetailDialog(
                             mapHeight = 220.dp
                         )
                     } else {
-                        // Statistics Tab (Max Load, Avg Load, Total Volume, Total Reps)
                         if (history.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -496,6 +488,168 @@ fun ProgressionLineChart(
             }
             if (values.size > 1) {
                 drawPath(path = path, color = lineColor, style = Stroke(width = 3.dp.toPx()))
+            }
+        }
+    }
+}
+
+/**
+ * Reusable Google Drive SAF Auto-Sync Card & Dialog
+ */
+@Composable
+fun GoogleDriveSyncCard(
+    viewModel: GymWpViewModel,
+    modifier: Modifier = Modifier
+) {
+    val syncState by viewModel.driveSyncState.collectAsState()
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()) }
+
+    val createDriveDocLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.linkAndExportToGoogleDrive(uri)
+        }
+    }
+
+    val openDriveDocLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.restoreFromGoogleDrive(uri)
+        }
+    }
+
+    val isLinked = !syncState.linkedUri.isNullOrBlank()
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = GymCardBg),
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isLinked) Icons.Default.CloudDone else Icons.Default.CloudUpload,
+                        contentDescription = null,
+                        tint = if (isLinked) FatigueGreen else GymOrange
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Google Drive • Auto-Sync",
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = if (isLinked) "Archivo vinculado: ${syncState.linkedFileName}" else "Sin archivo vinculado en Google Drive",
+                            color = if (isLinked) FatigueGreen else Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                if (isLinked) {
+                    Switch(
+                        checked = syncState.autoBackupEnabled,
+                        onCheckedChange = { viewModel.toggleGoogleDriveAutoBackup(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = GymOrange, checkedTrackColor = GymOrange.copy(alpha = 0.4f))
+                    )
+                }
+            }
+
+            Text(
+                text = syncState.statusMessage,
+                color = Color.LightGray,
+                fontSize = 12.sp
+            )
+
+            if (syncState.lastSyncMillis > 0L) {
+                Text(
+                    text = "Última sincronización: ${dateFormat.format(Date(syncState.lastSyncMillis))}",
+                    color = GymAccentCyan,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        if (isLinked) {
+                            viewModel.syncNowToGoogleDrive()
+                        } else {
+                            createDriveDocLauncher.launch("GymWP_Free_Backup.json")
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (isLinked) "Sincronizar Ahora" else "Vincular Google Drive", fontSize = 12.sp)
+                }
+
+                OutlinedButton(
+                    onClick = { openDriveDocLauncher.launch(arrayOf("application/json", "*/*")) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Restaurar Drive", color = GymOrange, fontSize = 12.sp)
+                }
+            }
+
+            if (isLinked) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(onClick = { createDriveDocLauncher.launch("GymWP_Free_Backup.json") }) {
+                        Text("Cambiar carpeta/archivo en Drive", color = Color.LightGray, fontSize = 11.sp)
+                    }
+                    TextButton(onClick = { viewModel.unlinkGoogleDrive() }) {
+                        Text("Desvincular", color = Color.Gray, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GoogleDriveSyncDialog(
+    viewModel: GymWpViewModel,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = GymCardBg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                GoogleDriveSyncCard(viewModel = viewModel)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cerrar", color = GymOrange)
+                    }
+                }
             }
         }
     }
