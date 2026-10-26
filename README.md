@@ -2,6 +2,9 @@
 
 Aplicación nativa Android (**Kotlin + Jetpack Compose + Room SQLite**) de planificación de entrenamiento, control de fatiga muscular 2D y seguimiento antropométrico multi-usuario con sincronización directa a **Google Drive**.
 
+## 📲 Descarga Directa (APK)
+- **[Descargar v1.apk](./v1.apk)** *(Entra a `v1.apk` desde GitHub en tu celular y toca **Download raw file** / **View raw** para instalarla directamente).*
+
 ## Características Principales
 
 1. **Soporte Multi-Usuario Independiente**:
