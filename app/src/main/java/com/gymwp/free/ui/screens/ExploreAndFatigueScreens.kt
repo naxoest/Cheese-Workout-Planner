@@ -54,13 +54,13 @@ fun ExplorePrebuiltPlansScreen(
     ) {
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Catálogo de 57 Rutinas Pro",
+            text = "Catálogo de 57 Rutinas",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
             color = GymOrange
         )
         Text(
-            text = "Todos los planes oficiales desbloqueados gratuitamente y listos para usar.",
+            text = "Planes estructurados por nivel, objetivo y días de entrenamiento.",
             color = Color.LightGray,
             fontSize = 12.sp
         )
@@ -117,7 +117,7 @@ fun ExplorePrebuiltPlansScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "PRO GRATIS",
+                                        text = "RUTINA COMPLETA",
                                         color = GymOrange,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,

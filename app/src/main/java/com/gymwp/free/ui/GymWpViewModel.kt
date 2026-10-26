@@ -9,6 +9,7 @@ import com.gymwp.free.domain.MuscleFatigueCalculator
 import com.gymwp.free.domain.SmartWorkoutGenerator
 import com.gymwp.free.domain.WorkoutMetricsCalculator
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -20,6 +21,7 @@ data class CompletedExerciseLog(
     val repsPerSet: List<Int>
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appContext = application.applicationContext
@@ -30,13 +32,21 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     val prebuiltPlans: List<PrebuiltPlan> = AssetCatalogRepository.getPrebuiltPlans(application)
     private val catalogMap: Map<Int, CatalogExercise> = catalogExercises.associateBy { it.id }
 
+    private val _activeUserId = MutableStateFlow(GoogleDriveBackupManager.getSavedActiveUserId(appContext))
+    val activeUserId: StateFlow<Int> = _activeUserId.asStateFlow()
+
+    val allUsers: StateFlow<List<UserProfileEntity>> = dao.observeAllUsers()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _driveSyncState = MutableStateFlow(GoogleDriveBackupManager.loadSyncState(appContext))
     val driveSyncState: StateFlow<DriveSyncState> = _driveSyncState.asStateFlow()
 
-    val userProfile: StateFlow<UserProfileEntity?> = dao.observeUserProfile()
+    val userProfile: StateFlow<UserProfileEntity?> = _activeUserId
+        .flatMapLatest { uid -> dao.observeUserProfile(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val workoutPlans: StateFlow<List<WorkoutPlanEntity>> = dao.observeWorkoutPlans()
+    val workoutPlans: StateFlow<List<WorkoutPlanEntity>> = _activeUserId
+        .flatMapLatest { uid -> dao.observeWorkoutPlans(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allWorkoutDays: StateFlow<List<WorkoutDayEntity>> = dao.observeAllWorkoutDays()
@@ -45,59 +55,138 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     val allWorkoutExercises: StateFlow<List<WorkoutExerciseEntity>> = dao.observeAllWorkoutExercises()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val userCustomExercises: StateFlow<List<UserCustomExerciseEntity>> = dao.observeUserCustomExercises()
+    val userCustomExercises: StateFlow<List<UserCustomExerciseEntity>> = _activeUserId
+        .flatMapLatest { uid -> dao.observeUserCustomExercises(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val favoriteIds: StateFlow<Set<Int>> = dao.observeFavorites()
+    val favoriteIds: StateFlow<Set<Int>> = _activeUserId
+        .flatMapLatest { uid -> dao.observeFavorites(uid) }
         .map { list -> list.map { it.exerciseId }.toSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val muscleFatigueList: StateFlow<List<MuscleFatigueEntity>> = dao.observeMuscleFatigue()
-        .map { list ->
-            val now = System.currentTimeMillis()
-            val byId = list.associateBy { it.muscleId }
-            (0..16).map { mId ->
-                val entity = byId[mId] ?: MuscleFatigueEntity(mId, 0, now)
-                entity.copy(fatiguePercent = MuscleFatigueCalculator.computeCurrentFatigue(entity, now))
+    val muscleFatigueList: StateFlow<List<MuscleFatigueEntity>> = _activeUserId
+        .flatMapLatest { uid ->
+            dao.observeMuscleFatigue(uid).map { list ->
+                val now = System.currentTimeMillis()
+                val byId = list.associateBy { it.muscleId }
+                (0..16).map { mId ->
+                    val entity = byId[mId] ?: MuscleFatigueEntity(userId = uid, muscleId = mId, fatiguePercent = 0, lastUpdatedMillis = now)
+                    entity.copy(fatiguePercent = MuscleFatigueCalculator.computeCurrentFatigue(entity, now))
+                }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val finishedWorkouts: StateFlow<List<FinishedWorkoutDayEntity>> = dao.observeFinishedWorkouts()
+    val finishedWorkouts: StateFlow<List<FinishedWorkoutDayEntity>> = _activeUserId
+        .flatMapLatest { uid -> dao.observeFinishedWorkouts(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allFinishedExercises: StateFlow<List<FinishedExerciseEntity>> = dao.observeAllFinishedExercises()
+    val allFinishedExercises: StateFlow<List<FinishedExerciseEntity>> = _activeUserId
+        .flatMapLatest { uid -> dao.observeAllFinishedExercises(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val bodyMeasurements: StateFlow<List<BodyMeasurementEntity>> = dao.observeBodyMeasurements()
+    val bodyMeasurements: StateFlow<List<BodyMeasurementEntity>> = _activeUserId
+        .flatMapLatest { uid -> dao.observeBodyMeasurements(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val existingFatigue = dao.getAllMuscleFatigue()
-            if (existingFatigue.isEmpty()) {
-                val now = System.currentTimeMillis()
-                dao.upsertMuscleFatigueList((0..16).map { MuscleFatigueEntity(it, 0, now) })
-            } else {
-                val now = System.currentTimeMillis()
-                val decayed = existingFatigue.map {
-                    it.copy(
-                        fatiguePercent = MuscleFatigueCalculator.computeCurrentFatigue(it, now),
-                        lastUpdatedMillis = now
+            var users = dao.getAllUsersSnapshot()
+            if (users.isEmpty()) {
+                // Crear los 2 perfiles iniciales por defecto (Ignacio y Pareja)
+                val id1 = dao.saveUserProfile(
+                    UserProfileEntity(
+                        id = 1,
+                        name = "Ignacio",
+                        avatarColorIndex = 9,
+                        gender = 0,
+                        onboardingDone = false
                     )
-                }
-                dao.upsertMuscleFatigueList(decayed)
+                ).toInt()
+                users = dao.getAllUsersSnapshot()
+                _activeUserId.value = id1
+                GoogleDriveBackupManager.saveActiveUserId(appContext, id1)
+            } else if (users.none { it.id == _activeUserId.value }) {
+                val firstId = users.first().id
+                _activeUserId.value = firstId
+                GoogleDriveBackupManager.saveActiveUserId(appContext, firstId)
             }
 
-            if (dao.getUserProfile() == null) {
-                dao.saveUserProfile(UserProfileEntity())
+            ensureUserMuscleFatigueInitialized(_activeUserId.value)
+        }
+    }
+
+    private suspend fun ensureUserMuscleFatigueInitialized(uid: Int) {
+        val existingFatigue = dao.getUserMuscleFatigue(uid)
+        val now = System.currentTimeMillis()
+        if (existingFatigue.isEmpty()) {
+            dao.upsertMuscleFatigueList((0..16).map { MuscleFatigueEntity(userId = uid, muscleId = it, fatiguePercent = 0, lastUpdatedMillis = now) })
+        } else {
+            val decayed = existingFatigue.map {
+                it.copy(
+                    fatiguePercent = MuscleFatigueCalculator.computeCurrentFatigue(it, now),
+                    lastUpdatedMillis = now
+                )
             }
+            dao.upsertMuscleFatigueList(decayed)
         }
     }
 
     private suspend fun triggerAutoDriveSync() {
         GoogleDriveBackupManager.autoSyncIfEnabled(appContext, dao)?.let { updated ->
             _driveSyncState.value = updated
+        }
+    }
+
+    fun selectActiveUser(userId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _activeUserId.value = userId
+            GoogleDriveBackupManager.saveActiveUserId(appContext, userId)
+            ensureUserMuscleFatigueInitialized(userId)
+            triggerAutoDriveSync()
+        }
+    }
+
+    fun createNewUserProfile(
+        name: String,
+        gender: Int,
+        avatarColorIndex: Int,
+        onCreated: (UserProfileEntity) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newProfile = UserProfileEntity(
+                name = name.ifBlank { "Usuario ${allUsers.value.size + 1}" },
+                avatarColorIndex = avatarColorIndex,
+                gender = gender,
+                heightCm = if (gender == 0) 175f else 163f,
+                weightKg = if (gender == 0) 75f else 60f,
+                onboardingDone = false
+            )
+            val newId = dao.saveUserProfile(newProfile).toInt()
+            val saved = newProfile.copy(id = newId)
+            _activeUserId.value = newId
+            GoogleDriveBackupManager.saveActiveUserId(appContext, newId)
+            ensureUserMuscleFatigueInitialized(newId)
+            triggerAutoDriveSync()
+            launch(Dispatchers.Main) {
+                onCreated(saved)
+            }
+        }
+    }
+
+    fun deleteUserProfile(userId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentUsers = dao.getAllUsersSnapshot()
+            if (currentUsers.size <= 1) return@launch
+            dao.deleteWorkoutPlansForUser(userId)
+            dao.deleteUserProfile(userId)
+            val remaining = dao.getAllUsersSnapshot()
+            if (remaining.isNotEmpty()) {
+                val nextId = remaining.first().id
+                _activeUserId.value = nextId
+                GoogleDriveBackupManager.saveActiveUserId(appContext, nextId)
+            }
+            triggerAutoDriveSync()
         }
     }
 
@@ -121,6 +210,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun restoreFromGoogleDrive(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             GoogleDriveBackupManager.restoreBackupFromUri(appContext, dao, uri, linkAsDefaultDriveFile = true)
+            _activeUserId.value = GoogleDriveBackupManager.getSavedActiveUserId(appContext)
             _driveSyncState.value = GoogleDriveBackupManager.loadSyncState(appContext)
         }
     }
@@ -140,10 +230,11 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveProfileAndGenerateSmartPlan(profile: UserProfileEntity, regeneratePlan: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            val updated = profile.copy(onboardingDone = true)
+            val uid = _activeUserId.value
+            val updated = profile.copy(id = uid, onboardingDone = true)
             dao.saveUserProfile(updated)
             if (regeneratePlan) {
-                val currentPlans = workoutPlans.value.filter { it.isCustomPeriodized }
+                val currentPlans = workoutPlans.value.filter { it.isCustomPeriodized && it.userId == uid }
                 for (p in currentPlans) {
                     dao.deleteWorkoutPlan(p.id)
                 }
@@ -151,6 +242,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 for (phase in phases) {
                     val planId = dao.insertWorkoutPlan(
                         WorkoutPlanEntity(
+                            userId = uid,
                             name = phase.name,
                             description = phase.description,
                             isCustomPeriodized = true,
@@ -194,8 +286,10 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun importPrebuiltPlan(prebuilt: PrebuiltPlan, onImported: (Long) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
             val planId = dao.insertWorkoutPlan(
                 WorkoutPlanEntity(
+                    userId = uid,
                     name = prebuilt.name,
                     description = prebuilt.description,
                     isCustomPeriodized = false,
@@ -243,8 +337,10 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createManualWorkoutPlan(name: String, description: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
             val planId = dao.insertWorkoutPlan(
                 WorkoutPlanEntity(
+                    userId = uid,
                     name = name.ifBlank { "Mi Plan de Entrenamiento" },
                     description = description,
                     isCustomPeriodized = false,
@@ -349,7 +445,8 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         onDayCreated: (Long) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val profile = dao.getUserProfile() ?: UserProfileEntity()
+            val uid = _activeUserId.value
+            val profile = dao.getUserProfile(uid) ?: UserProfileEntity(id = uid)
             val fatigueMap = muscleFatigueList.value.associate { it.muscleId to it.fatiguePercent }
             val generatedDay = SmartWorkoutGenerator.generateFreestyleWorkout(
                 durationMinutes = durationMinutes,
@@ -359,9 +456,10 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 catalog = catalogExercises
             )
 
-            val freestylePlan = workoutPlans.value.firstOrNull { it.name == "Entrenamientos Libres (Freestyle)" }
+            val freestylePlan = workoutPlans.value.firstOrNull { it.name == "Entrenamientos Libres (Freestyle)" && it.userId == uid }
             val planId = freestylePlan?.id ?: dao.insertWorkoutPlan(
                 WorkoutPlanEntity(
+                    userId = uid,
                     name = "Entrenamientos Libres (Freestyle)",
                     description = "Sesiones generadas inteligentemente según tu recuperación muscular",
                     isCustomPeriodized = false,
@@ -400,10 +498,11 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(exerciseId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
             if (favoriteIds.value.contains(exerciseId)) {
-                dao.removeFavorite(exerciseId)
+                dao.removeFavorite(uid, exerciseId)
             } else {
-                dao.addFavorite(FavoriteExerciseEntity(exerciseId))
+                dao.addFavorite(FavoriteExerciseEntity(userId = uid, exerciseId = exerciseId))
             }
             triggerAutoDriveSync()
         }
@@ -411,8 +510,10 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateMuscleFatigueManually(muscleId: Int, newPercent: Int) {
         viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
             dao.upsertMuscleFatigue(
                 MuscleFatigueEntity(
+                    userId = uid,
                     muscleId = muscleId,
                     fatiguePercent = newPercent.coerceIn(0, 100),
                     lastUpdatedMillis = System.currentTimeMillis()
@@ -424,8 +525,9 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetAllMuscleFatigue() {
         viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
             val now = System.currentTimeMillis()
-            dao.upsertMuscleFatigueList((0..16).map { MuscleFatigueEntity(it, 0, now) })
+            dao.upsertMuscleFatigueList((0..16).map { MuscleFatigueEntity(userId = uid, muscleId = it, fatiguePercent = 0, lastUpdatedMillis = now) })
             triggerAutoDriveSync()
         }
     }
@@ -439,6 +541,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         onFinished: (Int, Map<Int, Int>) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
             val now = System.currentTimeMillis()
             val weightKg = userProfile.value?.weightKg ?: 75f
             val totalSets = completedLogs.sumOf { it.repsPerSet.size }
@@ -450,6 +553,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
             val finishedDayId = dao.insertFinishedWorkoutDay(
                 FinishedWorkoutDayEntity(
+                    userId = uid,
                     planName = planName,
                     dayName = dayName,
                     timestampMillis = now,
@@ -471,6 +575,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     .mapIndexed { idx, (l, r) -> "S${idx + 1}: ${r}x${l}kg" }
                     .joinToString(" | ")
                 FinishedExerciseEntity(
+                    userId = uid,
                     finishedDayId = finishedDayId,
                     exerciseId = log.exerciseId,
                     exerciseName = log.exerciseName,
@@ -500,11 +605,10 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             )
             dao.upsertMuscleFatigueList(
                 updatedMap.map { (mId, pct) ->
-                    MuscleFatigueEntity(muscleId = mId, fatiguePercent = pct, lastUpdatedMillis = now)
+                    MuscleFatigueEntity(userId = uid, muscleId = mId, fatiguePercent = pct, lastUpdatedMillis = now)
                 }
             )
 
-            // Automatically push full snapshot to linked Google Drive file!
             triggerAutoDriveSync()
 
             launch(Dispatchers.Main) {
@@ -515,8 +619,9 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveBodyMeasurement(measurement: BodyMeasurementEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.insertBodyMeasurement(measurement)
-            val prof = dao.getUserProfile()
+            val uid = _activeUserId.value
+            dao.insertBodyMeasurement(measurement.copy(userId = uid))
+            val prof = dao.getUserProfile(uid)
             if (prof != null) {
                 dao.saveUserProfile(prof.copy(weightKg = measurement.weightKg, heightCm = measurement.heightCm))
             }

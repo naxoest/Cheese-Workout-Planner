@@ -20,7 +20,7 @@ import com.google.gson.reflect.TypeToken
         FinishedExerciseEntity::class,
         BodyMeasurementEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class GymWpDatabase : RoomDatabase() {
@@ -35,7 +35,7 @@ abstract class GymWpDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     GymWpDatabase::class.java,
-                    "gymwp_free_cleanroom.db"
+                    "chukaros_gymplanner.db"
                 ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance

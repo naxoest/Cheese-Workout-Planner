@@ -13,8 +13,8 @@ android {
         applicationId = "com.gymwp.free"
         minSdk = 24
         targetSdk = 35
-        versionCode = 112
-        versionName = "9.9.0-Free"
+        versionCode = 200
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

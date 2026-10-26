@@ -10,10 +10,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 data class GymWpCloudBackupPayload(
-    val schemaVersion: Int = 1,
+    val schemaVersion: Int = 2,
+    val appName: String = "Chukaros's GymPlanner",
     val exportedAtMillis: Long = System.currentTimeMillis(),
     val deviceModel: String = "${Build.MANUFACTURER} ${Build.MODEL}",
-    val userProfile: UserProfileEntity? = null,
+    val activeUserId: Int = 1,
+    val userProfiles: List<UserProfileEntity> = emptyList(),
+    val userProfile: UserProfileEntity? = null, // Compatibilidad con respaldos v1
     val workoutPlans: List<WorkoutPlanEntity> = emptyList(),
     val workoutDays: List<WorkoutDayEntity> = emptyList(),
     val workoutExercises: List<WorkoutExerciseEntity> = emptyList(),
@@ -30,12 +33,13 @@ data class DriveSyncState(
     val linkedFileName: String = "Sin vincular",
     val autoBackupEnabled: Boolean = true,
     val lastSyncMillis: Long = 0L,
-    val statusMessage: String = "Guardado local activo. Vincula tu archivo en Google Drive para Auto-Sync."
+    val statusMessage: String = "Guardado local multi-usuario activo. Vincula tu archivo en Google Drive para Auto-Sync."
 )
 
 object GoogleDriveBackupManager {
 
-    private const val PREFS_NAME = "gymwp_gdrive_sync_prefs"
+    private const val PREFS_NAME = "chukaros_gdrive_sync_prefs"
+    private const val KEY_ACTIVE_USER_ID = "active_user_id"
     private const val KEY_LINKED_URI = "linked_drive_uri"
     private const val KEY_LINKED_NAME = "linked_drive_name"
     private const val KEY_AUTO_BACKUP = "auto_backup_enabled"
@@ -43,6 +47,16 @@ object GoogleDriveBackupManager {
     private const val KEY_LAST_STATUS = "last_status_msg"
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
+
+    fun getSavedActiveUserId(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_ACTIVE_USER_ID, 1)
+    }
+
+    fun saveActiveUserId(context: Context, userId: Int) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_ACTIVE_USER_ID, userId).apply()
+    }
 
     fun loadSyncState(context: Context): DriveSyncState {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -54,7 +68,7 @@ object GoogleDriveBackupManager {
             lastSyncMillis = prefs.getLong(KEY_LAST_SYNC_MILLIS, 0L),
             statusMessage = prefs.getString(
                 KEY_LAST_STATUS,
-                if (uriStr != null) "Vinculado con Google Drive" else "Guardado local activo. Vincula tu archivo en Google Drive para Auto-Sync."
+                if (uriStr != null) "Vinculado con Google Drive (Multi-Usuario)" else "Guardado local multi-usuario activo. Vincula tu archivo en Google Drive para Auto-Sync."
             ) ?: ""
         )
     }
@@ -82,9 +96,9 @@ object GoogleDriveBackupManager {
                 if (nameIndex >= 0 && cursor.moveToFirst()) {
                     cursor.getString(nameIndex)
                 } else null
-            } ?: uri.lastPathSegment ?: "GymWP_Free_Backup.json"
+            } ?: uri.lastPathSegment ?: "Chukaros_GymPlanner_Backup.json"
         } catch (_: Exception) {
-            "GymWP_Free_Backup.json"
+            "Chukaros_GymPlanner_Backup.json"
         }
     }
 
@@ -107,9 +121,14 @@ object GoogleDriveBackupManager {
     suspend fun exportBackupToUri(context: Context, dao: GymWpDao, targetUri: Uri): Result<DriveSyncState> =
         withContext(Dispatchers.IO) {
             try {
+                val activeId = getSavedActiveUserId(context)
+                val allUsers = dao.getAllUsersSnapshot()
                 val payload = GymWpCloudBackupPayload(
+                    schemaVersion = 2,
                     exportedAtMillis = System.currentTimeMillis(),
-                    userProfile = dao.getUserProfile(),
+                    activeUserId = activeId,
+                    userProfiles = allUsers,
+                    userProfile = allUsers.firstOrNull { it.id == activeId } ?: allUsers.firstOrNull(),
                     workoutPlans = dao.getAllWorkoutPlans(),
                     workoutDays = dao.getAllWorkoutDaysSnapshot(),
                     workoutExercises = dao.getAllWorkoutExercisesSnapshot(),
@@ -128,7 +147,7 @@ object GoogleDriveBackupManager {
 
                 val now = System.currentTimeMillis()
                 val fileName = resolveDisplayName(context, targetUri)
-                val msg = "✅ Sincronizado en Google Drive ($fileName • ${payload.workoutPlans.size} planes, ${payload.finishedWorkouts.size} sesiones)"
+                val msg = "✅ Sincronizado en Google Drive ($fileName • ${allUsers.size} usuarios, ${payload.workoutPlans.size} planes, ${payload.finishedWorkouts.size} sesiones)"
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 prefs.edit()
                     .putString(KEY_LINKED_URI, targetUri.toString())
@@ -175,7 +194,21 @@ object GoogleDriveBackupManager {
             val payload = gson.fromJson(jsonText, GymWpCloudBackupPayload::class.java)
                 ?: error("Formato de respaldo inválido")
 
-            payload.userProfile?.let { dao.saveUserProfile(it) }
+            val profilesToRestore = when {
+                payload.userProfiles.isNotEmpty() -> payload.userProfiles
+                payload.userProfile != null -> listOf(payload.userProfile)
+                else -> listOf(UserProfileEntity(id = 1, name = "Ignacio"))
+            }
+
+            dao.clearUserProfiles()
+            dao.insertUserProfiles(profilesToRestore)
+
+            val restoredActiveId = if (profilesToRestore.any { it.id == payload.activeUserId }) {
+                payload.activeUserId
+            } else {
+                profilesToRestore.first().id
+            }
+            saveActiveUserId(context, restoredActiveId)
 
             dao.clearWorkoutExercises()
             dao.clearWorkoutDays()
@@ -191,6 +224,7 @@ object GoogleDriveBackupManager {
             dao.insertFavorites(payload.favorites)
 
             if (payload.muscleFatigue.isNotEmpty()) {
+                dao.clearMuscleFatigue()
                 dao.upsertMuscleFatigueList(payload.muscleFatigue)
             }
 
@@ -204,7 +238,7 @@ object GoogleDriveBackupManager {
 
             val now = System.currentTimeMillis()
             val fileName = resolveDisplayName(context, sourceUri)
-            val msg = "✅ Restaurado desde Google Drive ($fileName • ${payload.workoutPlans.size} planes, ${payload.finishedWorkouts.size} sesiones)"
+            val msg = "✅ Restaurado desde Google Drive ($fileName • ${profilesToRestore.size} usuarios, ${payload.workoutPlans.size} planes)"
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit()
                 .putLong(KEY_LAST_SYNC_MILLIS, now)

@@ -590,7 +590,7 @@ fun GoogleDriveSyncCard(
                         if (isLinked) {
                             viewModel.syncNowToGoogleDrive()
                         } else {
-                            createDriveDocLauncher.launch("GymWP_Free_Backup.json")
+                            createDriveDocLauncher.launch("Chukaros_GymPlanner_Backup.json")
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = GymOrange),
@@ -616,7 +616,7 @@ fun GoogleDriveSyncCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TextButton(onClick = { createDriveDocLauncher.launch("GymWP_Free_Backup.json") }) {
+                    TextButton(onClick = { createDriveDocLauncher.launch("Chukaros_GymPlanner_Backup.json") }) {
                         Text("Cambiar carpeta/archivo en Drive", color = Color.LightGray, fontSize = 11.sp)
                     }
                     TextButton(onClick = { viewModel.unlinkGoogleDrive() }) {
@@ -648,6 +648,173 @@ fun GoogleDriveSyncDialog(
                 ) {
                     TextButton(onClick = onDismiss) {
                         Text("Cerrar", color = GymOrange)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserSwitcherDialog(
+    viewModel: GymWpViewModel,
+    onDismiss: () -> Unit,
+    onOpenWizardForNewUser: () -> Unit
+) {
+    val allUsers by viewModel.allUsers.collectAsState()
+    val activeUserId by viewModel.activeUserId.collectAsState()
+    var showCreateForm by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+    var newGender by remember { mutableIntStateOf(1) }
+    var newColorIdx by remember { mutableIntStateOf(1) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = GymCardBg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Perfiles de Usuario",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = GymOrange
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+                    }
+                }
+
+                Text(
+                    text = "Cada usuario mantiene sus propios planes, cargas, fatiga muscular, historial y antropometría de forma independiente (sincronizados en Google Drive).",
+                    color = Color.LightGray,
+                    fontSize = 12.sp
+                )
+
+                allUsers.forEach { user ->
+                    val isSelected = user.id == activeUserId
+                    val avatarColor = DayPalette[user.avatarColorIndex.coerceIn(0, DayPalette.lastIndex)]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (isSelected) GymOrange.copy(alpha = 0.2f) else GymSurfaceElevated,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                viewModel.selectActiveUser(user.id)
+                                onDismiss()
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(avatarColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = user.name.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 16.sp
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = user.name,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "${user.weightKg} kg • ${user.heightCm.toInt()} cm • ${user.daysPerWeek} días/sem",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isSelected) {
+                                Text("Activo", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            if (allUsers.size > 1) {
+                                IconButton(onClick = { viewModel.deleteUserProfile(user.id) }) {
+                                    Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar usuario", tint = Color.Gray)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (showCreateForm) {
+                    Divider(color = Color.DarkGray)
+                    Text("Nuevo Perfil de Usuario", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Nombre (ej. Mi Novia, Invitado...)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = newGender == 1,
+                            onClick = { newGender = 1 },
+                            label = { Text("Femenino") }
+                        )
+                        FilterChip(
+                            selected = newGender == 0,
+                            onClick = { newGender = 0 },
+                            label = { Text("Masculino") }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showCreateForm = false }) { Text("Cancelar") }
+                        Spacer(Modifier.width(6.dp))
+                        Button(
+                            onClick = {
+                                viewModel.createNewUserProfile(
+                                    name = newName,
+                                    gender = newGender,
+                                    avatarColorIndex = (allUsers.size * 2 + 1) % DayPalette.size
+                                ) {
+                                    showCreateForm = false
+                                    onDismiss()
+                                    onOpenWizardForNewUser()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                        ) {
+                            Text("Crear y Configurar Plan")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = { showCreateForm = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Añadir Nuevo Usuario")
                     }
                 }
             }

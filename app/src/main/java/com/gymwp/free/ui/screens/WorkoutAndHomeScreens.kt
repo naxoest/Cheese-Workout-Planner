@@ -30,6 +30,7 @@ import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
 import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.components.GoogleDriveSyncDialog
+import com.gymwp.free.ui.components.UserSwitcherDialog
 import com.gymwp.free.ui.theme.*
 
 @Composable
@@ -53,6 +54,7 @@ fun HomeWorkoutsScreen(
     var showSmartWizard by remember { mutableStateOf(false) }
     var showFreestyleDialog by remember { mutableStateOf(false) }
     var showDriveSyncDialog by remember { mutableStateOf(false) }
+    var showUserSwitcherDialog by remember { mutableStateOf(false) }
     var showNewPlanDialog by remember { mutableStateOf(false) }
     var showAddDayDialogForPlan by remember { mutableStateOf<Long?>(null) }
     var showAddExerciseForDay by remember { mutableStateOf<Long?>(null) }
@@ -85,18 +87,36 @@ fun HomeWorkoutsScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "GymWP Free • Pro",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Chukaros's GymPlanner",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = GymOrange
                 )
-                Text(
-                    text = "100% Desbloqueado • Sin Publicidad • Offline",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.LightGray
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(GymSurfaceElevated)
+                        .clickable { showUserSwitcherDialog = true }
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Cambiar Usuario",
+                        tint = GymOrange,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "${profile?.name ?: "Usuario"} (Cambiar)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -189,14 +209,14 @@ fun HomeWorkoutsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "¡Bienvenido a GymWP Free!",
+                        "¡Bienvenido a Chukaros's GymPlanner!",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Genera tu Plan Personalizado de 3 Fases (Adaptación, Hipertrofia y Fuerza) o explora las 57 rutinas Pro desbloqueadas.",
+                        "Genera tu Plan Personalizado de 3 Fases (Adaptación, Hipertrofia y Fuerza) o explora el catálogo de 57 rutinas especializadas.",
                         color = Color.LightGray,
                         fontSize = 13.sp
                     )
@@ -209,7 +229,7 @@ fun HomeWorkoutsScreen(
                             Text("Generar Plan 3 Fases")
                         }
                         OutlinedButton(onClick = onNavigateToExplore) {
-                            Text("Ver 57 Planes Pro", color = GymOrange)
+                            Text("Ver 57 Planes", color = GymOrange)
                         }
                     }
                 }
@@ -484,6 +504,14 @@ fun HomeWorkoutsScreen(
         )
     }
 
+    if (showUserSwitcherDialog) {
+        UserSwitcherDialog(
+            viewModel = viewModel,
+            onDismiss = { showUserSwitcherDialog = false },
+            onOpenWizardForNewUser = { showSmartWizard = true }
+        )
+    }
+
     // Dialog: Create Manual Plan
     if (showNewPlanDialog) {
         var name by remember { mutableStateOf("") }
@@ -617,14 +645,15 @@ fun SmartPlanOnboardingDialog(
     onDismiss: () -> Unit,
     onConfirm: (UserProfileEntity) -> Unit
 ) {
-    var gender by remember { mutableIntStateOf(initialProfile.gender) }
-    var birthYear by remember { mutableStateOf(initialProfile.birthYear.toString()) }
-    var heightCm by remember { mutableStateOf(initialProfile.heightCm.toString()) }
-    var weightKg by remember { mutableStateOf(initialProfile.weightKg.toString()) }
-    var goal by remember { mutableIntStateOf(initialProfile.goal) }
-    var level by remember { mutableIntStateOf(initialProfile.experienceLevel) }
-    var place by remember { mutableIntStateOf(initialProfile.trainingPlace) }
-    var daysPerWeek by remember { mutableIntStateOf(initialProfile.daysPerWeek.coerceIn(2, 6)) }
+    var userName by remember(initialProfile.id) { mutableStateOf(initialProfile.name) }
+    var gender by remember(initialProfile.id) { mutableIntStateOf(initialProfile.gender) }
+    var birthYear by remember(initialProfile.id) { mutableStateOf(initialProfile.birthYear.toString()) }
+    var heightCm by remember(initialProfile.id) { mutableStateOf(initialProfile.heightCm.toString()) }
+    var weightKg by remember(initialProfile.id) { mutableStateOf(initialProfile.weightKg.toString()) }
+    var goal by remember(initialProfile.id) { mutableIntStateOf(initialProfile.goal) }
+    var level by remember(initialProfile.id) { mutableIntStateOf(initialProfile.experienceLevel) }
+    var place by remember(initialProfile.id) { mutableIntStateOf(initialProfile.trainingPlace) }
+    var daysPerWeek by remember(initialProfile.id) { mutableIntStateOf(initialProfile.daysPerWeek.coerceIn(2, 6)) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -645,9 +674,17 @@ fun SmartPlanOnboardingDialog(
                     color = GymOrange
                 )
                 Text(
-                    "Configura tu perfil biométrico para crear tu periodización completa (Fase 1: Adaptación, Fase 2: Hipertrofia, Fase 3: Fuerza).",
+                    "Configura el perfil biométrico del usuario para crear su periodización completa (Fase 1: Adaptación, Fase 2: Hipertrofia, Fase 3: Fuerza).",
                     fontSize = 12.sp,
                     color = Color.LightGray
+                )
+
+                OutlinedTextField(
+                    value = userName,
+                    onValueChange = { userName = it },
+                    label = { Text("Nombre del Usuario") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 // Gender
@@ -740,6 +777,7 @@ fun SmartPlanOnboardingDialog(
                         onClick = {
                             onConfirm(
                                 initialProfile.copy(
+                                    name = userName.ifBlank { initialProfile.name },
                                     gender = gender,
                                     birthYear = birthYear.toIntOrNull() ?: 1996,
                                     heightCm = heightCm.toFloatOrNull() ?: 175f,

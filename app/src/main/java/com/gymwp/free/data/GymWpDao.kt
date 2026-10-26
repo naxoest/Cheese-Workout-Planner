@@ -6,19 +6,34 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface GymWpDao {
 
-    // User Profile
-    @Query("SELECT * FROM user_profile WHERE id = 1")
-    fun observeUserProfile(): Flow<UserProfileEntity?>
+    // Multi-User Profiles
+    @Query("SELECT * FROM user_profile ORDER BY id ASC")
+    fun observeAllUsers(): Flow<List<UserProfileEntity>>
 
-    @Query("SELECT * FROM user_profile WHERE id = 1")
-    suspend fun getUserProfile(): UserProfileEntity?
+    @Query("SELECT * FROM user_profile ORDER BY id ASC")
+    suspend fun getAllUsersSnapshot(): List<UserProfileEntity>
+
+    @Query("SELECT * FROM user_profile WHERE id = :userId")
+    fun observeUserProfile(userId: Int): Flow<UserProfileEntity?>
+
+    @Query("SELECT * FROM user_profile WHERE id = :userId")
+    suspend fun getUserProfile(userId: Int): UserProfileEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun saveUserProfile(profile: UserProfileEntity)
+    suspend fun saveUserProfile(profile: UserProfileEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUserProfiles(profiles: List<UserProfileEntity>)
+
+    @Query("DELETE FROM user_profile WHERE id = :userId")
+    suspend fun deleteUserProfile(userId: Int)
+
+    @Query("DELETE FROM user_profile")
+    suspend fun clearUserProfiles()
 
     // Workout Plans & Days & Exercises
-    @Query("SELECT * FROM workout_plan ORDER BY isCustomPeriodized DESC, phaseNumber ASC, id DESC")
-    fun observeWorkoutPlans(): Flow<List<WorkoutPlanEntity>>
+    @Query("SELECT * FROM workout_plan WHERE userId = :userId ORDER BY isCustomPeriodized DESC, phaseNumber ASC, id DESC")
+    fun observeWorkoutPlans(userId: Int): Flow<List<WorkoutPlanEntity>>
 
     @Query("SELECT * FROM workout_plan")
     suspend fun getAllWorkoutPlans(): List<WorkoutPlanEntity>
@@ -37,6 +52,9 @@ interface GymWpDao {
 
     @Query("DELETE FROM workout_plan WHERE id = :planId")
     suspend fun deleteWorkoutPlan(planId: Long)
+
+    @Query("DELETE FROM workout_plan WHERE userId = :userId")
+    suspend fun deleteWorkoutPlansForUser(userId: Int)
 
     @Query("DELETE FROM workout_plan")
     suspend fun clearWorkoutPlans()
@@ -96,8 +114,8 @@ interface GymWpDao {
     suspend fun clearWorkoutExercises()
 
     // User Custom Exercises & Favorites
-    @Query("SELECT * FROM user_exercise ORDER BY name ASC")
-    fun observeUserCustomExercises(): Flow<List<UserCustomExerciseEntity>>
+    @Query("SELECT * FROM user_exercise WHERE userId = :userId ORDER BY name ASC")
+    fun observeUserCustomExercises(userId: Int): Flow<List<UserCustomExerciseEntity>>
 
     @Query("SELECT * FROM user_exercise")
     suspend fun getAllUserCustomExercisesSnapshot(): List<UserCustomExerciseEntity>
@@ -111,8 +129,8 @@ interface GymWpDao {
     @Query("DELETE FROM user_exercise")
     suspend fun clearUserCustomExercises()
 
-    @Query("SELECT * FROM favorite_exercise")
-    fun observeFavorites(): Flow<List<FavoriteExerciseEntity>>
+    @Query("SELECT * FROM favorite_exercise WHERE userId = :userId")
+    fun observeFavorites(userId: Int): Flow<List<FavoriteExerciseEntity>>
 
     @Query("SELECT * FROM favorite_exercise")
     suspend fun getAllFavoritesSnapshot(): List<FavoriteExerciseEntity>
@@ -123,17 +141,20 @@ interface GymWpDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFavorites(items: List<FavoriteExerciseEntity>)
 
-    @Query("DELETE FROM favorite_exercise WHERE exerciseId = :exerciseId")
-    suspend fun removeFavorite(exerciseId: Int)
+    @Query("DELETE FROM favorite_exercise WHERE userId = :userId AND exerciseId = :exerciseId")
+    suspend fun removeFavorite(userId: Int, exerciseId: Int)
 
     @Query("DELETE FROM favorite_exercise")
     suspend fun clearFavorites()
 
-    // Muscle Fatigue (17 muscles: 0..16)
-    @Query("SELECT * FROM muscle_fatigue ORDER BY muscleId ASC")
-    fun observeMuscleFatigue(): Flow<List<MuscleFatigueEntity>>
+    // Muscle Fatigue (17 muscles: 0..16 per user)
+    @Query("SELECT * FROM muscle_fatigue WHERE userId = :userId ORDER BY muscleId ASC")
+    fun observeMuscleFatigue(userId: Int): Flow<List<MuscleFatigueEntity>>
 
-    @Query("SELECT * FROM muscle_fatigue ORDER BY muscleId ASC")
+    @Query("SELECT * FROM muscle_fatigue WHERE userId = :userId ORDER BY muscleId ASC")
+    suspend fun getUserMuscleFatigue(userId: Int): List<MuscleFatigueEntity>
+
+    @Query("SELECT * FROM muscle_fatigue ORDER BY userId ASC, muscleId ASC")
     suspend fun getAllMuscleFatigue(): List<MuscleFatigueEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -142,9 +163,12 @@ interface GymWpDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertMuscleFatigue(item: MuscleFatigueEntity)
 
+    @Query("DELETE FROM muscle_fatigue")
+    suspend fun clearMuscleFatigue()
+
     // Finished Workouts & Exercise Statistics
-    @Query("SELECT * FROM finished_workout_day ORDER BY timestampMillis DESC")
-    fun observeFinishedWorkouts(): Flow<List<FinishedWorkoutDayEntity>>
+    @Query("SELECT * FROM finished_workout_day WHERE userId = :userId ORDER BY timestampMillis DESC")
+    fun observeFinishedWorkouts(userId: Int): Flow<List<FinishedWorkoutDayEntity>>
 
     @Query("SELECT * FROM finished_workout_day")
     suspend fun getAllFinishedWorkoutsSnapshot(): List<FinishedWorkoutDayEntity>
@@ -158,14 +182,11 @@ interface GymWpDao {
     @Query("DELETE FROM finished_workout_day")
     suspend fun clearFinishedWorkoutDays()
 
-    @Query("SELECT * FROM finished_exercise ORDER BY timestampMillis ASC")
-    fun observeAllFinishedExercises(): Flow<List<FinishedExerciseEntity>>
+    @Query("SELECT * FROM finished_exercise WHERE userId = :userId ORDER BY timestampMillis ASC")
+    fun observeAllFinishedExercises(userId: Int): Flow<List<FinishedExerciseEntity>>
 
     @Query("SELECT * FROM finished_exercise")
     suspend fun getAllFinishedExercisesSnapshot(): List<FinishedExerciseEntity>
-
-    @Query("SELECT * FROM finished_exercise WHERE exerciseId = :exerciseId ORDER BY timestampMillis ASC")
-    fun observeFinishedExercisesForId(exerciseId: Int): Flow<List<FinishedExerciseEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFinishedExercises(items: List<FinishedExerciseEntity>)
@@ -174,8 +195,8 @@ interface GymWpDao {
     suspend fun clearFinishedExercises()
 
     // My Body Measurements
-    @Query("SELECT * FROM my_body_info ORDER BY timestampMillis DESC")
-    fun observeBodyMeasurements(): Flow<List<BodyMeasurementEntity>>
+    @Query("SELECT * FROM my_body_info WHERE userId = :userId ORDER BY timestampMillis DESC")
+    fun observeBodyMeasurements(userId: Int): Flow<List<BodyMeasurementEntity>>
 
     @Query("SELECT * FROM my_body_info")
     suspend fun getAllBodyMeasurementsSnapshot(): List<BodyMeasurementEntity>

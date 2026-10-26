@@ -31,6 +31,7 @@ import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.components.GoogleDriveSyncCard
 import com.gymwp.free.ui.components.ProgressionLineChart
 import com.gymwp.free.ui.components.StatMiniCard
+import com.gymwp.free.ui.components.UserSwitcherDialog
 import com.gymwp.free.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -374,8 +375,10 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
 @Composable
 fun MyBodyScreen(viewModel: GymWpViewModel) {
     val profile by viewModel.userProfile.collectAsState()
+    val allUsers by viewModel.allUsers.collectAsState()
     val measurements by viewModel.bodyMeasurements.collectAsState()
     var showAddMeasurementModal by remember { mutableStateOf(false) }
+    var showUserSwitcherModal by remember { mutableStateOf(false) }
 
     val currentWeight = measurements.firstOrNull()?.weightKg ?: profile?.weightKg ?: 75f
     val currentHeight = measurements.firstOrNull()?.heightCm ?: profile?.heightCm ?: 175f
@@ -423,6 +426,42 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Registrar")
+                }
+            }
+        }
+
+        // Active User & Multi-User Switcher Card
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = GymCardBg),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "Perfil Activo: ${profile?.name ?: "Usuario"}",
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "${allUsers.size} usuario(s) registrado(s) en Chukaros's GymPlanner",
+                            color = Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                    }
+                    OutlinedButton(onClick = { showUserSwitcherModal = true }) {
+                        Icon(Icons.Default.Group, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Usuarios (${allUsers.size})", color = GymOrange, fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -543,6 +582,14 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                 viewModel.saveBodyMeasurement(entity)
                 showAddMeasurementModal = false
             }
+        )
+    }
+
+    if (showUserSwitcherModal) {
+        UserSwitcherDialog(
+            viewModel = viewModel,
+            onDismiss = { showUserSwitcherModal = false },
+            onOpenWizardForNewUser = {}
         )
     }
 }

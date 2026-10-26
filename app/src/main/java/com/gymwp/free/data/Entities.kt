@@ -3,14 +3,14 @@ package com.gymwp.free.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-// JSON Catalog Models (353 Internal Exercises & 57 Pre-built Plans)
+// Catálogo interno de 353 ejercicios y 57 planes
 data class CatalogExercise(
     val id: Int,
     val name: String,
     val nameEn: String = "",
     val namePt: String = "",
     val description: String,
-    val muscles: String, // 17 chars '0'..'3'
+    val muscles: String, // 17 caracteres '0'..'3'
     val defaultUnitType: Int = 0, // 0: Reps+Carga, 1: Reps, 2: Seg, 3: Min
     val equipment: List<String> = emptyList(),
     val gifAssetPath: String
@@ -38,12 +38,13 @@ data class PrebuiltExercise(
     val isBiSet: Boolean = false
 )
 
-// Room Database Entities
+// Entidades SQLite Multi-Usuario para Chukaros's GymPlanner
 
 @Entity(tableName = "user_profile")
 data class UserProfileEntity(
-    @PrimaryKey val id: Int = 1,
-    val name: String = "Atleta",
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String = "Usuario 1",
+    val avatarColorIndex: Int = 0,
     val gender: Int = 0, // 0 = Masculino, 1 = Femenino
     val birthYear: Int = 1996,
     val heightCm: Float = 175f,
@@ -58,6 +59,7 @@ data class UserProfileEntity(
 @Entity(tableName = "workout_plan")
 data class WorkoutPlanEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Int = 1,
     val name: String,
     val description: String = "",
     val isCustomPeriodized: Boolean = false,
@@ -73,7 +75,7 @@ data class WorkoutDayEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val workoutPlanId: Long,
     val name: String,
-    val colorIndex: Int = 0, // 0..9 palette from GymWP
+    val colorIndex: Int = 0,
     val orderIndex: Int = 0
 )
 
@@ -81,13 +83,13 @@ data class WorkoutDayEntity(
 data class WorkoutExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val workoutDayId: Long,
-    val exerciseId: Int, // 0..352 or >= 10000 for user custom exercises
+    val exerciseId: Int,
     val isCustomExercise: Boolean = false,
     val customExerciseName: String = "",
     val setsCount: Int = 4,
     val repsPerSetCsv: String = "10,10,10,10",
     val loadsPerSetCsv: String = "20,20,20,20",
-    val unitType: Int = 0, // 0: Reps+Carga, 1: Reps, 2: Segundos, 3: Minutos
+    val unitType: Int = 0,
     val restSeconds: Int = 60,
     val isBiSet: Boolean = false,
     val notes: String = "",
@@ -97,20 +99,23 @@ data class WorkoutExerciseEntity(
 @Entity(tableName = "user_exercise")
 data class UserCustomExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 10000,
+    val userId: Int = 1,
     val name: String,
     val description: String = "",
-    val muscles: String = "00000000000000000", // 17 chars '0'..'3'
+    val muscles: String = "00000000000000000",
     val unitType: Int = 0
 )
 
-@Entity(tableName = "favorite_exercise")
+@Entity(tableName = "favorite_exercise", primaryKeys = ["userId", "exerciseId"])
 data class FavoriteExerciseEntity(
-    @PrimaryKey val exerciseId: Int
+    val userId: Int = 1,
+    val exerciseId: Int
 )
 
-@Entity(tableName = "muscle_fatigue")
+@Entity(tableName = "muscle_fatigue", primaryKeys = ["userId", "muscleId"])
 data class MuscleFatigueEntity(
-    @PrimaryKey val muscleId: Int, // 0..16
+    val userId: Int = 1,
+    val muscleId: Int, // 0..16
     val fatiguePercent: Int = 0, // 0..100
     val lastUpdatedMillis: Long = System.currentTimeMillis()
 )
@@ -118,6 +123,7 @@ data class MuscleFatigueEntity(
 @Entity(tableName = "finished_workout_day")
 data class FinishedWorkoutDayEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Int = 1,
     val planName: String,
     val dayName: String,
     val timestampMillis: Long = System.currentTimeMillis(),
@@ -132,6 +138,7 @@ data class FinishedWorkoutDayEntity(
 @Entity(tableName = "finished_exercise")
 data class FinishedExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Int = 1,
     val finishedDayId: Long,
     val exerciseId: Int,
     val exerciseName: String,
@@ -148,6 +155,7 @@ data class FinishedExerciseEntity(
 @Entity(tableName = "my_body_info")
 data class BodyMeasurementEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Int = 1,
     val timestampMillis: Long = System.currentTimeMillis(),
     val weightKg: Float = 75f,
     val heightCm: Float = 175f,
@@ -156,7 +164,7 @@ data class BodyMeasurementEntity(
     val boneMassKg: Float = 3.2f,
     val waterPercent: Float = 60f,
     val visceralFat: Int = 5,
-    // 12 Circumferences (cm)
+    // 12 Circunferencias (cm)
     val neckCm: Float = 0f,
     val shoulderCm: Float = 0f,
     val chestCm: Float = 0f,
@@ -171,7 +179,7 @@ data class BodyMeasurementEntity(
     val thighRightCm: Float = 0f,
     val calfLeftCm: Float = 0f,
     val calfRightCm: Float = 0f,
-    // 9 Skinfolds (mm)
+    // 9 Pliegues Cutáneos (mm)
     val skinfoldChestMm: Float = 0f,
     val skinfoldMidaxillaryMm: Float = 0f,
     val skinfoldTricepsMm: Float = 0f,
