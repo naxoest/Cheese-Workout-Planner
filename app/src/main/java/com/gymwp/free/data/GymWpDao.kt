@@ -117,14 +117,23 @@ interface GymWpDao {
     @Query("SELECT * FROM user_exercise WHERE userId = :userId ORDER BY name ASC")
     fun observeUserCustomExercises(userId: Int): Flow<List<UserCustomExerciseEntity>>
 
+    @Query("SELECT * FROM user_exercise ORDER BY name ASC")
+    fun observeAllUserCustomExercises(): Flow<List<UserCustomExerciseEntity>>
+
     @Query("SELECT * FROM user_exercise")
     suspend fun getAllUserCustomExercisesSnapshot(): List<UserCustomExerciseEntity>
+
+    @Query("SELECT MAX(id) FROM user_exercise")
+    suspend fun getMaxCustomExerciseId(): Int?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUserCustomExercise(ex: UserCustomExerciseEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUserCustomExercises(items: List<UserCustomExerciseEntity>)
+
+    @Query("DELETE FROM user_exercise WHERE id = :id")
+    suspend fun deleteUserCustomExercise(id: Int)
 
     @Query("DELETE FROM user_exercise")
     suspend fun clearUserCustomExercises()

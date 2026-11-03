@@ -11,10 +11,11 @@ import kotlinx.coroutines.withContext
 
 data class GymWpCloudBackupPayload(
     val schemaVersion: Int = 2,
-    val appName: String = "Chukaros's GymPlanner",
+    val appName: String = "Cheese WP",
     val exportedAtMillis: Long = System.currentTimeMillis(),
     val deviceModel: String = "${Build.MANUFACTURER} ${Build.MODEL}",
     val activeUserId: Int = 1,
+    val userThemes: Map<Int, String> = emptyMap(),
     val userProfiles: List<UserProfileEntity> = emptyList(),
     val userProfile: UserProfileEntity? = null, // Compatibilidad con respaldos v1
     val workoutPlans: List<WorkoutPlanEntity> = emptyList(),
@@ -40,6 +41,8 @@ object GoogleDriveBackupManager {
 
     private const val PREFS_NAME = "chukaros_gdrive_sync_prefs"
     private const val KEY_ACTIVE_USER_ID = "active_user_id"
+    private const val KEY_DEFAULT_THEME = "app_theme_default"
+    private const val KEY_USER_THEME_PREFIX = "app_theme_user_"
     private const val KEY_LINKED_URI = "linked_drive_uri"
     private const val KEY_LINKED_NAME = "linked_drive_name"
     private const val KEY_AUTO_BACKUP = "auto_backup_enabled"
@@ -47,6 +50,20 @@ object GoogleDriveBackupManager {
     private const val KEY_LAST_STATUS = "last_status_msg"
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
+
+    fun getSavedThemeForUser(context: Context, userId: Int): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val fallback = prefs.getString(KEY_DEFAULT_THEME, "orange_red") ?: "orange_red"
+        return prefs.getString("$KEY_USER_THEME_PREFIX$userId", fallback) ?: fallback
+    }
+
+    fun saveThemeForUser(context: Context, userId: Int, themeId: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("$KEY_USER_THEME_PREFIX$userId", themeId)
+            .putString(KEY_DEFAULT_THEME, themeId)
+            .apply()
+    }
 
     fun getSavedActiveUserId(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -96,9 +113,9 @@ object GoogleDriveBackupManager {
                 if (nameIndex >= 0 && cursor.moveToFirst()) {
                     cursor.getString(nameIndex)
                 } else null
-            } ?: uri.lastPathSegment ?: "Chukaros_GymPlanner_Backup.json"
+            } ?: uri.lastPathSegment ?: "Cheese_WP_Backup.json"
         } catch (_: Exception) {
-            "Chukaros_GymPlanner_Backup.json"
+            "Cheese_WP_Backup.json"
         }
     }
 
@@ -123,10 +140,12 @@ object GoogleDriveBackupManager {
             try {
                 val activeId = getSavedActiveUserId(context)
                 val allUsers = dao.getAllUsersSnapshot()
+                val themesMap = allUsers.associate { u -> u.id to getSavedThemeForUser(context, u.id) }
                 val payload = GymWpCloudBackupPayload(
                     schemaVersion = 2,
                     exportedAtMillis = System.currentTimeMillis(),
                     activeUserId = activeId,
+                    userThemes = themesMap,
                     userProfiles = allUsers,
                     userProfile = allUsers.firstOrNull { it.id == activeId } ?: allUsers.firstOrNull(),
                     workoutPlans = dao.getAllWorkoutPlans(),
@@ -209,6 +228,9 @@ object GoogleDriveBackupManager {
                 profilesToRestore.first().id
             }
             saveActiveUserId(context, restoredActiveId)
+            payload.userThemes?.forEach { (uid, themeId) ->
+                saveThemeForUser(context, uid, themeId)
+            }
 
             dao.clearWorkoutExercises()
             dao.clearWorkoutDays()

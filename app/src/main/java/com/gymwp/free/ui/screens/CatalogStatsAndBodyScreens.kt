@@ -28,8 +28,10 @@ import com.gymwp.free.domain.BodyMetricsCalculator
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
+import com.gymwp.free.ui.components.AppThemeSelectorCard
 import com.gymwp.free.ui.components.AppUpdateCard
 import com.gymwp.free.ui.components.ConfirmDeleteDialog
+import com.gymwp.free.ui.components.CreateOrEditCustomExerciseDialog
 import com.gymwp.free.ui.components.ExerciseDetailDialog
 import com.gymwp.free.ui.components.GoogleDriveSyncCard
 import com.gymwp.free.ui.components.ProgressionLineChart
@@ -42,15 +44,20 @@ import java.util.Locale
 
 @Composable
 fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
-    var activeSubTab by remember { mutableIntStateOf(0) } // 0: 353 Ejercicios, 1: Estadísticas e Historial
+    var activeSubTab by remember { mutableIntStateOf(0) } // 0: Catálogo + Personalizados, 1: Estadísticas
     var search by remember { mutableStateOf("") }
     var selectedMuscleId by remember { mutableStateOf<Int?>(null) }
     var selectedEquipment by remember { mutableStateOf<String?>(null) }
     var onlyFavorites by remember { mutableStateOf(false) }
+    var onlyCustom by remember { mutableStateOf(false) }
+    var showCreateCustomModal by remember { mutableStateOf(false) }
+    var editingCustomExercise by remember { mutableStateOf<CatalogExercise?>(null) }
+    var customExercisePendingDelete by remember { mutableStateOf<CatalogExercise?>(null) }
     var inspectingExercise by remember { mutableStateOf<CatalogExercise?>(null) }
     var finishedWorkoutPendingDelete by remember { mutableStateOf<FinishedWorkoutDayEntity?>(null) }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
 
+    val allCatalog by viewModel.allAvailableExercises.collectAsState()
     val favorites by viewModel.favoriteIds.collectAsState()
     val finishedWorkouts by viewModel.finishedWorkouts.collectAsState()
     val allFinishedEx by viewModel.allFinishedExercises.collectAsState()
@@ -63,15 +70,16 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
     }
 
     val filteredCatalog = remember(
-        viewModel.catalogExercises, search, selectedMuscleId, selectedEquipment, onlyFavorites, favorites
+        allCatalog, search, selectedMuscleId, selectedEquipment, onlyFavorites, onlyCustom, favorites
     ) {
-        viewModel.catalogExercises.filter { ex ->
+        allCatalog.filter { ex ->
             val matchSearch = search.isBlank() || ex.name.contains(search, ignoreCase = true)
             val matchMuscle = selectedMuscleId == null ||
                 (selectedMuscleId!! < ex.muscles.length && ex.muscles[selectedMuscleId!!] >= '2')
             val matchEquip = selectedEquipment == null || ex.equipment.contains(selectedEquipment)
             val matchFav = !onlyFavorites || favorites.contains(ex.id)
-            matchSearch && matchMuscle && matchEquip && matchFav
+            val matchCustom = !onlyCustom || ex.id >= 10000
+            matchSearch && matchMuscle && matchEquip && matchFav && matchCustom
         }
     }
 
@@ -88,7 +96,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
             Tab(
                 selected = activeSubTab == 0,
                 onClick = { activeSubTab = 0 },
-                text = { Text("353 Ejercicios (${filteredCatalog.size})", fontWeight = FontWeight.Bold) }
+                text = { Text("Ejercicios (${filteredCatalog.size})", fontWeight = FontWeight.Bold) }
             )
             Tab(
                 selected = activeSubTab == 1,
@@ -106,19 +114,27 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     OutlinedTextField(
                         value = search,
                         onValueChange = { search = it },
-                        placeholder = { Text("Buscar ejercicio...") },
+                        placeholder = { Text("Buscar ejercicio o máquina...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
-                    FilterChip(
-                        selected = onlyFavorites,
-                        onClick = { onlyFavorites = !onlyFavorites },
-                        label = { Text("★ Favs") }
-                    )
+                    Button(
+                        onClick = { showCreateCustomModal = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GymOrange,
+                            contentColor = GymOnPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Crear", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
 
-                // Muscle filter chips
+                // Muscle & Custom/Favorites filter chips
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -127,9 +143,23 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     FilterChip(
-                        selected = selectedMuscleId == null,
-                        onClick = { selectedMuscleId = null },
-                        label = { Text("Todos los Músculos", fontSize = 11.sp) }
+                        selected = selectedMuscleId == null && !onlyCustom && !onlyFavorites,
+                        onClick = {
+                            selectedMuscleId = null
+                            onlyCustom = false
+                            onlyFavorites = false
+                        },
+                        label = { Text("Todos", fontSize = 11.sp) }
+                    )
+                    FilterChip(
+                        selected = onlyCustom,
+                        onClick = { onlyCustom = !onlyCustom },
+                        label = { Text("★ Mis Ejercicios", fontSize = 11.sp) }
+                    )
+                    FilterChip(
+                        selected = onlyFavorites,
+                        onClick = { onlyFavorites = !onlyFavorites },
+                        label = { Text("♥ Favoritos", fontSize = 11.sp) }
                     )
                     MuscleCatalog.ALL_MUSCLES.forEach { m ->
                         FilterChip(
@@ -173,6 +203,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     val primaryMuscles = (0..16)
                         .filter { it < ex.muscles.length && ex.muscles[it] >= '2' }
                         .joinToString(", ") { MuscleCatalog.getName(it) }
+                    val isCustom = ex.id >= 10000
 
                     Card(
                         colors = CardDefaults.cardColors(containerColor = GymCardBg),
@@ -194,12 +225,23 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                             )
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = ex.name,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = ex.name,
+                                        color = GymTextPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    if (isCustom) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            text = "★ Propio",
+                                            color = GymOrange,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    }
+                                }
                                 if (primaryMuscles.isNotBlank()) {
                                     Text(
                                         text = primaryMuscles,
@@ -211,16 +253,32 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                 if (ex.equipment.isNotEmpty()) {
                                     Text(
                                         text = ex.equipment.joinToString(" • "),
-                                        color = Color.LightGray,
+                                        color = GymTextSecondary,
                                         fontSize = 11.sp
                                     )
                                 }
                             }
-                            IconButton(onClick = { viewModel.toggleFavorite(ex.id) }) {
+                            if (isCustom) {
+                                IconButton(
+                                    onClick = { editingCustomExercise = ex },
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Editar ejercicio propio",
+                                        tint = GymOrange,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            IconButton(
+                                onClick = { viewModel.toggleFavorite(ex.id) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
                                 Icon(
                                     imageVector = if (favorites.contains(ex.id)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = "Favorito",
-                                    tint = if (favorites.contains(ex.id)) GymOrange else Color.Gray
+                                    tint = if (favorites.contains(ex.id)) GymOrange else GymTextSecondary
                                 )
                             }
                         }
@@ -229,12 +287,10 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
             }
         } else {
             // Global Statistics & Comparative Macro-Muscle Breakdown
-            val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
             val totalWorkouts = finishedWorkouts.size
             val totalKcal = finishedWorkouts.sumOf { it.caloriesBurned }
             val totalVolumeTon = finishedWorkouts.sumOf { it.totalVolumeKg.toDouble() }.toFloat()
 
-            // Calculate comparative macro-muscle distribution from allFinishedEx
             val macroCounts = remember(allFinishedEx) {
                 val map = mutableMapOf(
                     "Pecho" to 0,
@@ -277,7 +333,6 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     }
                 }
 
-                // Macro-Muscle Comparative Distribution Card (GraphicStatistcsComparativeFragment)
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = GymCardBg),
@@ -300,7 +355,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(macroName, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(macroName, color = GymTextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                         Text("$pct%", color = barColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(Modifier.height(3.dp))
@@ -332,7 +387,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     item {
                         Text(
                             "Aún no has finalizado ningún entrenamiento. Inicia una rutina desde la pestaña Entrenar.",
-                            color = Color.Gray,
+                            color = GymTextSecondary,
                             fontSize = 13.sp
                         )
                     }
@@ -355,14 +410,14 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(fw.dayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text(dateFormat.format(Date(fw.timestampMillis)), color = Color.LightGray, fontSize = 11.sp)
+                                        Text(fw.dayName, color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(dateFormat.format(Date(fw.timestampMillis)), color = GymTextSecondary, fontSize = 11.sp)
                                     }
                                     Text(fw.planName, color = GymOrange, fontSize = 12.sp)
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series (${fw.totalReps} reps)",
-                                        color = Color.LightGray,
+                                        color = GymTextSecondary,
                                         fontSize = 12.sp
                                     )
                                 }
@@ -370,7 +425,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                     Icon(
                                         imageVector = Icons.Default.DeleteOutline,
                                         contentDescription = "Eliminar entrenamiento del historial",
-                                        tint = Color.Gray
+                                        tint = GymTextSecondary
                                     )
                                 }
                             }
@@ -379,6 +434,41 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                 }
             }
         }
+    }
+
+    if (showCreateCustomModal) {
+        CreateOrEditCustomExerciseDialog(
+            initialExercise = null,
+            onDismiss = { showCreateCustomModal = false },
+            onSave = { existingId, name, eq, prim, sec, unit, notes ->
+                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes) {
+                    showCreateCustomModal = false
+                }
+            }
+        )
+    }
+
+    editingCustomExercise?.let { targetCustom ->
+        CreateOrEditCustomExerciseDialog(
+            initialExercise = targetCustom,
+            onDismiss = { editingCustomExercise = null },
+            onSave = { existingId, name, eq, prim, sec, unit, notes ->
+                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes) {
+                    editingCustomExercise = null
+                }
+            }
+        )
+    }
+
+    customExercisePendingDelete?.let { targetCustom ->
+        ConfirmDeleteDialog(
+            itemTitle = "el ejercicio personalizado \"${targetCustom.name}\"",
+            onConfirm = {
+                viewModel.deleteCustomExercise(targetCustom.id)
+                customExercisePendingDelete = null
+            },
+            onDismiss = { customExercisePendingDelete = null }
+        )
     }
 
     finishedWorkoutPendingDelete?.let { targetFw ->
@@ -398,7 +488,15 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
             isFavorite = favorites.contains(ex.id),
             history = allFinishedEx.filter { it.exerciseId == ex.id },
             onToggleFavorite = { viewModel.toggleFavorite(ex.id) },
-            onDismiss = { inspectingExercise = null }
+            onDismiss = { inspectingExercise = null },
+            onEditCustomExercise = { target ->
+                inspectingExercise = null
+                editingCustomExercise = target
+            },
+            onDeleteCustomExercise = { target ->
+                inspectingExercise = null
+                customExercisePendingDelete = target
+            }
         )
     }
 }
@@ -438,26 +536,26 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(Modifier.weight(1f)) {
                     Text(
-                        text = "Mi Cuerpo y Antropometría",
+                        text = "Mi Cuerpo y Ajustes",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = GymOrange
                     )
                     Text(
-                        text = "IMC, Peso Ideal, Grasa Corporal, 12 Circunferencias y 9 Pliegues",
-                        color = Color.LightGray,
+                        text = "IMC, Peso Ideal, Antropometría, Temas de Cheese WP y Nube",
+                        color = GymTextSecondary,
                         fontSize = 12.sp
                     )
                 }
                 Button(
                     onClick = { showAddMeasurementModal = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Registrar")
+                    Text("Registrar", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -479,13 +577,13 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                     Column(Modifier.weight(1f)) {
                         Text(
                             text = "Perfil Activo: ${profile?.name ?: "Usuario"}",
-                            color = Color.White,
+                            color = GymTextPrimary,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp
                         )
                         Text(
-                            text = "${allUsers.size} usuario(s) registrado(s) en Chukaros's GymPlanner",
-                            color = Color.LightGray,
+                            text = "${allUsers.size} usuario(s) registrado(s) en Cheese WP",
+                            color = GymTextSecondary,
                             fontSize = 12.sp
                         )
                     }
@@ -498,7 +596,12 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
             }
         }
 
-        // Google Drive 4 TB Auto-Sync Card
+        // 5 Application Themes Selector Card
+        item {
+            AppThemeSelectorCard(viewModel = viewModel)
+        }
+
+        // Google Drive Auto-Sync Card
         item {
             GoogleDriveSyncCard(viewModel = viewModel)
         }
@@ -527,20 +630,20 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                     }
                     Text(
                         text = "Clasificación OMS: $bmiClass",
-                        color = Color.White,
+                        color = GymTextPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
                     Text(
                         text = "Rango de Peso Ideal para ${currentHeight.toInt()} cm: ${"%.1f".format(idealMin)} kg – ${"%.1f".format(idealMax)} kg",
                         color = GymAccentCyan,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         }
 
-        // Weight Progression Chart if measurements exist
         if (measurements.isNotEmpty()) {
             item {
                 ProgressionLineChart(
@@ -551,7 +654,6 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
             }
         }
 
-        // Historical Measurements List
         item {
             Text(
                 "Registros Antropométricos (${measurements.size})",
@@ -575,17 +677,17 @@ fun MyBodyScreen(viewModel: GymWpViewModel) {
                     ) {
                         Text(
                             text = "📅 ${dateFormat.format(Date(m.timestampMillis))} — ${m.weightKg} kg (${m.bodyFatPercent}% grasa)",
-                            color = Color.White,
+                            color = GymTextPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
                         IconButton(onClick = { measurementPendingDelete = m }) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = "Borrar", tint = Color.Gray)
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Borrar", tint = GymTextSecondary)
                         }
                     }
                     Text(
                         text = "Composición: Músculo ${m.muscleMassPercent}% • Agua ${m.waterPercent}% • Masa Ósea ${m.boneMassKg} kg",
-                        color = Color.LightGray,
+                        color = GymTextSecondary,
                         fontSize = 12.sp
                     )
                     if (m.chestCm > 0f || m.waistCm > 0f || m.bicepsRightCm > 0f || m.thighRightCm > 0f) {
@@ -656,7 +758,6 @@ fun AddBodyMeasurementDialog(
     var muscle by remember { mutableStateOf("42.0") }
     var water by remember { mutableStateOf("60.0") }
 
-    // Key circumferences (cm)
     var neck by remember { mutableStateOf("") }
     var shoulders by remember { mutableStateOf("") }
     var chest by remember { mutableStateOf("") }
@@ -668,7 +769,6 @@ fun AddBodyMeasurementDialog(
     var thigh by remember { mutableStateOf("") }
     var calf by remember { mutableStateOf("") }
 
-    // Key skinfolds (mm)
     var sfChest by remember { mutableStateOf("") }
     var sfTriceps by remember { mutableStateOf("") }
     var sfSubscapular by remember { mutableStateOf("") }
@@ -692,7 +792,7 @@ fun AddBodyMeasurementDialog(
             ) {
                 Text("Nuevo Registro Antropométrico", color = GymOrange, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
 
-                Text("1. Peso y Composición Corporal", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("1. Peso y Composición Corporal", color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = weight, onValueChange = { weight = it }, label = { Text("Peso (kg)") }, modifier = Modifier.weight(1f))
                     OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text("Altura (cm)") }, modifier = Modifier.weight(1f))
@@ -704,7 +804,7 @@ fun AddBodyMeasurementDialog(
                 }
 
                 Spacer(Modifier.height(4.dp))
-                Text("2. Circunferencias Corporales (cm)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("2. Circunferencias Corporales (cm)", color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = chest, onValueChange = { chest = it }, label = { Text("Pecho") }, modifier = Modifier.weight(1f))
                     OutlinedTextField(value = shoulders, onValueChange = { shoulders = it }, label = { Text("Hombros") }, modifier = Modifier.weight(1f))
@@ -725,7 +825,7 @@ fun AddBodyMeasurementDialog(
                 }
 
                 Spacer(Modifier.height(4.dp))
-                Text("3. Pliegues Cutáneos (mm)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("3. Pliegues Cutáneos (mm)", color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = sfChest, onValueChange = { sfChest = it }, label = { Text("Pectoral") }, modifier = Modifier.weight(1f))
                     OutlinedTextField(value = sfAbdominal, onValueChange = { sfAbdominal = it }, label = { Text("Abdominal") }, modifier = Modifier.weight(1f))
@@ -742,7 +842,7 @@ fun AddBodyMeasurementDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancelar") }
+                    TextButton(onClick = onDismiss) { Text("Cancelar", color = GymTextSecondary) }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -776,9 +876,9 @@ fun AddBodyMeasurementDialog(
                                 )
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
                     ) {
-                        Text("Guardar Medición")
+                        Text("Guardar Medición", fontWeight = FontWeight.Bold)
                     }
                 }
             }

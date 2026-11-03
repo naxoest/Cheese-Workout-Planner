@@ -62,7 +62,7 @@ fun ExplorePrebuiltPlansScreen(
         )
         Text(
             text = "Planes estructurados por nivel, objetivo y días de entrenamiento.",
-            color = Color.LightGray,
+            color = GymTextSecondary,
             fontSize = 12.sp
         )
         Spacer(Modifier.height(10.dp))
@@ -108,7 +108,7 @@ fun ExplorePrebuiltPlansScreen(
                             ) {
                                 Text(
                                     text = plan.name,
-                                    color = Color.White,
+                                    color = GymTextPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 16.sp,
                                     modifier = Modifier.weight(1f)
@@ -130,7 +130,7 @@ fun ExplorePrebuiltPlansScreen(
                             if (plan.description.isNotBlank()) {
                                 Text(
                                     text = plan.description,
-                                    color = Color.LightGray,
+                                    color = GymTextSecondary,
                                     fontSize = 12.sp,
                                     maxLines = 3
                                 )
@@ -153,7 +153,7 @@ fun ExplorePrebuiltPlansScreen(
                                             onPlanImported()
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange),
+                                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -181,7 +181,7 @@ fun ExplorePrebuiltPlansScreen(
                 Column(Modifier.padding(16.dp)) {
                     Text(plan.name, color = GymOrange, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                     Spacer(Modifier.height(4.dp))
-                    Text(plan.description, color = Color.LightGray, fontSize = 12.sp)
+                    Text(plan.description, color = GymTextSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(12.dp))
                     Column(
                         modifier = Modifier
@@ -216,13 +216,13 @@ fun ExplorePrebuiltPlansScreen(
                                             Column {
                                                 Text(
                                                     text = catEx?.name ?: "Ejercicio #${pEx.exerciseId}",
-                                                    color = Color.White,
+                                                    color = GymTextPrimary,
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.SemiBold
                                                 )
                                                 Text(
                                                     text = "${pEx.sets} series • Reps: ${pEx.reps.joinToString("-")}",
-                                                    color = Color.LightGray,
+                                                    color = GymTextSecondary,
                                                     fontSize = 11.sp
                                                 )
                                             }
@@ -237,7 +237,7 @@ fun ExplorePrebuiltPlansScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(onClick = { previewingPlan = null }) { Text("Cerrar") }
+                        TextButton(onClick = { previewingPlan = null }) { Text("Cerrar", color = GymTextSecondary) }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
@@ -246,9 +246,9 @@ fun ExplorePrebuiltPlansScreen(
                                     onPlanImported()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
                         ) {
-                            Text("Importar a Mis Rutinas")
+                            Text("Importar a Mis Rutinas", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -289,7 +289,7 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
                     )
                     Text(
                         text = "Recuperación horaria automática • Toca un músculo para ajustar su fatiga",
-                        color = Color.LightGray,
+                        color = GymTextSecondary,
                         fontSize = 12.sp
                     )
                 }
@@ -352,7 +352,7 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
                         Column {
                             Text(
                                 text = mInfo.nameEs,
-                                color = Color.White,
+                                color = GymTextPrimary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -362,7 +362,7 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
                                 } else {
                                     "100% Recuperado y listo para entrenar"
                                 },
-                                color = Color.LightGray,
+                                color = GymTextSecondary,
                                 fontSize = 12.sp
                             )
                         }
@@ -388,13 +388,12 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
         }
     }
 
-    // Dialog: Edit Muscle Fatigue Manually (DialogEditMuscleFatigue equivalent)
     editingMuscle?.let { item ->
         var sliderVal by remember { mutableFloatStateOf(item.fatiguePercent.toFloat()) }
         val mName = MuscleCatalog.getName(item.muscleId)
         AlertDialog(
             onDismissRequest = { editingMuscle = null },
-            title = { Text("Ajustar Fatiga: $mName") },
+            title = { Text("Ajustar Fatiga: $mName", color = GymTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -419,14 +418,15 @@ fun MuscleFatigueScreen(viewModel: GymWpViewModel) {
                         viewModel.updateMuscleFatigueManually(item.muscleId, sliderVal.toInt())
                         editingMuscle = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
                 ) {
-                    Text("Guardar")
+                    Text("Guardar", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { editingMuscle = null }) { Text("Cancelar") }
-            }
+                TextButton(onClick = { editingMuscle = null }) { Text("Cancelar", color = GymTextSecondary) }
+            },
+            containerColor = GymCardBg
         )
     }
 
@@ -453,6 +453,6 @@ private fun FatigueLegendDot(label: String, color: Color) {
                 .background(color, CircleShape)
         )
         Spacer(Modifier.width(4.dp))
-        Text(label, color = Color.LightGray, fontSize = 11.sp)
+        Text(label, color = GymTextSecondary, fontSize = 11.sp)
     }
 }

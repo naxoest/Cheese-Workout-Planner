@@ -6,7 +6,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -42,7 +44,6 @@ import com.gymwp.free.R
 import com.gymwp.free.data.AppUpdateManager
 import com.gymwp.free.data.AppUpdateState
 import com.gymwp.free.data.CatalogExercise
-import com.gymwp.free.data.DriveSyncState
 import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.data.UserProfileEntity
 import com.gymwp.free.domain.MuscleCatalog
@@ -75,6 +76,26 @@ fun AnimatedExerciseGif(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit
 ) {
+    if (gifAssetPath.isBlank()) {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(GymOrange.copy(alpha = 0.14f))
+                .border(1.dp, GymOrange.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(4.dp)) {
+                Icon(
+                    imageVector = Icons.Default.FitnessCenter,
+                    contentDescription = contentDescription,
+                    tint = GymOrange,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+        return
+    }
+
     val context = LocalContext.current
     val imageLoader = rememberGifImageLoader()
     AsyncImage(
@@ -91,43 +112,48 @@ fun AnimatedExerciseGif(
     )
 }
 
+/**
+ * 100% Anatomically Verified 2D Muscle Fatigue Body Map
+ */
 @Composable
 fun AnatomyFatigueBodyMap(
     fatigueByMuscleId: Map<Int, Int>,
     modifier: Modifier = Modifier,
-    mapHeight: Dp = 290.dp
+    mapHeight: Dp = 290.dp,
+    highlightOnlyActive: Boolean = false
 ) {
+    // Verified bijection between MuscleCatalog IDs (0..15) and front/back PNG layers
     val frontMuscleDrawables = remember {
         listOf(
-            0 to R.drawable.muscle_front_0,
-            1 to R.drawable.muscle_front_1,
-            2 to R.drawable.muscle_front_2,
-            3 to R.drawable.muscle_front_3,
-            4 to R.drawable.muscle_front_4,
-            5 to R.drawable.muscle_front_5,
-            6 to R.drawable.muscle_front_6,
-            7 to R.drawable.muscle_front_7,
-            8 to R.drawable.muscle_front_8,
-            10 to R.drawable.muscle_front_10,
-            11 to R.drawable.muscle_front_11,
-            15 to R.drawable.muscle_front_15
+            0 to R.drawable.muscle_front_3,   // 0: Hombros (Deltoides anterior/lateral)
+            1 to R.drawable.muscle_front_4,   // 1: Pecho (Pectorales)
+            2 to R.drawable.muscle_front_5,   // 2: Bíceps
+            3 to R.drawable.muscle_front_6,   // 3: Antebrazos
+            4 to R.drawable.muscle_front_7,   // 4: Abdomen (Recto)
+            5 to R.drawable.muscle_front_8,   // 5: Oblicuos
+            6 to R.drawable.muscle_front_15,  // 6: Cuádriceps
+            7 to R.drawable.muscle_front_11,  // 7: Aductores
+            8 to R.drawable.muscle_front_10,  // 8: Abductores
+            10 to R.drawable.muscle_front_0,  // 10: Tríceps (porción medial frontal)
+            11 to R.drawable.muscle_front_1,  // 11: Dorsales (vista frontal subaxilar)
+            15 to R.drawable.muscle_front_2   // 15: Gemelos (vista frontal interna)
         )
     }
 
     val backMuscleDrawables = remember {
         listOf(
-            0 to R.drawable.muscle_back_0,
-            2 to R.drawable.muscle_back_2,
-            3 to R.drawable.muscle_back_3,
-            5 to R.drawable.muscle_back_5,
-            7 to R.drawable.muscle_back_7,
-            9 to R.drawable.muscle_back_9,
-            10 to R.drawable.muscle_back_10,
-            11 to R.drawable.muscle_back_11,
-            12 to R.drawable.muscle_back_12,
-            13 to R.drawable.muscle_back_13,
-            14 to R.drawable.muscle_back_14,
-            15 to R.drawable.muscle_back_15
+            0 to R.drawable.muscle_back_9,    // 0: Hombros (Deltoides posterior)
+            2 to R.drawable.muscle_back_12,   // 2: Bíceps / Braquial
+            3 to R.drawable.muscle_back_13,   // 3: Antebrazos
+            5 to R.drawable.muscle_back_10,   // 5: Oblicuos (flanco posterior)
+            7 to R.drawable.muscle_back_11,   // 7: Aductores (posterior interno)
+            9 to R.drawable.muscle_back_3,    // 9: Trapecio
+            10 to R.drawable.muscle_back_2,   // 10: Tríceps
+            11 to R.drawable.muscle_back_7,   // 11: Dorsales (Espalda Alta)
+            12 to R.drawable.muscle_back_14,  // 12: Lumbares (Espalda Baja)
+            13 to R.drawable.muscle_back_5,   // 13: Glúteos
+            14 to R.drawable.muscle_back_15,  // 14: Isquiotibiales (Femoral)
+            15 to R.drawable.muscle_back_0    // 15: Gemelos (Pantorrillas)
         )
     }
 
@@ -137,19 +163,21 @@ fun AnatomyFatigueBodyMap(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-            Text("Frente", style = MaterialTheme.typography.labelMedium, color = Color.LightGray)
+            Text("Frente", style = MaterialTheme.typography.labelMedium, color = GymTextSecondary)
             Spacer(Modifier.height(4.dp))
             Box(modifier = Modifier.height(mapHeight).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Image(
                     painter = painterResource(id = R.drawable.muscle_front_base),
                     contentDescription = "Cuerpo Frontal",
-                    colorFilter = ColorFilter.tint(SkinToneBase.copy(alpha = 0.9f)),
+                    colorFilter = ColorFilter.tint(SkinToneBase),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
                 for ((muscleId, resId) in frontMuscleDrawables) {
                     val pct = fatigueByMuscleId[muscleId] ?: 0
-                    val tint = getFatigueColor(pct).copy(alpha = 0.62f)
+                    if (highlightOnlyActive && pct <= 0) continue
+                    val alpha = if (pct >= 20) 0.86f else 0.45f
+                    val tint = getFatigueColor(pct).copy(alpha = alpha)
                     Image(
                         painter = painterResource(id = resId),
                         contentDescription = null,
@@ -162,19 +190,21 @@ fun AnatomyFatigueBodyMap(
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-            Text("Espalda", style = MaterialTheme.typography.labelMedium, color = Color.LightGray)
+            Text("Espalda", style = MaterialTheme.typography.labelMedium, color = GymTextSecondary)
             Spacer(Modifier.height(4.dp))
             Box(modifier = Modifier.height(mapHeight).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Image(
                     painter = painterResource(id = R.drawable.muscle_back_base),
                     contentDescription = "Cuerpo Posterior",
-                    colorFilter = ColorFilter.tint(SkinToneBase.copy(alpha = 0.9f)),
+                    colorFilter = ColorFilter.tint(SkinToneBase),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
                 for ((muscleId, resId) in backMuscleDrawables) {
                     val pct = fatigueByMuscleId[muscleId] ?: 0
-                    val tint = getFatigueColor(pct).copy(alpha = 0.62f)
+                    if (highlightOnlyActive && pct <= 0) continue
+                    val alpha = if (pct >= 20) 0.86f else 0.45f
+                    val tint = getFatigueColor(pct).copy(alpha = alpha)
                     Image(
                         painter = painterResource(id = resId),
                         contentDescription = null,
@@ -194,9 +224,12 @@ fun ExerciseDetailDialog(
     isFavorite: Boolean,
     history: List<FinishedExerciseEntity>,
     onToggleFavorite: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onEditCustomExercise: ((CatalogExercise) -> Unit)? = null,
+    onDeleteCustomExercise: ((CatalogExercise) -> Unit)? = null
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val isCustom = exercise.id >= 10000
 
     val muscleHighlightMap = remember(exercise.muscles) {
         (0..16).associateWith { mId ->
@@ -228,22 +261,41 @@ fun ExerciseDetailDialog(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = exercise.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = exercise.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = GymTextPrimary
+                        )
+                        if (isCustom) {
+                            Text(
+                                text = "Ejercicio personalizado",
+                                fontSize = 11.sp,
+                                color = GymOrange,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    if (isCustom && onEditCustomExercise != null) {
+                        IconButton(onClick = { onEditCustomExercise(exercise) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar ejercicio", tint = GymOrange)
+                        }
+                    }
+                    if (isCustom && onDeleteCustomExercise != null) {
+                        IconButton(onClick = { onDeleteCustomExercise(exercise) }) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar ejercicio", tint = FatigueRed)
+                        }
+                    }
                     IconButton(onClick = onToggleFavorite) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorito",
-                            tint = if (isFavorite) GymOrange else Color.LightGray
+                            tint = if (isFavorite) GymOrange else GymTextSecondary
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GymTextPrimary)
                     }
                 }
 
@@ -271,20 +323,23 @@ fun ExerciseDetailDialog(
                         .padding(16.dp)
                 ) {
                     if (selectedTab == 0) {
-                        AnimatedExerciseGif(
-                            gifAssetPath = exercise.gifAssetPath,
-                            contentDescription = exercise.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                        )
-
-                        Spacer(Modifier.height(12.dp))
+                        if (exercise.gifAssetPath.isNotBlank()) {
+                            AnimatedExerciseGif(
+                                gifAssetPath = exercise.gifAssetPath,
+                                contentDescription = exercise.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp)
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
 
                         if (exercise.equipment.isNotEmpty()) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
                             ) {
                                 exercise.equipment.forEach { eq ->
                                     AssistChip(
@@ -301,7 +356,7 @@ fun ExerciseDetailDialog(
                         }
 
                         Text(
-                            "Instrucciones de Ejecución",
+                            "Instrucciones / Notas de Ejecución",
                             style = MaterialTheme.typography.titleSmall,
                             color = GymOrange,
                             fontWeight = FontWeight.Bold
@@ -310,7 +365,7 @@ fun ExerciseDetailDialog(
                         Text(
                             text = exercise.description.ifBlank { "Ejecute el movimiento de forma controlada manteniendo la postura anatómica correcta." },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFE0E0E0),
+                            color = GymTextPrimary,
                             lineHeight = 20.sp
                         )
 
@@ -356,16 +411,17 @@ fun ExerciseDetailDialog(
                                             .background(badgeColor, CircleShape)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text(MuscleCatalog.getName(mId), color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    Text(MuscleCatalog.getName(mId), color = GymTextPrimary, fontWeight = FontWeight.SemiBold)
                                 }
-                                Text(roleLabel, color = badgeColor, fontSize = 12.sp)
+                                Text(roleLabel, color = badgeColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
                         Spacer(Modifier.height(14.dp))
                         AnatomyFatigueBodyMap(
                             fatigueByMuscleId = muscleHighlightMap,
-                            mapHeight = 220.dp
+                            mapHeight = 220.dp,
+                            highlightOnlyActive = true
                         )
                     } else {
                         if (history.isEmpty()) {
@@ -376,8 +432,8 @@ fun ExerciseDetailDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Aún no hay sesiones registradas para este ejercicio.\nCompleta un entrenamiento con el Asistente en Vivo para ver tu progresión.",
-                                    color = Color.Gray
+                                    "Aún no hay sesiones registradas para este ejercicio.\nCompleta un entrenamiento en vivo para ver tu progresión.",
+                                    color = GymTextSecondary
                                 )
                             }
                         } else {
@@ -389,7 +445,7 @@ fun ExerciseDetailDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                StatMiniCard("Récord Carga", "${maxLoadAllTime} kg", Modifier.weight(1f))
+                                StatMiniCard("Récord Carga", "$maxLoadAllTime kg", Modifier.weight(1f))
                                 StatMiniCard("Máx Volumen", "${maxVolAllTime.toInt()} kg", Modifier.weight(1f))
                                 StatMiniCard("Total Reps", "$totalRepsAllTime", Modifier.weight(1f))
                             }
@@ -424,16 +480,383 @@ fun ExerciseDetailDialog(
                                     Column(Modifier.padding(12.dp)) {
                                         Text(
                                             text = "Máx: ${item.maxLoadKg} kg | Vol: ${item.totalVolumeKg.toInt()} kg | Reps: ${item.totalReps}",
-                                            color = Color.White,
+                                            color = GymTextPrimary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp
                                         )
                                         Spacer(Modifier.height(2.dp))
-                                        Text(item.setsDetailText, color = Color.LightGray, fontSize = 12.sp)
+                                        Text(item.setsDetailText, color = GymTextSecondary, fontSize = 12.sp)
                                     }
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dialog to create or edit a Custom Gym Exercise / Machine
+ */
+@Composable
+fun CreateOrEditCustomExerciseDialog(
+    initialExercise: CatalogExercise? = null,
+    onDismiss: () -> Unit,
+    onSave: (
+        existingId: Int?,
+        name: String,
+        equipment: List<String>,
+        primaryMuscles: Set<Int>,
+        secondaryMuscles: Set<Int>,
+        unitType: Int,
+        notes: String
+    ) -> Unit
+) {
+    var name by remember { mutableStateOf(initialExercise?.name ?: "") }
+    var unitType by remember { mutableIntStateOf(initialExercise?.defaultUnitType ?: 0) }
+    var notes by remember { mutableStateOf(initialExercise?.description ?: "") }
+
+    val allEquipmentOptions = remember {
+        listOf(
+            "Aparato / Máquina", "Polea / Cable", "Mancuernas", "Barra", "Máquina Smith",
+            "Peso Corporal", "Barra Fija", "Banco", "TRX / Suspensión", "Pelota Suiza", "Tobillera / Peso Libre"
+        )
+    }
+
+    val selectedEquipment = remember {
+        mutableStateListOf<String>().apply {
+            val initEq = initialExercise?.equipment ?: listOf("Aparato / Máquina")
+            addAll(initEq)
+        }
+    }
+
+    val primaryMuscles = remember {
+        mutableStateListOf<Int>().apply {
+            initialExercise?.muscles?.forEachIndexed { idx, c ->
+                if (c == '3') add(idx)
+            }
+            if (isEmpty() && initialExercise == null) add(1) // Pecho por defecto si está vacío
+        }
+    }
+
+    val secondaryMuscles = remember {
+        mutableStateListOf<Int>().apply {
+            initialExercise?.muscles?.forEachIndexed { idx, c ->
+                if (c == '2' || c == '1') add(idx)
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+                .padding(horizontal = 12.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = GymCardBg
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GymSurfaceElevated)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (initialExercise == null) "Crear Ejercicio / Máquina" else "Editar Ejercicio Propio",
+                        color = GymOrange,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GymTextPrimary)
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nombre del ejercicio o máquina *") },
+                        placeholder = { Text("Ej. Prensa Péndulo, Remo Hammer...") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("Equipamiento utilizado:", color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        allEquipmentOptions.forEach { eq ->
+                            val selected = selectedEquipment.contains(eq)
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    if (selected && selectedEquipment.size > 1) {
+                                        selectedEquipment.remove(eq)
+                                    } else if (!selected) {
+                                        selectedEquipment.add(eq)
+                                    }
+                                },
+                                label = { Text(eq, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+
+                    Text("Cómo se registra:", color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            0 to "Reps + Carga (kg)",
+                            1 to "Solo Reps (Peso Corporal)",
+                            2 to "Segundos (Isométrico)",
+                            3 to "Minutos (Cardio)"
+                        ).forEach { (uCode, label) ->
+                            FilterChip(
+                                selected = unitType == uCode,
+                                onClick = { unitType = uCode },
+                                label = { Text(label, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+
+                    Text(
+                        "Músculos Principales (Impacto directo en Fatiga 2D):",
+                        color = GymOrange,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        MuscleCatalog.ALL_MUSCLES.forEach { m ->
+                            val isPrim = primaryMuscles.contains(m.id)
+                            FilterChip(
+                                selected = isPrim,
+                                onClick = {
+                                    if (isPrim && primaryMuscles.size > 1) {
+                                        primaryMuscles.remove(m.id)
+                                    } else if (!isPrim) {
+                                        primaryMuscles.add(m.id)
+                                        secondaryMuscles.remove(m.id)
+                                    }
+                                },
+                                label = { Text(m.nameEs, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = FatigueRed.copy(alpha = 0.85f),
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+
+                    Text(
+                        "Músculos Secundarios (Opcional):",
+                        color = GymTextPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        MuscleCatalog.ALL_MUSCLES.forEach { m ->
+                            val isSec = secondaryMuscles.contains(m.id)
+                            val isPrim = primaryMuscles.contains(m.id)
+                            if (!isPrim) {
+                                FilterChip(
+                                    selected = isSec,
+                                    onClick = {
+                                        if (isSec) secondaryMuscles.remove(m.id) else secondaryMuscles.add(m.id)
+                                    },
+                                    label = { Text(m.nameEs, fontSize = 12.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("Notas / Ajustes de máquina (opcional)") },
+                        placeholder = { Text("Ej. Asiento en nivel 3, agarre neutro...") },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GymSurfaceElevated)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar", color = GymTextSecondary)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (name.isNotBlank()) {
+                                onSave(
+                                    initialExercise?.id,
+                                    name,
+                                    selectedEquipment.toList(),
+                                    primaryMuscles.toSet(),
+                                    secondaryMuscles.toSet(),
+                                    unitType,
+                                    notes
+                                )
+                            }
+                        },
+                        enabled = name.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Guardar Ejercicio", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Theme Selector Card & Dialog (5 Official Cheese WP Themes)
+ */
+@Composable
+fun AppThemeSelectorCard(viewModel: GymWpViewModel) {
+    val currentTheme by viewModel.selectedTheme.collectAsState()
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = GymCardBg),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Palette, contentDescription = null, tint = GymOrange)
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Tema de Cheese WP",
+                        color = GymTextPrimary,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = "Actual: ${currentTheme.displayName}",
+                        color = GymTextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            AppThemeOption.entries.forEach { option ->
+                val selected = option == currentTheme
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) GymOrange.copy(alpha = 0.16f) else GymSurfaceElevated)
+                        .border(
+                            width = if (selected) 2.dp else 1.dp,
+                            color = if (selected) GymOrange else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .clickable { viewModel.setAppTheme(option) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        // Color Swatch Preview (Bg + Primary + Secondary)
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .border(1.dp, Color.Gray.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        ) {
+                            Box(Modifier.size(16.dp, 28.dp).background(option.previewBg))
+                            Box(Modifier.size(16.dp, 28.dp).background(option.previewPrimary))
+                            Box(Modifier.size(16.dp, 28.dp).background(option.previewSecondary))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = option.displayName,
+                                color = GymTextPrimary,
+                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = option.subtitle,
+                                color = GymTextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    if (selected) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = "Seleccionado", tint = GymOrange)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AppThemeSelectorDialog(
+    viewModel: GymWpViewModel,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = GymCardBg,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(14.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                AppThemeSelectorCard(viewModel = viewModel)
+                Spacer(Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Listo", color = GymOrange, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -450,7 +873,7 @@ fun StatMiniCard(label: String, value: String, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(value, color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Text(label, color = Color.LightGray, fontSize = 11.sp)
+        Text(label, color = GymTextSecondary, fontSize = 11.sp)
     }
 }
 
@@ -467,7 +890,7 @@ fun ProgressionLineChart(
             .background(GymSurfaceElevated, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
-        Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        Text(title, color = GymTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         Spacer(Modifier.height(8.dp))
         if (values.isEmpty()) return@Column
         val minVal = (values.minOrNull() ?: 0f) * 0.9f
@@ -550,13 +973,13 @@ fun GoogleDriveSyncCard(
                     Column {
                         Text(
                             text = "Google Drive • Auto-Sync",
-                            color = Color.White,
+                            color = GymTextPrimary,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp
                         )
                         Text(
                             text = if (isLinked) "Archivo vinculado: ${syncState.linkedFileName}" else "Sin archivo vinculado en Google Drive",
-                            color = if (isLinked) FatigueGreen else Color.LightGray,
+                            color = if (isLinked) FatigueGreen else GymTextSecondary,
                             fontSize = 12.sp
                         )
                     }
@@ -572,7 +995,7 @@ fun GoogleDriveSyncCard(
 
             Text(
                 text = syncState.statusMessage,
-                color = Color.LightGray,
+                color = GymTextSecondary,
                 fontSize = 12.sp
             )
 
@@ -594,10 +1017,10 @@ fun GoogleDriveSyncCard(
                         if (isLinked) {
                             viewModel.syncNowToGoogleDrive()
                         } else {
-                            createDriveDocLauncher.launch("Chukaros_GymPlanner_Backup.json")
+                            createDriveDocLauncher.launch("Cheese_WP_Backup.json")
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange),
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -620,8 +1043,8 @@ fun GoogleDriveSyncCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TextButton(onClick = { createDriveDocLauncher.launch("Chukaros_GymPlanner_Backup.json") }) {
-                        Text("Cambiar carpeta/archivo en Drive", color = Color.LightGray, fontSize = 11.sp)
+                    TextButton(onClick = { createDriveDocLauncher.launch("Cheese_WP_Backup.json") }) {
+                        Text("Cambiar carpeta/archivo en Drive", color = GymTextSecondary, fontSize = 11.sp)
                     }
                     TextButton(onClick = { showConfirmUnlink = true }) {
                         Text("Desvincular", color = Color.Gray, fontSize = 11.sp)
@@ -707,13 +1130,13 @@ fun UserSwitcherDialog(
                         color = GymOrange
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GymTextPrimary)
                     }
                 }
 
                 Text(
-                    text = "Cada usuario mantiene sus propios planes, cargas, fatiga muscular, historial y antropometría de forma independiente (sincronizados en Google Drive).",
-                    color = Color.LightGray,
+                    text = "Cada usuario mantiene sus propios planes, cargas, fatiga muscular, tema visual, historial y antropometría de forma independiente.",
+                    color = GymTextSecondary,
                     fontSize = 12.sp
                 )
 
@@ -724,7 +1147,7 @@ fun UserSwitcherDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                if (isSelected) GymOrange.copy(alpha = 0.2f) else GymSurfaceElevated,
+                                if (isSelected) GymOrange.copy(alpha = 0.18f) else GymSurfaceElevated,
                                 RoundedCornerShape(12.dp)
                             )
                             .clickable {
@@ -754,13 +1177,13 @@ fun UserSwitcherDialog(
                             Column {
                                 Text(
                                     text = user.name,
-                                    color = Color.White,
+                                    color = GymTextPrimary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp
                                 )
                                 Text(
                                     text = "${user.weightKg} kg • ${user.heightCm.toInt()} cm • ${user.daysPerWeek} días/sem",
-                                    color = Color.LightGray,
+                                    color = GymTextSecondary,
                                     fontSize = 11.sp
                                 )
                             }
@@ -779,7 +1202,7 @@ fun UserSwitcherDialog(
                 }
 
                 if (showCreateForm) {
-                    HorizontalDivider(color = Color.DarkGray)
+                    HorizontalDivider(color = Color.Gray.copy(alpha = 0.3f))
                     Text("Nuevo Perfil de Usuario", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     OutlinedTextField(
                         value = newName,
@@ -818,7 +1241,7 @@ fun UserSwitcherDialog(
                                     onOpenWizardForNewUser()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
                         ) {
                             Text("Crear y Configurar Plan")
                         }
@@ -826,7 +1249,7 @@ fun UserSwitcherDialog(
                 } else {
                     Button(
                         onClick = { showCreateForm = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange),
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -871,7 +1294,7 @@ fun ConfirmDeleteDialog(
         title = {
             Text(
                 text = "¿Estás seguro que lo quieres eliminar?",
-                color = Color.White,
+                color = GymTextPrimary,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 17.sp
             )
@@ -879,7 +1302,7 @@ fun ConfirmDeleteDialog(
         text = {
             Text(
                 text = customQuestion ?: "Se eliminará permanentemente $itemTitle. Esta acción no se puede deshacer.",
-                color = Color.LightGray,
+                color = GymTextSecondary,
                 fontSize = 13.sp
             )
         },
@@ -893,7 +1316,7 @@ fun ConfirmDeleteDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color.LightGray)
+                Text("Cancelar", color = GymTextSecondary)
             }
         },
         containerColor = GymCardBg
@@ -929,14 +1352,14 @@ fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "Versión instalada: v${state.currentVersionName} → Nueva: v${state.remote.versionName}",
-                            color = Color.White,
+                            color = GymTextPrimary,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp
                         )
                         if (state.remote.releaseNotes.isNotBlank()) {
                             Text(
                                 text = state.remote.releaseNotes,
-                                color = Color.LightGray,
+                                color = GymTextSecondary,
                                 fontSize = 12.sp
                             )
                         }
@@ -951,7 +1374,7 @@ fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
                 confirmButton = {
                     Button(
                         onClick = { viewModel.downloadAndInstallUpdate(state.remote) },
-                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange)
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
@@ -960,7 +1383,7 @@ fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
                 },
                 dismissButton = {
                     TextButton(onClick = { viewModel.dismissUpdatePrompt() }) {
-                        Text("Más tarde", color = Color.LightGray)
+                        Text("Más tarde", color = GymTextSecondary)
                     }
                 },
                 containerColor = GymCardBg
@@ -979,8 +1402,8 @@ fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = "Respaldando datos y descargando el instalador desde GitHub...",
-                            color = Color.LightGray,
+                            text = "Respaldando datos y descargando el instalador de Cheese WP desde GitHub...",
+                            color = GymTextSecondary,
                             fontSize = 12.sp
                         )
                         LinearProgressIndicator(
@@ -1007,7 +1430,7 @@ fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
                 text = {
                     Text(
                         text = "Si el instalador de Android no se abrió automáticamente, toca \"Instalar APK\" para aplicar la actualización sin perder tus datos.",
-                        color = Color.LightGray,
+                        color = GymTextSecondary,
                         fontSize = 13.sp
                     )
                 },
@@ -1051,8 +1474,8 @@ fun AppUpdateCard(viewModel: GymWpViewModel) {
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Versión de la App: v$installedName (Build $installedCode)",
-                    color = Color.White,
+                    text = "Cheese WP • v$installedName (Build $installedCode)",
+                    color = GymTextPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -1063,7 +1486,7 @@ fun AppUpdateCard(viewModel: GymWpViewModel) {
                     is AppUpdateState.Error -> s.message
                     else -> "Actualizaciones automáticas OTA desde GitHub activas"
                 }
-                Text(statusText, color = Color.LightGray, fontSize = 12.sp)
+                Text(statusText, color = GymTextSecondary, fontSize = 12.sp)
             }
             OutlinedButton(
                 onClick = { viewModel.checkForAppUpdates(notifyIfAvailable = true) }

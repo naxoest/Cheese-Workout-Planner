@@ -1,6 +1,6 @@
 {
-  "versionCode": 202,
-  "versionName": "2.2.0",
+  "versionCode": 203,
+  "versionName": "2.3.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Corrección completa del equipamiento y músculos de los 353 ejercicios.\n• Ajuste de dimensiones seguras (systemBarsPadding) en todas las pantallas (compatible con Motorola Edge 50 Fusion).\n• Opción para eliminar entrenamientos del historial con confirmación.\n• Nuevo ícono oficial del quesito levantando la barra."
+  "releaseNotes": "• Nuevo nombre oficial: Cheese WP.\n• Reemplazo directo de ejercicios en rutinas y en vivo sin necesidad de eliminarlos.\n• Cronómetro general y de descanso precisos con pantalla bloqueada + alerta sonora, vibración y notificación.\n• Edición completa de la rutina mientras está en ejecución (añadir/reemplazar/reordenar ejercicios y series).\n• Corrección anatómica exacta del Mapa de Fatiga Muscular 2D (piernas, glúteos, hombros, espalda, brazos, etc.).\n• Botón 'Replicar S1' para copiar repeticiones y carga de la Serie 1 al resto de series.\n• Creación de ejercicios y máquinas personalizadas tanto en Ejercicios como dentro de cualquier rutina.\n• Nueva interfaz de ejecución en vivo amigable estilo Gym WP.\n• 5 Temas visuales: Naranjo con Rojo, Rosado con Negro, Rosado con Blanco, Amarillo con Verde y Naranjo con Blanco."
 }

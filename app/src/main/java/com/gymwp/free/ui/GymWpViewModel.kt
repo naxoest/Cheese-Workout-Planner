@@ -8,10 +8,47 @@ import com.gymwp.free.data.*
 import com.gymwp.free.domain.MuscleFatigueCalculator
 import com.gymwp.free.domain.SmartWorkoutGenerator
 import com.gymwp.free.domain.WorkoutMetricsCalculator
+import com.gymwp.free.ui.theme.AppThemeOption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+object CustomExerciseCodec {
+    private const val PREFIX = "[EQ:"
+    private const val SUFFIX = "]"
+
+    fun encodeDescription(equipment: List<String>, notes: String): String {
+        val cleanEq = equipment.ifEmpty { listOf("Aparato / Máquina") }.joinToString("|")
+        return "$PREFIX$cleanEq$SUFFIX\n${notes.trim()}"
+    }
+
+    fun decodeDescription(raw: String): Pair<List<String>, String> {
+        if (raw.startsWith(PREFIX)) {
+            val endIdx = raw.indexOf(SUFFIX)
+            if (endIdx > PREFIX.length) {
+                val eqPart = raw.substring(PREFIX.length, endIdx)
+                val eqList = eqPart.split("|").map { it.trim() }.filter { it.isNotBlank() }
+                val cleanNotes = raw.substring(endIdx + 1).trimStart('\n', '\r', ' ')
+                return (eqList.ifEmpty { listOf("Aparato / Máquina") }) to cleanNotes
+            }
+        }
+        return listOf("Aparato / Máquina") to raw
+    }
+
+    fun toCatalogExercise(entity: UserCustomExerciseEntity): CatalogExercise {
+        val (eqList, cleanNotes) = decodeDescription(entity.description)
+        return CatalogExercise(
+            id = entity.id,
+            name = entity.name,
+            description = cleanNotes,
+            muscles = entity.muscles.padEnd(17, '0').take(17),
+            defaultUnitType = entity.unitType,
+            equipment = eqList,
+            gifAssetPath = ""
+        )
+    }
+}
 
 data class CompletedExerciseLog(
     val exerciseId: Int,
@@ -31,9 +68,16 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     val catalogExercises: List<CatalogExercise> = AssetCatalogRepository.getExercises(application)
     val prebuiltPlans: List<PrebuiltPlan> = AssetCatalogRepository.getPrebuiltPlans(application)
     private val catalogMap: Map<Int, CatalogExercise> = catalogExercises.associateBy { it.id }
+    @Volatile
+    private var customCatalogMap: Map<Int, CatalogExercise> = emptyMap()
 
     private val _activeUserId = MutableStateFlow(GoogleDriveBackupManager.getSavedActiveUserId(appContext))
     val activeUserId: StateFlow<Int> = _activeUserId.asStateFlow()
+
+    private val _selectedTheme = MutableStateFlow(
+        AppThemeOption.fromId(GoogleDriveBackupManager.getSavedThemeForUser(appContext, _activeUserId.value))
+    )
+    val selectedTheme: StateFlow<AppThemeOption> = _selectedTheme.asStateFlow()
 
     val allUsers: StateFlow<List<UserProfileEntity>> = dao.observeAllUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -58,9 +102,16 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     val allWorkoutExercises: StateFlow<List<WorkoutExerciseEntity>> = dao.observeAllWorkoutExercises()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val userCustomExercises: StateFlow<List<UserCustomExerciseEntity>> = _activeUserId
-        .flatMapLatest { uid -> dao.observeUserCustomExercises(uid) }
+    val userCustomExercises: StateFlow<List<UserCustomExerciseEntity>> = dao.observeAllUserCustomExercises()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allAvailableExercises: StateFlow<List<CatalogExercise>> = dao.observeAllUserCustomExercises()
+        .map { customList ->
+            val mappedCustom = customList.map { CustomExerciseCodec.toCatalogExercise(it) }
+            customCatalogMap = mappedCustom.associateBy { it.id }
+            mappedCustom + catalogExercises
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, catalogExercises)
 
     val favoriteIds: StateFlow<Set<Int>> = _activeUserId
         .flatMapLatest { uid -> dao.observeFavorites(uid) }
@@ -165,10 +216,21 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setAppTheme(theme: AppThemeOption) {
+        _selectedTheme.value = theme
+        GoogleDriveBackupManager.saveThemeForUser(appContext, _activeUserId.value, theme.id)
+        viewModelScope.launch(Dispatchers.IO) {
+            triggerAutoDriveSync()
+        }
+    }
+
     fun selectActiveUser(userId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             _activeUserId.value = userId
             GoogleDriveBackupManager.saveActiveUserId(appContext, userId)
+            _selectedTheme.value = AppThemeOption.fromId(
+                GoogleDriveBackupManager.getSavedThemeForUser(appContext, userId)
+            )
             ensureUserMuscleFatigueInitialized(userId)
             triggerAutoDriveSync()
         }
@@ -237,7 +299,11 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun restoreFromGoogleDrive(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             GoogleDriveBackupManager.restoreBackupFromUri(appContext, dao, uri, linkAsDefaultDriveFile = true)
-            _activeUserId.value = GoogleDriveBackupManager.getSavedActiveUserId(appContext)
+            val newActiveUid = GoogleDriveBackupManager.getSavedActiveUserId(appContext)
+            _activeUserId.value = newActiveUid
+            _selectedTheme.value = AppThemeOption.fromId(
+                GoogleDriveBackupManager.getSavedThemeForUser(appContext, newActiveUid)
+            )
             _driveSyncState.value = GoogleDriveBackupManager.loadSyncState(appContext)
         }
     }
@@ -253,7 +319,58 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         _driveSyncState.value = GoogleDriveBackupManager.unlinkGoogleDrive(appContext)
     }
 
-    fun getCatalogExercise(id: Int): CatalogExercise? = catalogMap[id]
+    fun getCatalogExercise(id: Int): CatalogExercise? = catalogMap[id] ?: customCatalogMap[id]
+
+    fun saveCustomExercise(
+        existingId: Int? = null,
+        name: String,
+        equipment: List<String>,
+        primaryMuscles: Set<Int>,
+        secondaryMuscles: Set<Int>,
+        unitType: Int,
+        notes: String,
+        onSaved: (CatalogExercise) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
+            val targetId = existingId ?: maxOf(10000, (dao.getMaxCustomExerciseId() ?: 9999) + 1)
+            val muscleChars = CharArray(17) { idx ->
+                when {
+                    idx in primaryMuscles -> '3'
+                    idx in secondaryMuscles -> '2'
+                    else -> '0'
+                }
+            }
+            val musclesStr = String(muscleChars).let {
+                if (it.all { c -> c == '0' }) "03000000000000000" else it
+            }
+            val encodedDesc = CustomExerciseCodec.encodeDescription(equipment, notes)
+            val entity = UserCustomExerciseEntity(
+                id = targetId,
+                userId = uid,
+                name = name.trim().ifBlank { "Ejercicio Personalizado" },
+                description = encodedDesc,
+                muscles = musclesStr,
+                unitType = unitType
+            )
+            dao.insertUserCustomExercise(entity)
+            val catEx = CustomExerciseCodec.toCatalogExercise(entity)
+            customCatalogMap = customCatalogMap + (catEx.id to catEx)
+            triggerAutoDriveSync()
+            launch(Dispatchers.Main) {
+                onSaved(catEx)
+            }
+        }
+    }
+
+    fun deleteCustomExercise(exerciseId: Int) {
+        if (exerciseId < 10000) return
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteUserCustomExercise(exerciseId)
+            customCatalogMap = customCatalogMap - exerciseId
+            triggerAutoDriveSync()
+        }
+    }
 
     fun saveProfileAndGenerateSmartPlan(profile: UserProfileEntity, regeneratePlan: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -426,28 +543,87 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         dayId: Long,
         exerciseId: Int,
         sets: Int = 4,
-        repsPerSet: String = "10,10,10,10",
-        loadsPerSet: String = "20,20,20,20",
+        repsPerSet: String? = null,
+        loadsPerSet: String? = null,
         restSeconds: Int = 60,
         isBiSet: Boolean = false
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val existing = dao.getWorkoutExercises(dayId)
-            val catEx = catalogMap[exerciseId]
+            val catEx = getCatalogExercise(exerciseId)
             val unitType = catEx?.defaultUnitType ?: 0
+            val defaultReps = repsPerSet ?: when (unitType) {
+                2 -> List(sets) { "45" }.joinToString(",")
+                3 -> List(sets) { "15" }.joinToString(",")
+                else -> List(sets) { "10" }.joinToString(",")
+            }
+            val defaultLoads = loadsPerSet ?: List(sets) { if (unitType == 0) "20" else "0" }.joinToString(",")
             dao.insertWorkoutExercise(
                 WorkoutExerciseEntity(
                     workoutDayId = dayId,
                     exerciseId = exerciseId,
+                    isCustomExercise = exerciseId >= 10000,
+                    customExerciseName = if (exerciseId >= 10000) (catEx?.name ?: "Ejercicio Personalizado") else "",
                     setsCount = sets,
-                    repsPerSetCsv = repsPerSet,
-                    loadsPerSetCsv = loadsPerSet,
+                    repsPerSetCsv = defaultReps,
+                    loadsPerSetCsv = defaultLoads,
                     unitType = unitType,
                     restSeconds = restSeconds,
                     isBiSet = isBiSet,
                     orderIndex = existing.size
                 )
             )
+            triggerAutoDriveSync()
+        }
+    }
+
+    fun replaceWorkoutExercise(target: WorkoutExerciseEntity, replacement: CatalogExercise) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sets = target.setsCount.coerceAtLeast(1)
+            val newUnit = replacement.defaultUnitType
+            val updatedReps = if (target.unitType == newUnit) {
+                target.repsPerSetCsv
+            } else {
+                when (newUnit) {
+                    2 -> List(sets) { "45" }.joinToString(",")
+                    3 -> List(sets) { "15" }.joinToString(",")
+                    else -> List(sets) { "10" }.joinToString(",")
+                }
+            }
+            val updatedLoads = if (newUnit == 0) {
+                if (target.unitType == 0) target.loadsPerSetCsv else List(sets) { "20" }.joinToString(",")
+            } else {
+                List(sets) { "0" }.joinToString(",")
+            }
+            dao.updateWorkoutExercise(
+                target.copy(
+                    exerciseId = replacement.id,
+                    isCustomExercise = replacement.id >= 10000,
+                    customExerciseName = if (replacement.id >= 10000) replacement.name else "",
+                    unitType = newUnit,
+                    repsPerSetCsv = updatedReps,
+                    loadsPerSetCsv = updatedLoads
+                )
+            )
+            triggerAutoDriveSync()
+        }
+    }
+
+    fun moveWorkoutExercise(dayId: Long, workoutExerciseId: Long, moveUp: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = dao.getWorkoutExercises(dayId).toMutableList()
+            val idx = list.indexOfFirst { it.id == workoutExerciseId }
+            if (idx < 0) return@launch
+            val swapIdx = if (moveUp) idx - 1 else idx + 1
+            if (swapIdx !in list.indices) return@launch
+            val tmp = list[idx]
+            list[idx] = list[swapIdx]
+            list[swapIdx] = tmp
+            list.forEachIndexed { newOrder, item ->
+                if (item.orderIndex != newOrder) {
+                    dao.updateWorkoutExercise(item.copy(orderIndex = newOrder))
+                }
+            }
             triggerAutoDriveSync()
         }
     }

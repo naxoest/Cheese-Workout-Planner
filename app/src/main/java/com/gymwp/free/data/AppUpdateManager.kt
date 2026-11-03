@@ -38,8 +38,10 @@ sealed class AppUpdateState {
 object AppUpdateManager {
 
     private const val VERSION_JSON_URL = "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/version.json"
-    private const val CHANNEL_ID = "chukaros_app_updates"
+    private const val CHANNEL_ID = "cheese_wp_app_updates"
+    private const val REST_CHANNEL_ID = "cheese_wp_rest_timer"
     private const val NOTIFICATION_ID = 9001
+    private const val REST_NOTIFICATION_ID = 9002
 
     fun getInstalledVersion(context: Context): Pair<Int, String> {
         return try {
@@ -93,7 +95,7 @@ object AppUpdateManager {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     CHANNEL_ID,
-                    "Actualizaciones de Chukaros's GymPlanner",
+                    "Actualizaciones de Cheese WP",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = "Notifica cuando hay una nueva versión disponible en GitHub"
@@ -111,14 +113,59 @@ object AppUpdateManager {
             )
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle("¡Nueva versión disponible (v${remote.versionName})!")
-                .setContentText(remote.releaseNotes.ifBlank { "Toca para actualizar Chukaros's GymPlanner sin perder tus datos." })
+                .setContentTitle("¡Nueva versión de Cheese WP (v${remote.versionName})!")
+                .setContentText(remote.releaseNotes.ifBlank { "Toca para actualizar Cheese WP sin perder tus datos." })
                 .setStyle(NotificationCompat.BigTextStyle().bigText(remote.releaseNotes))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .build()
             nm.notify(NOTIFICATION_ID, notification)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun postRestFinishedNotification(context: Context, dayName: String) {
+        try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    REST_CHANNEL_ID,
+                    "Cronómetro de Descanso (Cheese WP)",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Avisa cuando finaliza el tiempo de descanso entre series"
+                    enableVibration(true)
+                }
+                nm.createNotificationChannel(channel)
+            }
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                1,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(context, REST_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("⏱ ¡Descanso terminado!")
+                .setContentText("Es hora de tu siguiente serie en \"$dayName\" 💪")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+            nm.notify(REST_NOTIFICATION_ID, notification)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun cancelRestNotification(context: Context) {
+        try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(REST_NOTIFICATION_ID)
         } catch (_: Exception) {
         }
     }
@@ -140,7 +187,7 @@ object AppUpdateManager {
                 return@withContext AppUpdateState.Error("Error al descargar APK (HTTP ${conn.responseCode})")
             }
             val totalBytes = conn.contentLength.coerceAtLeast(1)
-            val outFile = File(context.cacheDir, "Chukaros_GymPlanner_Update.apk")
+            val outFile = File(context.cacheDir, "Cheese_WP_Update.apk")
             if (outFile.exists()) outFile.delete()
 
             conn.inputStream.use { input ->

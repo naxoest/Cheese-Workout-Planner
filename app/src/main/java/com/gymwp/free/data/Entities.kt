@@ -38,7 +38,7 @@ data class PrebuiltExercise(
     val isBiSet: Boolean = false
 )
 
-// Entidades SQLite Multi-Usuario para Chukaros's GymPlanner
+// Entidades SQLite Multi-Usuario para Cheese WP
 
 @Entity(tableName = "user_profile")
 data class UserProfileEntity(
