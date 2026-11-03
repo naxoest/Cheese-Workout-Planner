@@ -420,24 +420,48 @@ fun HomeWorkoutsScreen(
                                         }
                                     }
 
+                                    val repsTokens = remember(wEx.repsPerSetCsv) {
+                                        wEx.repsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                    }
+                                    val loadsTokens = remember(wEx.loadsPerSetCsv) {
+                                        wEx.loadsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                    }
+                                    val unitSuffix = when (wEx.unitType) {
+                                        2 -> "seg"
+                                        3 -> "min"
+                                        else -> "reps"
+                                    }
+                                    val formattedSeriesText = if (repsTokens.distinct().size == 1 && repsTokens.isNotEmpty()) {
+                                        "${wEx.setsCount} × ${repsTokens.first()} $unitSuffix"
+                                    } else {
+                                        "${wEx.setsCount} series • ${repsTokens.joinToString("-")} $unitSuffix"
+                                    }
+                                    val formattedLoadsText = if (loadsTokens.distinct().size == 1 && loadsTokens.isNotEmpty()) {
+                                        "${loadsTokens.first()} kg"
+                                    } else {
+                                        "${loadsTokens.joinToString("-")} kg"
+                                    }
+
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(vertical = 5.dp)
-                                            .background(GymSurfaceElevated, RoundedCornerShape(12.dp))
-                                            .clickable {
-                                                if (catEx != null) inspectingCatalogExercise = catEx
-                                            }
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(GymSurfaceElevated)
+                                            .clickable { editingWorkoutExercise = wEx }
                                             .padding(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        if (catEx != null) {
-                                            AnimatedExerciseGif(
-                                                gifAssetPath = catEx.gifAssetPath,
-                                                contentDescription = exName,
-                                                modifier = Modifier.size(54.dp)
-                                            )
-                                        }
+                                        AnimatedExerciseGif(
+                                            gifAssetPath = catEx?.gifAssetPath.orEmpty(),
+                                            contentDescription = exName,
+                                            modifier = Modifier
+                                                .size(56.dp)
+                                                .clickable {
+                                                    if (catEx != null) inspectingCatalogExercise = catEx
+                                                    else editingWorkoutExercise = wEx
+                                                }
+                                        )
                                         Spacer(Modifier.width(10.dp))
                                         Column(Modifier.weight(1f)) {
                                             Text(
@@ -446,24 +470,22 @@ fun HomeWorkoutsScreen(
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 14.sp
                                             )
-                                            val unitSuffix = when (wEx.unitType) {
-                                                2 -> "seg"
-                                                3 -> "min"
-                                                else -> "reps"
-                                            }
+                                            Spacer(Modifier.height(2.dp))
                                             Text(
-                                                text = "${wEx.setsCount} series • [${wEx.repsPerSetCsv}] $unitSuffix",
+                                                text = formattedSeriesText,
                                                 color = GymOrange,
                                                 fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold
+                                                fontWeight = FontWeight.ExtraBold
                                             )
-                                            if (wEx.unitType == 0) {
-                                                Text(
-                                                    text = "Cargas: ${wEx.loadsPerSetCsv} kg • Descanso: ${wEx.restSeconds}s",
-                                                    color = GymTextSecondary,
-                                                    fontSize = 11.sp
-                                                )
-                                            }
+                                            Text(
+                                                text = if (wEx.unitType == 0) {
+                                                    "🏋️ $formattedLoadsText • ⏱ ${wEx.restSeconds}s"
+                                                } else {
+                                                    "⏱ Descanso: ${wEx.restSeconds}s"
+                                                },
+                                                color = GymTextSecondary,
+                                                fontSize = 11.sp
+                                            )
                                         }
                                         // Reemplazar ejercicio sin eliminarlo
                                         IconButton(
@@ -477,17 +499,22 @@ fun HomeWorkoutsScreen(
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
-                                        IconButton(
-                                            onClick = { editingWorkoutExercise = wEx },
-                                            modifier = Modifier.size(34.dp)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(GymOrange.copy(alpha = 0.14f))
+                                                .clickable { editingWorkoutExercise = wEx },
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                Icons.Default.Edit,
+                                                Icons.Default.Tune,
                                                 contentDescription = "Editar series/carga",
-                                                tint = GymTextSecondary,
-                                                modifier = Modifier.size(18.dp)
+                                                tint = GymOrange,
+                                                modifier = Modifier.size(17.dp)
                                             )
                                         }
+                                        Spacer(Modifier.width(2.dp))
                                         IconButton(
                                             onClick = { exercisePendingDelete = wEx to exName },
                                             modifier = Modifier.size(32.dp)
@@ -765,16 +792,23 @@ fun HomeWorkoutsScreen(
 
     // Dialog: Edit Sets / Reps / Loads / Replicate Set 1 / BiSet for a WorkoutExerciseEntity
     editingWorkoutExercise?.let { wEx ->
-        val exName = viewModel.getCatalogExercise(wEx.exerciseId)?.name
-            ?: wEx.customExerciseName.ifBlank { "Ejercicio" }
+        val catEx = viewModel.getCatalogExercise(wEx.exerciseId)
+        val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio" }
         EditWorkoutExerciseDialog(
             exercise = wEx,
             exerciseName = exName,
+            catalogExercise = catEx,
             onDismiss = { editingWorkoutExercise = null },
             onRequestReplace = {
                 editingWorkoutExercise = null
                 replacingWorkoutExercise = wEx to exName
             },
+            onInspectGuide = if (catEx != null) {
+                {
+                    editingWorkoutExercise = null
+                    inspectingCatalogExercise = catEx
+                }
+            } else null,
             onSave = { updated ->
                 viewModel.updateWorkoutExercise(updated)
                 editingWorkoutExercise = null
@@ -805,8 +839,8 @@ fun HomeWorkoutsScreen(
         CreateOrEditCustomExerciseDialog(
             initialExercise = customEx,
             onDismiss = { editingCustomCatalogExercise = null },
-            onSave = { id, name, eq, prim, sec, unit, notes ->
-                viewModel.saveCustomExercise(id, name, eq, prim, sec, unit, notes) {
+            onSave = { id, name, eq, prim, sec, unit, notes, photoPath ->
+                viewModel.saveCustomExercise(id, name, eq, prim, sec, unit, notes, photoPath) {
                     editingCustomCatalogExercise = null
                 }
             }
@@ -1298,8 +1332,8 @@ fun ExercisePickerModal(
         CreateOrEditCustomExerciseDialog(
             initialExercise = null,
             onDismiss = { showCreateCustomModal = false },
-            onSave = { existingId, name, eq, prim, sec, unit, notes ->
-                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes) { createdEx ->
+            onSave = { existingId, name, eq, prim, sec, unit, notes, photoPath ->
+                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes, photoPath) { createdEx ->
                     showCreateCustomModal = false
                     onSelectExercise(createdEx)
                 }
@@ -1308,15 +1342,36 @@ fun ExercisePickerModal(
     }
 }
 
+private data class EditorExactFieldTarget(
+    val setIndex: Int,
+    val isLoadField: Boolean,
+    val currentValue: String,
+    val unitLabel: String
+)
+
+private fun formatEditorLoad(value: Float): String {
+    val safe = value.coerceAtLeast(0f)
+    val rounded = (kotlin.math.round(safe * 100f) / 100f)
+    return if (rounded % 1f == 0f) {
+        rounded.toInt().toString()
+    } else if ((rounded * 10f) % 1f == 0f) {
+        "%.1f".format(Locale.US, rounded)
+    } else {
+        "%.2f".format(Locale.US, rounded)
+    }
+}
+
 @Composable
 fun EditWorkoutExerciseDialog(
     exercise: WorkoutExerciseEntity,
     exerciseName: String = "Ejercicio",
+    catalogExercise: CatalogExercise? = null,
     onDismiss: () -> Unit,
     onRequestReplace: (() -> Unit)? = null,
+    onInspectGuide: (() -> Unit)? = null,
     onSave: (WorkoutExerciseEntity) -> Unit
 ) {
-    val initialSets = exercise.setsCount.coerceIn(1, 10)
+    val initialSets = exercise.setsCount.coerceIn(1, 12)
     val parsedReps = remember(exercise) {
         val raw = exercise.repsPerSetCsv.split(",").mapNotNull { it.trim().toIntOrNull() }
         List(initialSets) { i -> raw.getOrElse(i) { raw.lastOrNull() ?: 10 }.toString() }
@@ -1324,8 +1379,7 @@ fun EditWorkoutExerciseDialog(
     val parsedLoads = remember(exercise) {
         val raw = exercise.loadsPerSetCsv.split(",").mapNotNull { it.trim().toFloatOrNull() }
         List(initialSets) { i ->
-            val v = raw.getOrElse(i) { raw.lastOrNull() ?: 20f }
-            if (v % 1f == 0f) v.toInt().toString() else v.toString()
+            formatEditorLoad(raw.getOrElse(i) { raw.lastOrNull() ?: 20f })
         }
     }
 
@@ -1333,191 +1387,500 @@ fun EditWorkoutExerciseDialog(
     val loadsList = remember { mutableStateListOf(*parsedLoads.toTypedArray()) }
     var restSeconds by remember { mutableIntStateOf(exercise.restSeconds.coerceIn(15, 600)) }
     var isBiSet by remember { mutableStateOf(exercise.isBiSet) }
-    var replicatedBanner by remember { mutableStateOf(false) }
+    var replicatedBanner by remember { mutableStateOf<String?>(null) }
+    var exactFieldTarget by remember { mutableStateOf<EditorExactFieldTarget?>(null) }
 
     val unitLabel = when (exercise.unitType) {
-        2 -> "Seg"
-        3 -> "Min"
-        else -> "Reps"
+        2 -> "seg"
+        3 -> "min"
+        else -> "reps"
+    }
+    val repStepDelta = if (exercise.unitType == 2) 5 else 1
+
+    val primaryMusclesLabel = remember(catalogExercise) {
+        catalogExercise?.let { cat ->
+            (0..16)
+                .filter { it < cat.muscles.length && cat.muscles[it] >= '2' }
+                .joinToString(" • ") { MuscleCatalog.getName(it) }
+        }.orEmpty()
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             color = GymCardBg,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.90f)
+                .padding(horizontal = 12.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = exerciseName,
-                    color = GymOrange,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 16.sp
-                )
-
-                if (onRequestReplace != null) {
-                    OutlinedButton(
-                        onClick = onRequestReplace,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = GymOrange, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Reemplazar por otro ejercicio", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                }
-
-                // Series Count + Replicate Set 1 row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 1. Friendly Gym WP Hero Exercise Header
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GymSurfaceElevated)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        FilledTonalIconButton(
-                            onClick = {
-                                if (repsList.size > 1) {
-                                    repsList.removeAt(repsList.lastIndex)
-                                    loadsList.removeAt(loadsList.lastIndex)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AnimatedExerciseGif(
+                            gifAssetPath = catalogExercise?.gifAssetPath.orEmpty(),
+                            contentDescription = exerciseName,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .let { mod ->
+                                    if (onInspectGuide != null) mod.clickable { onInspectGuide() } else mod
                                 }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Menos series", modifier = Modifier.size(16.dp))
-                        }
-                        Text(
-                            text = " ${repsList.size} Series ",
-                            color = GymTextPrimary,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp)
                         )
-                        FilledTonalIconButton(
-                            onClick = {
-                                if (repsList.size < 10) {
-                                    repsList.add(repsList.lastOrNull() ?: "10")
-                                    loadsList.add(loadsList.lastOrNull() ?: "20")
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Más series", modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = exerciseName,
+                                color = GymTextPrimary,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp
+                            )
+                            if (primaryMusclesLabel.isNotBlank()) {
+                                Text(
+                                    text = primaryMusclesLabel,
+                                    color = GymOrange,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            if (!catalogExercise?.equipment.isNullOrEmpty()) {
+                                Text(
+                                    text = catalogExercise!!.equipment.joinToString(" • "),
+                                    color = GymTextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GymTextPrimary)
                         }
                     }
 
-                    // One-tap Replicate Set 1 button
-                    if (repsList.size > 1) {
-                        FilledTonalButton(
-                            onClick = {
-                                val firstR = repsList.firstOrNull() ?: "10"
-                                val firstL = loadsList.firstOrNull() ?: "20"
-                                for (i in 1 until repsList.size) {
-                                    repsList[i] = firstR
-                                    loadsList[i] = firstL
-                                }
-                                replicatedBanner = true
-                            },
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = GymOrange.copy(alpha = 0.16f),
-                                contentColor = GymOrange
-                            ),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    if (onRequestReplace != null || onInspectGuide != null) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Replicar S1", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            if (onRequestReplace != null) {
+                                FilledTonalButton(
+                                    onClick = onRequestReplace,
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = GymOrange.copy(alpha = 0.15f),
+                                        contentColor = GymOrange
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Cambiar Ejercicio", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                            if (onInspectGuide != null) {
+                                OutlinedButton(
+                                    onClick = onInspectGuide,
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = GymTextPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(5.dp))
+                                    Text("Guía", color = GymTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                                }
+                            }
                         }
                     }
                 }
 
-                if (replicatedBanner) {
-                    Text(
-                        text = "✓ Serie 1 copiada al resto de las series",
-                        color = FatigueGreen,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Per-set rows
-                repsList.forEachIndexed { idx, repVal ->
+                // 2. Scrollable Body: Series Toolbar + Tactile Set Steppers + Rest Chips + Bi-Serie Switch
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Series Count + One-Tap Replicate S1 Bar
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(GymSurfaceElevated, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .background(GymSurfaceElevated, RoundedCornerShape(14.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "S${idx + 1}",
-                            color = GymOrange,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 13.sp,
-                            modifier = Modifier.width(28.dp)
-                        )
-                        OutlinedTextField(
-                            value = repVal,
-                            onValueChange = { repsList[idx] = it },
-                            label = { Text(unitLabel, fontSize = 10.sp) },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (exercise.unitType == 0) {
-                            OutlinedTextField(
-                                value = loadsList[idx],
-                                onValueChange = { loadsList[idx] = it },
-                                label = { Text("Carga (kg)", fontSize = 10.sp) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(GymCardBg)
+                                    .clickable {
+                                        if (repsList.size > 1) {
+                                            repsList.removeAt(repsList.lastIndex)
+                                            loadsList.removeAt(loadsList.lastIndex)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Menos series", tint = GymOrange, modifier = Modifier.size(17.dp))
+                            }
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            ) {
+                                Text(
+                                    text = "${repsList.size}",
+                                    color = GymTextPrimary,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 17.sp
+                                )
+                                Text(
+                                    text = if (repsList.size == 1) "Serie" else "Series",
+                                    color = GymTextSecondary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(GymCardBg)
+                                    .clickable {
+                                        if (repsList.size < 12) {
+                                            repsList.add(repsList.lastOrNull() ?: "10")
+                                            loadsList.add(loadsList.lastOrNull() ?: "20")
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Más series", tint = GymOrange, modifier = Modifier.size(17.dp))
+                            }
+                        }
+
+                        if (repsList.size > 1) {
+                            FilledTonalButton(
+                                onClick = {
+                                    val firstR = repsList.firstOrNull() ?: "10"
+                                    val firstL = loadsList.firstOrNull() ?: "20"
+                                    for (i in 1 until repsList.size) {
+                                        repsList[i] = firstR
+                                        loadsList[i] = firstL
+                                    }
+                                    replicatedBanner = "✓ Serie 1 copiada a las ${repsList.size} series"
+                                },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = GymOrange,
+                                    contentColor = GymOnPrimary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Replicar Serie 1", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    replicatedBanner?.let { bannerMsg ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(FatigueGreen.copy(alpha = 0.16f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = bannerMsg,
+                                color = FatigueGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                }
 
-                // Rest selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Descanso:", color = GymTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { restSeconds = (restSeconds - 15).coerceAtLeast(15) }) {
-                            Text("-15s", color = GymOrange, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Toca - / + para ajustar rápido o toca el número central para escribir el valor exacto:",
+                        color = GymTextSecondary,
+                        fontSize = 11.sp
+                    )
+
+                    // Tactile Set Cards (Serie 1..N)
+                    repsList.forEachIndexed { idx, repVal ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(GymSurfaceElevated, RoundedCornerShape(14.dp))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Set Badge
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(GymOrange.copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${idx + 1}",
+                                    color = GymOrange,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            // Reps / Duration Stepper Pill
+                            EditorTactileStepperPill(
+                                valueText = repVal,
+                                unitText = unitLabel,
+                                onMinus = {
+                                    val cur = repsList[idx].toIntOrNull() ?: 10
+                                    repsList[idx] = (cur - repStepDelta).coerceAtLeast(1).toString()
+                                },
+                                onPlus = {
+                                    val cur = repsList[idx].toIntOrNull() ?: 10
+                                    repsList[idx] = (cur + repStepDelta).coerceAtLeast(1).toString()
+                                },
+                                onTapCenter = {
+                                    exactFieldTarget = EditorExactFieldTarget(
+                                        setIndex = idx,
+                                        isLoadField = false,
+                                        currentValue = repsList[idx],
+                                        unitLabel = unitLabel
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Load (kg) Stepper Pill when applicable
+                            if (exercise.unitType == 0) {
+                                EditorTactileStepperPill(
+                                    valueText = loadsList[idx],
+                                    unitText = "kg",
+                                    onMinus = {
+                                        val cur = loadsList[idx].replace(',', '.').toFloatOrNull() ?: 20f
+                                        loadsList[idx] = formatEditorLoad(cur - 2.5f)
+                                    },
+                                    onPlus = {
+                                        val cur = loadsList[idx].replace(',', '.').toFloatOrNull() ?: 20f
+                                        loadsList[idx] = formatEditorLoad(cur + 2.5f)
+                                    },
+                                    onTapCenter = {
+                                        exactFieldTarget = EditorExactFieldTarget(
+                                            setIndex = idx,
+                                            isLoadField = true,
+                                            currentValue = loadsList[idx],
+                                            unitLabel = "kg"
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            if (repsList.size > 1) {
+                                IconButton(
+                                    onClick = {
+                                        repsList.removeAt(idx)
+                                        loadsList.removeAt(idx)
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Quitar serie",
+                                        tint = GymTextSecondary.copy(alpha = 0.75f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
                         }
-                        Text("${restSeconds}s", color = GymTextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-                        TextButton(onClick = { restSeconds = (restSeconds + 15).coerceAtMost(600) }) {
-                            Text("+15s", color = GymOrange, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Quick Add Set Button
+                    if (repsList.size < 12) {
+                        OutlinedButton(
+                            onClick = {
+                                repsList.add(repsList.lastOrNull() ?: "10")
+                                loadsList.add(loadsList.lastOrNull() ?: "20")
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = GymOrange, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Añadir Serie", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
+                    }
+
+                    // Visual Rest Timer Card
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = GymSurfaceElevated),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Timer, contentDescription = null, tint = GymOrange, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Descanso entre series",
+                                        color = GymTextPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(GymCardBg)
+                                            .clickable { restSeconds = (restSeconds - 15).coerceAtLeast(15) }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("-15s", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    }
+                                    Text(
+                                        text = " ${restSeconds}s ",
+                                        color = GymTextPrimary,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(GymCardBg)
+                                            .clickable { restSeconds = (restSeconds + 15).coerceAtMost(600) }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("+15s", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(30, 45, 60, 90, 120, 180).forEach { presetSec ->
+                                    val selected = restSeconds == presetSec
+                                    FilterChip(
+                                        selected = selected,
+                                        onClick = { restSeconds = presetSec },
+                                        label = {
+                                            Text(
+                                                text = if (presetSec >= 120 && presetSec % 60 == 0) "${presetSec / 60} min" else "${presetSec}s",
+                                                fontSize = 12.sp,
+                                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
+                                            )
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = GymOrange,
+                                            selectedLabelColor = GymOnPrimary,
+                                            containerColor = GymCardBg,
+                                            labelColor = GymTextSecondary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Modern Bi-Serie / Superserie Switch Card
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (isBiSet) GymAccentCyan.copy(alpha = 0.14f) else GymSurfaceElevated)
+                            .border(
+                                width = if (isBiSet) 1.dp else 0.dp,
+                                color = if (isBiSet) GymAccentCyan.copy(alpha = 0.6f) else Color.Transparent,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable { isBiSet = !isBiSet }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = if (isBiSet) GymAccentCyan else GymOrange,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Bi-Serie / Superserie",
+                                    color = GymTextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "Ejecutar seguido del ejercicio anterior sin descanso previo",
+                                    color = GymTextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isBiSet,
+                            onCheckedChange = { isBiSet = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = GymOrange,
+                                checkedTrackColor = GymOrange.copy(alpha = 0.4f)
+                            )
+                        )
                     }
                 }
 
+                // 3. Fixed Bottom Save Bar
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { isBiSet = !isBiSet }
-                ) {
-                    Checkbox(checked = isBiSet, onCheckedChange = { isBiSet = it })
-                    Text(
-                        "Agrupar en Bi-Serie / Superserie con el anterior",
-                        color = GymTextPrimary,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GymSurfaceElevated)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancelar", color = GymTextSecondary)
+                        Text("Cancelar", color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -1532,12 +1895,216 @@ fun EditWorkoutExerciseDialog(
                                 )
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
                     ) {
-                        Text("Guardar", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Guardar Cambios", fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
+        }
+    }
+
+    // Exact Value Input Popup when tapping the center of any stepper pill
+    exactFieldTarget?.let { target ->
+        var typedText by remember(target) { mutableStateOf(target.currentValue) }
+        val popupTitle = if (target.isLoadField) {
+            "Serie ${target.setIndex + 1} • Carga (${target.unitLabel})"
+        } else {
+            "Serie ${target.setIndex + 1} • ${target.unitLabel.replaceFirstChar { it.uppercase() }}"
+        }
+
+        val applyValue: (Boolean) -> Unit = { replicateRemaining ->
+            val cleanVal = if (target.isLoadField) {
+                formatEditorLoad(typedText.replace(',', '.').toFloatOrNull() ?: 0f)
+            } else {
+                (typedText.toIntOrNull() ?: 10).coerceAtLeast(1).toString()
+            }
+            if (target.setIndex in repsList.indices) {
+                if (target.isLoadField) {
+                    loadsList[target.setIndex] = cleanVal
+                    if (replicateRemaining) {
+                        for (i in (target.setIndex + 1) until loadsList.size) {
+                            loadsList[i] = cleanVal
+                        }
+                    }
+                } else {
+                    repsList[target.setIndex] = cleanVal
+                    if (replicateRemaining) {
+                        for (i in (target.setIndex + 1) until repsList.size) {
+                            repsList[i] = cleanVal
+                        }
+                    }
+                }
+                if (replicateRemaining) {
+                    replicatedBanner = "✓ Valor replicado a las series siguientes"
+                }
+            }
+            exactFieldTarget = null
+        }
+
+        AlertDialog(
+            onDismissRequest = { exactFieldTarget = null },
+            title = {
+                Text(popupTitle, color = GymOrange, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = typedText,
+                        onValueChange = { typedText = it },
+                        label = { Text("Valor exacto (${target.unitLabel})") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = if (target.isLoadField) KeyboardType.Decimal else KeyboardType.Number
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (target.isLoadField) {
+                        Text("Ajuste rápido:", color = GymTextSecondary, fontSize = 11.sp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(-5f, -2.5f, +1.25f, +2.5f, +5f, +10f).forEach { delta ->
+                                val lbl = if (delta < 0f) "-${formatEditorLoad(kotlin.math.abs(delta))} kg" else "+${formatEditorLoad(delta)} kg"
+                                AssistChip(
+                                    onClick = {
+                                        val cur = typedText.replace(',', '.').toFloatOrNull() ?: 0f
+                                        typedText = formatEditorLoad(cur + delta)
+                                    },
+                                    label = { Text(lbl, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    } else {
+                        Text("Valores frecuentes:", color = GymTextSecondary, fontSize = 11.sp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(6, 8, 10, 12, 15, 20).forEach { preset ->
+                                AssistChip(
+                                    onClick = { typedText = preset.toString() },
+                                    label = { Text("$preset", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                                )
+                            }
+                        }
+                    }
+
+                    if (target.setIndex < repsList.lastIndex) {
+                        OutlinedButton(
+                            onClick = { applyValue(true) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Guardar y replicar en siguientes",
+                                color = GymOrange,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { applyValue(false) },
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                ) {
+                    Text("Aplicar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { exactFieldTarget = null }) {
+                    Text("Cancelar", color = GymTextSecondary)
+                }
+            },
+            containerColor = GymCardBg
+        )
+    }
+}
+
+@Composable
+private fun EditorTactileStepperPill(
+    valueText: String,
+    unitText: String,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit,
+    onTapCenter: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(GymCardBg)
+            .padding(horizontal = 5.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(GymSurfaceElevated)
+                .clickable(onClick = onMinus),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Remove,
+                contentDescription = "Disminuir",
+                tint = GymOrange,
+                modifier = Modifier.size(15.dp)
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(onClick = onTapCenter)
+                .padding(vertical = 2.dp)
+        ) {
+            Text(
+                text = valueText,
+                color = GymTextPrimary,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 15.sp,
+                maxLines = 1
+            )
+            Text(
+                text = unitText,
+                color = GymTextSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(GymSurfaceElevated)
+                .clickable(onClick = onPlus),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Aumentar",
+                tint = GymOrange,
+                modifier = Modifier.size(15.dp)
+            )
         }
     }
 }

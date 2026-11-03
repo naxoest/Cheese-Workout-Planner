@@ -14,42 +14,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-object CustomExerciseCodec {
-    private const val PREFIX = "[EQ:"
-    private const val SUFFIX = "]"
-
-    fun encodeDescription(equipment: List<String>, notes: String): String {
-        val cleanEq = equipment.ifEmpty { listOf("Aparato / Máquina") }.joinToString("|")
-        return "$PREFIX$cleanEq$SUFFIX\n${notes.trim()}"
-    }
-
-    fun decodeDescription(raw: String): Pair<List<String>, String> {
-        if (raw.startsWith(PREFIX)) {
-            val endIdx = raw.indexOf(SUFFIX)
-            if (endIdx > PREFIX.length) {
-                val eqPart = raw.substring(PREFIX.length, endIdx)
-                val eqList = eqPart.split("|").map { it.trim() }.filter { it.isNotBlank() }
-                val cleanNotes = raw.substring(endIdx + 1).trimStart('\n', '\r', ' ')
-                return (eqList.ifEmpty { listOf("Aparato / Máquina") }) to cleanNotes
-            }
-        }
-        return listOf("Aparato / Máquina") to raw
-    }
-
-    fun toCatalogExercise(entity: UserCustomExerciseEntity): CatalogExercise {
-        val (eqList, cleanNotes) = decodeDescription(entity.description)
-        return CatalogExercise(
-            id = entity.id,
-            name = entity.name,
-            description = cleanNotes,
-            muscles = entity.muscles.padEnd(17, '0').take(17),
-            defaultUnitType = entity.unitType,
-            equipment = eqList,
-            gifAssetPath = ""
-        )
-    }
-}
-
 data class CompletedExerciseLog(
     val exerciseId: Int,
     val exerciseName: String,
@@ -329,11 +293,17 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         secondaryMuscles: Set<Int>,
         unitType: Int,
         notes: String,
+        photoPath: String? = null,
         onSaved: (CatalogExercise) -> Unit = {}
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val uid = _activeUserId.value
             val targetId = existingId ?: maxOf(10000, (dao.getMaxCustomExerciseId() ?: 9999) + 1)
+            val prevPhoto = customCatalogMap[targetId]?.gifAssetPath?.removePrefix("file://")?.takeIf { it.isNotBlank() }
+            val cleanNewPhoto = photoPath?.removePrefix("file://")?.trim()?.takeIf { it.isNotBlank() }
+            if (prevPhoto != null && prevPhoto != cleanNewPhoto) {
+                ExercisePhotoManager.deletePhotoIfManaged(appContext, prevPhoto)
+            }
             val muscleChars = CharArray(17) { idx ->
                 when {
                     idx in primaryMuscles -> '3'
@@ -344,7 +314,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             val musclesStr = String(muscleChars).let {
                 if (it.all { c -> c == '0' }) "03000000000000000" else it
             }
-            val encodedDesc = CustomExerciseCodec.encodeDescription(equipment, notes)
+            val encodedDesc = CustomExerciseCodec.encodeDescription(equipment, notes, cleanNewPhoto)
             val entity = UserCustomExerciseEntity(
                 id = targetId,
                 userId = uid,
@@ -366,6 +336,8 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteCustomExercise(exerciseId: Int) {
         if (exerciseId < 10000) return
         viewModelScope.launch(Dispatchers.IO) {
+            val oldPhoto = customCatalogMap[exerciseId]?.gifAssetPath
+            ExercisePhotoManager.deletePhotoIfManaged(appContext, oldPhoto)
             dao.deleteUserCustomExercise(exerciseId)
             customCatalogMap = customCatalogMap - exerciseId
             triggerAutoDriveSync()

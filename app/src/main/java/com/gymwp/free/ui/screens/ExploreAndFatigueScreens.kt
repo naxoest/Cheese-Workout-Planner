@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.gymwp.free.data.MuscleFatigueEntity
 import com.gymwp.free.data.PrebuiltPlan
 import com.gymwp.free.domain.MuscleCatalog
@@ -168,63 +170,153 @@ fun ExplorePrebuiltPlansScreen(
         }
     }
 
-    // Preview Modal for PrebuiltPlan
+    // Preview Modal for PrebuiltPlan (Description + Days unified in a single scrollable container)
     previewingPlan?.let { plan ->
-        Dialog(onDismissRequest = { previewingPlan = null }) {
+        val totalPreviewExercises = plan.days.sumOf { it.exercises.size }
+        Dialog(
+            onDismissRequest = { previewingPlan = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.85f),
-                shape = RoundedCornerShape(20.dp),
+                    .fillMaxHeight(0.90f)
+                    .padding(horizontal = 12.dp),
+                shape = RoundedCornerShape(22.dp),
                 color = GymCardBg
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(plan.name, color = GymOrange, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text(plan.description, color = GymTextSecondary, fontSize = 12.sp)
-                    Spacer(Modifier.height(12.dp))
-                    Column(
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Fixed Top Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(GymSurfaceElevated)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = plan.name,
+                                color = GymOrange,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "📅 ${plan.days.size} días/semana • 🏋️ $totalPreviewExercises ejercicios",
+                                color = GymAccentCyan,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        IconButton(onClick = { previewingPlan = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GymTextPrimary)
+                        }
+                    }
+
+                    // Unified Scrollable Content: Description + All Workout Days
+                    LazyColumn(
                         modifier = Modifier
                             .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .fillMaxWidth(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        plan.days.forEach { d ->
+                        if (plan.description.isNotBlank()) {
+                            item(key = "plan_desc_${plan.id}") {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = GymSurfaceElevated),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(Modifier.padding(14.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = null,
+                                                tint = GymOrange,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                text = "Descripción del Plan",
+                                                color = GymOrange,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(
+                                            text = plan.description.trim(),
+                                            color = GymTextPrimary,
+                                            fontSize = 13.sp,
+                                            lineHeight = 19.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        itemsIndexed(plan.days, key = { idx, d -> "day_${plan.id}_${idx}_${d.name}" }) { dIdx, d ->
+                            val dayAccent = DayPalette[dIdx % DayPalette.size]
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = GymSurfaceElevated),
+                                shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(Modifier.padding(10.dp)) {
-                                    Text(d.name, color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Spacer(Modifier.height(6.dp))
-                                    d.exercises.forEach { pEx ->
-                                        val catEx = viewModel.getCatalogExercise(pEx.exerciseId)
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 4.dp)
-                                        ) {
-                                            if (catEx != null) {
-                                                AnimatedExerciseGif(
-                                                    gifAssetPath = catEx.gifAssetPath,
-                                                    contentDescription = catEx.name,
-                                                    modifier = Modifier.size(40.dp)
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                            }
-                                            Column {
-                                                Text(
-                                                    text = catEx?.name ?: "Ejercicio #${pEx.exerciseId}",
-                                                    color = GymTextPrimary,
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                                Text(
-                                                    text = "${pEx.sets} series • Reps: ${pEx.reps.joinToString("-")}",
-                                                    color = GymTextSecondary,
-                                                    fontSize = 11.sp
-                                                )
+                                Column {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(dayAccent)
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = d.name,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 14.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = "${d.exercises.size} ej.",
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Column(Modifier.padding(10.dp)) {
+                                        d.exercises.forEach { pEx ->
+                                            val catEx = viewModel.getCatalogExercise(pEx.exerciseId)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 4.dp)
+                                            ) {
+                                                if (catEx != null) {
+                                                    AnimatedExerciseGif(
+                                                        gifAssetPath = catEx.gifAssetPath,
+                                                        contentDescription = catEx.name,
+                                                        modifier = Modifier.size(44.dp)
+                                                    )
+                                                    Spacer(Modifier.width(10.dp))
+                                                }
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = catEx?.name ?: "Ejercicio #${pEx.exerciseId}",
+                                                        color = GymTextPrimary,
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                    Text(
+                                                        text = "${pEx.sets} series • Reps: ${pEx.reps.joinToString("-")}",
+                                                        color = GymTextSecondary,
+                                                        fontSize = 11.sp
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -232,12 +324,19 @@ fun ExplorePrebuiltPlansScreen(
                             }
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
+
+                    // Fixed Bottom Action Bar
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(GymSurfaceElevated)
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = { previewingPlan = null }) { Text("Cerrar", color = GymTextSecondary) }
+                        TextButton(onClick = { previewingPlan = null }) {
+                            Text("Cerrar", color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
+                        }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
@@ -246,8 +345,11 @@ fun ExplorePrebuiltPlansScreen(
                                     onPlanImported()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text("Importar a Mis Rutinas", fontWeight = FontWeight.Bold)
                         }
                     }

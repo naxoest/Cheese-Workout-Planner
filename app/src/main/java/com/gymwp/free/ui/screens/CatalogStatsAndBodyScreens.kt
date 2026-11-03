@@ -440,8 +440,8 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
         CreateOrEditCustomExerciseDialog(
             initialExercise = null,
             onDismiss = { showCreateCustomModal = false },
-            onSave = { existingId, name, eq, prim, sec, unit, notes ->
-                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes) {
+            onSave = { existingId, name, eq, prim, sec, unit, notes, photoPath ->
+                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes, photoPath) {
                     showCreateCustomModal = false
                 }
             }
@@ -452,8 +452,8 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
         CreateOrEditCustomExerciseDialog(
             initialExercise = targetCustom,
             onDismiss = { editingCustomExercise = null },
-            onSave = { existingId, name, eq, prim, sec, unit, notes ->
-                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes) {
+            onSave = { existingId, name, eq, prim, sec, unit, notes, photoPath ->
+                viewModel.saveCustomExercise(existingId, name, eq, prim, sec, unit, notes, photoPath) {
                     editingCustomExercise = null
                 }
             }

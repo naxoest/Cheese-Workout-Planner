@@ -1,8 +1,13 @@
 package com.gymwp.free.ui.components
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,11 +49,16 @@ import com.gymwp.free.R
 import com.gymwp.free.data.AppUpdateManager
 import com.gymwp.free.data.AppUpdateState
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.ExercisePhotoManager
 import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.data.UserProfileEntity
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -76,7 +86,12 @@ fun AnimatedExerciseGif(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit
 ) {
-    if (gifAssetPath.isBlank()) {
+    val isLocalPhoto = gifAssetPath.startsWith("file://") || gifAssetPath.startsWith("/")
+    val localFile = remember(gifAssetPath) {
+        if (isLocalPhoto) File(gifAssetPath.removePrefix("file://")) else null
+    }
+
+    if (gifAssetPath.isBlank() || (isLocalPhoto && localFile?.exists() != true)) {
         Box(
             modifier = modifier
                 .clip(RoundedCornerShape(12.dp))
@@ -98,17 +113,25 @@ fun AnimatedExerciseGif(
 
     val context = LocalContext.current
     val imageLoader = rememberGifImageLoader()
+    val modelData: Any = if (isLocalPhoto && localFile != null) {
+        localFile
+    } else {
+        "file:///android_asset/$gifAssetPath"
+    }
+    val effectiveScale = if (isLocalPhoto) ContentScale.Crop else contentScale
+    val bgColor = if (isLocalPhoto) GymSurfaceElevated else Color.White
+
     AsyncImage(
         model = ImageRequest.Builder(context)
-            .data("file:///android_asset/$gifAssetPath")
+            .data(modelData)
             .crossfade(true)
             .build(),
         imageLoader = imageLoader,
         contentDescription = contentDescription,
-        contentScale = contentScale,
+        contentScale = effectiveScale,
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(bgColor)
     )
 }
 
@@ -498,7 +521,7 @@ fun ExerciseDetailDialog(
 }
 
 /**
- * Dialog to create or edit a Custom Gym Exercise / Machine
+ * Dialog to create or edit a Custom Gym Exercise / Machine (with Camera & Gallery Photo Support)
  */
 @Composable
 fun CreateOrEditCustomExerciseDialog(
@@ -511,12 +534,97 @@ fun CreateOrEditCustomExerciseDialog(
         primaryMuscles: Set<Int>,
         secondaryMuscles: Set<Int>,
         unitType: Int,
-        notes: String
+        notes: String,
+        photoPath: String?
     ) -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     var name by remember { mutableStateOf(initialExercise?.name ?: "") }
     var unitType by remember { mutableIntStateOf(initialExercise?.defaultUnitType ?: 0) }
     var notes by remember { mutableStateOf(initialExercise?.description ?: "") }
+    var photoPath by remember {
+        mutableStateOf(
+            initialExercise?.gifAssetPath
+                ?.takeIf { it.startsWith("file://") || it.startsWith("/") }
+                ?.removePrefix("file://")
+        )
+    }
+    var isProcessingPhoto by remember { mutableStateOf(false) }
+    var pendingCameraTempFile by remember { mutableStateOf<File?>(null) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val capturedUri = pendingCameraUri
+        val tempFile = pendingCameraTempFile
+        if (success && capturedUri != null) {
+            isProcessingPhoto = true
+            scope.launch {
+                val savedPath = withContext(Dispatchers.IO) {
+                    val out = ExercisePhotoManager.importAndSavePhoto(context, capturedUri)
+                    try { tempFile?.delete() } catch (_: Exception) {}
+                    out
+                }
+                isProcessingPhoto = false
+                if (savedPath != null) {
+                    if (photoPath != null && photoPath != initialExercise?.gifAssetPath?.removePrefix("file://")) {
+                        ExercisePhotoManager.deletePhotoIfManaged(context, photoPath)
+                    }
+                    photoPath = savedPath
+                } else {
+                    Toast.makeText(context, "No se pudo procesar la foto", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            try { tempFile?.delete() } catch (_: Exception) {}
+        }
+    }
+
+    val launchCameraCapture = {
+        try {
+            val (tmpFile, uri) = ExercisePhotoManager.createTempCameraUri(context)
+            pendingCameraTempFile = tmpFile
+            pendingCameraUri = uri
+            takePictureLauncher.launch(uri)
+        } catch (_: Exception) {
+            Toast.makeText(context, "No se pudo abrir la cámara", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchCameraCapture()
+        } else {
+            Toast.makeText(context, "Se requiere permiso de cámara para tomar una foto", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val pickGalleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { selectedUri: Uri? ->
+        if (selectedUri != null) {
+            isProcessingPhoto = true
+            scope.launch {
+                val savedPath = withContext(Dispatchers.IO) {
+                    ExercisePhotoManager.importAndSavePhoto(context, selectedUri)
+                }
+                isProcessingPhoto = false
+                if (savedPath != null) {
+                    if (photoPath != null && photoPath != initialExercise?.gifAssetPath?.removePrefix("file://")) {
+                        ExercisePhotoManager.deletePhotoIfManaged(context, photoPath)
+                    }
+                    photoPath = savedPath
+                } else {
+                    Toast.makeText(context, "No se pudo cargar la imagen seleccionada", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     val allEquipmentOptions = remember {
         listOf(
@@ -558,7 +666,7 @@ fun CreateOrEditCustomExerciseDialog(
                 .fillMaxWidth()
                 .fillMaxHeight(0.92f)
                 .padding(horizontal = 12.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             color = GymCardBg
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -588,6 +696,147 @@ fun CreateOrEditCustomExerciseDialog(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Photo Picker Card (Camera + Gallery)
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = GymSurfaceElevated),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Foto del Ejercicio / Máquina (Opcional)",
+                                    color = GymTextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                if (photoPath != null) {
+                                    TextButton(
+                                        onClick = { photoPath = null },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.DeleteOutline,
+                                            contentDescription = null,
+                                            tint = FatigueRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Quitar foto", color = FatigueRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            if (isProcessingPhoto) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(140.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(GymCardBg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        CircularProgressIndicator(
+                                            color = GymOrange,
+                                            strokeWidth = 3.dp,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Text("Optimizando foto...", color = GymTextSecondary, fontSize = 13.sp)
+                                    }
+                                }
+                            } else if (photoPath != null) {
+                                AnimatedExerciseGif(
+                                    gifAssetPath = "file://$photoPath",
+                                    contentDescription = name.ifBlank { "Foto del ejercicio" },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(165.dp)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(104.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(GymCardBg)
+                                        .border(1.dp, GymOrange.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(12.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.AddAPhoto,
+                                            contentDescription = null,
+                                            tint = GymOrange,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = "Toma una foto de la máquina de tu gimnasio o elige una imagen de tu galería",
+                                            color = GymTextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        val hasPerm = ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.CAMERA
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                        if (hasPerm) {
+                                            launchCameraCapture()
+                                        } else {
+                                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = GymOrange.copy(alpha = 0.16f),
+                                        contentColor = GymOrange
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Tomar Foto", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { pickGalleryLauncher.launch("image/*") },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.PhotoLibrary,
+                                        contentDescription = null,
+                                        tint = GymOrange,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Galería", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -725,7 +974,7 @@ fun CreateOrEditCustomExerciseDialog(
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            if (name.isNotBlank()) {
+                            if (name.isNotBlank() && !isProcessingPhoto) {
                                 onSave(
                                     initialExercise?.id,
                                     name,
@@ -733,12 +982,14 @@ fun CreateOrEditCustomExerciseDialog(
                                     primaryMuscles.toSet(),
                                     secondaryMuscles.toSet(),
                                     unitType,
-                                    notes
+                                    notes,
+                                    photoPath
                                 )
                             }
                         },
-                        enabled = name.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                        enabled = name.isNotBlank() && !isProcessingPhoto,
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))

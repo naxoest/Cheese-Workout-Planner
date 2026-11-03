@@ -1240,8 +1240,8 @@ fun LiveWorkoutAssistantScreen(
         CreateOrEditCustomExerciseDialog(
             initialExercise = customEx,
             onDismiss = { editingCustomCatalogExercise = null },
-            onSave = { id, name, eq, prim, sec, unit, notes ->
-                viewModel.saveCustomExercise(id, name, eq, prim, sec, unit, notes) {
+            onSave = { id, name, eq, prim, sec, unit, notes, photoPath ->
+                viewModel.saveCustomExercise(id, name, eq, prim, sec, unit, notes, photoPath) {
                     editingCustomCatalogExercise = null
                 }
             }

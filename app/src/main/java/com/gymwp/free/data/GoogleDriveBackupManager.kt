@@ -22,6 +22,7 @@ data class GymWpCloudBackupPayload(
     val workoutDays: List<WorkoutDayEntity> = emptyList(),
     val workoutExercises: List<WorkoutExerciseEntity> = emptyList(),
     val userCustomExercises: List<UserCustomExerciseEntity> = emptyList(),
+    val customExercisePhotosBase64: Map<Int, String>? = null,
     val favorites: List<FavoriteExerciseEntity> = emptyList(),
     val muscleFatigue: List<MuscleFatigueEntity> = emptyList(),
     val finishedWorkouts: List<FinishedWorkoutDayEntity> = emptyList(),
@@ -141,6 +142,12 @@ object GoogleDriveBackupManager {
                 val activeId = getSavedActiveUserId(context)
                 val allUsers = dao.getAllUsersSnapshot()
                 val themesMap = allUsers.associate { u -> u.id to getSavedThemeForUser(context, u.id) }
+                val customExercisesSnapshot = dao.getAllUserCustomExercisesSnapshot()
+                val photosBase64 = customExercisesSnapshot.mapNotNull { entity ->
+                    val photoPath = CustomExerciseCodec.decodeMeta(entity.description).photoPath
+                    val b64 = ExercisePhotoManager.encodePhotoToBase64(photoPath)
+                    if (!b64.isNullOrBlank()) entity.id to b64 else null
+                }.toMap()
                 val payload = GymWpCloudBackupPayload(
                     schemaVersion = 2,
                     exportedAtMillis = System.currentTimeMillis(),
@@ -151,7 +158,8 @@ object GoogleDriveBackupManager {
                     workoutPlans = dao.getAllWorkoutPlans(),
                     workoutDays = dao.getAllWorkoutDaysSnapshot(),
                     workoutExercises = dao.getAllWorkoutExercisesSnapshot(),
-                    userCustomExercises = dao.getAllUserCustomExercisesSnapshot(),
+                    userCustomExercises = customExercisesSnapshot,
+                    customExercisePhotosBase64 = photosBase64,
                     favorites = dao.getAllFavoritesSnapshot(),
                     muscleFatigue = dao.getAllMuscleFatigue(),
                     finishedWorkouts = dao.getAllFinishedWorkoutsSnapshot(),
@@ -240,7 +248,26 @@ object GoogleDriveBackupManager {
             dao.insertWorkoutExercises(payload.workoutExercises)
 
             dao.clearUserCustomExercises()
-            dao.insertUserCustomExercises(payload.userCustomExercises)
+            val restoredCustomExercises = payload.userCustomExercises.map { entity ->
+                val b64 = payload.customExercisePhotosBase64?.get(entity.id)
+                if (!b64.isNullOrBlank()) {
+                    val meta = CustomExerciseCodec.decodeMeta(entity.description)
+                    val existingLocal = ExercisePhotoManager.normalizeLocalPath(meta.photoPath)
+                    val targetPhotoPath = existingLocal ?: ExercisePhotoManager.restorePhotoFromBase64(context, entity.id, b64)
+                    if (targetPhotoPath != null) {
+                        entity.copy(
+                            description = CustomExerciseCodec.encodeDescription(
+                                equipment = meta.equipment,
+                                notes = meta.notes,
+                                photoPath = targetPhotoPath
+                            )
+                        )
+                    } else entity
+                } else {
+                    entity
+                }
+            }
+            dao.insertUserCustomExercises(restoredCustomExercises)
 
             dao.clearFavorites()
             dao.insertFavorites(payload.favorites)

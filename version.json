@@ -1,6 +1,6 @@
 {
-  "versionCode": 203,
-  "versionName": "2.3.0",
+  "versionCode": 204,
+  "versionName": "2.4.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Nuevo nombre oficial: Cheese WP.\n• Reemplazo directo de ejercicios en rutinas y en vivo sin necesidad de eliminarlos.\n• Cronómetro general y de descanso precisos con pantalla bloqueada + alerta sonora, vibración y notificación.\n• Edición completa de la rutina mientras está en ejecución (añadir/reemplazar/reordenar ejercicios y series).\n• Corrección anatómica exacta del Mapa de Fatiga Muscular 2D (piernas, glúteos, hombros, espalda, brazos, etc.).\n• Botón 'Replicar S1' para copiar repeticiones y carga de la Serie 1 al resto de series.\n• Creación de ejercicios y máquinas personalizadas tanto en Ejercicios como dentro de cualquier rutina.\n• Nueva interfaz de ejecución en vivo amigable estilo Gym WP.\n• 5 Temas visuales: Naranjo con Rojo, Rosado con Negro, Rosado con Blanco, Amarillo con Verde y Naranjo con Blanco."
+  "releaseNotes": "• Corrección completa de las 57 rutinas predefinidas: cada plan ('Pectoral Grande', 'Aumentar Masa Muscular', 'Pierde Peso con Salud', etc.) ahora importa exactamente sus días y ejercicios reales.\n• Corrección del scroll en la vista previa de planes: ahora puedes deslizar libremente tanto la descripción completa como los días del plan antes de importarlo.\n• Fotos en ejercicios personalizados: ahora puedes tomar una foto con la cámara o elegir una imagen de tu galería al crear o editar máquinas/ejercicios (con respaldo en Google Drive).\n• Nuevo editor amigable de ejercicios antes de entrenar: controles táctiles -/+ estilo Gym WP, vista previa animada/foto, replicar Serie 1, chips visuales de descanso y tarjeta moderna de Bi-Serie."
 }

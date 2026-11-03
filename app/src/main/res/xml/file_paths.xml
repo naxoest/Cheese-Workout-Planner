@@ -2,4 +2,5 @@
 <paths>
     <cache-path name="apk_updates" path="." />
     <external-cache-path name="external_apk_updates" path="." />
+    <files-path name="exercise_photos" path="exercise_photos/" />
 </paths>
