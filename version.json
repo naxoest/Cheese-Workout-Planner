@@ -1,6 +1,6 @@
 {
-  "versionCode": 206,
-  "versionName": "2.6.0",
+  "versionCode": 207,
+  "versionName": "2.7.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Ejercicios Parche (Secundario / Terciario / Opcional): configura alternativas para cada ejercicio de tu rutina cuando una máquina o implemento esté ocupado.\n• Cambio en 1 toque en vivo: durante el entrenamiento puedes alternar entre ★ Principal y tus Parches (o elegir uno nuevo al instante filtrado por el mismo músculo) sin sobrescribir tu rutina titular.\n• Series, cargas y progresión independientes: cada ejercicio parche recuerda sus propios kg y repeticiones, recibe sugerencias de sobrecarga progresiva y registra el ejercicio realmente ejecutado en Estadísticas."
+  "releaseNotes": "• Corrección de mensajes y dimensiones en Ejercicios Parche: textos completos y responsivos al alternar entre ★ Titular y Parche sin cortes ni desbordes.\n• Rediseño visual de los Días de Rutina: cabeceras con degradado, estado de último entrenamiento, KPIs rápidos, enfoque muscular, ejercicios numerados y personalización de nombre/color del día.\n• Gráfico de barras interactivo en Estadísticas: visualiza días completos, sesiones, series totales, volumen (kg) y minutos en los últimos 7 días o 8 semanas.\n• Separación de «Mi Cuerpo» y «Configuración»: Mi Cuerpo ahora muestra exclusivamente índices biométricos (Peso, IMC con escala OMS, % Grasa con calculadora Marina EE.UU., FFMI, Masa Magra/Grasa, ICA/ICC/V-Taper, TMB/TDEE y macros), mientras que usuarios, temas, Google Drive y actualizaciones pasan al nuevo apartado Configuración."
 }

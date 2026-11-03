@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -42,10 +43,11 @@ import com.gymwp.free.ui.theme.GymWpTheme
 
 private enum class BottomNavTab(val label: String, val icon: ImageVector) {
     HOME("Entrenar", Icons.Default.FitnessCenter),
-    EXPLORE("57 Planes", Icons.Default.Explore),
-    FATIGUE("Fatiga 2D", Icons.Default.AccessibilityNew),
+    EXPLORE("Planes", Icons.Default.Explore),
+    FATIGUE("Fatiga", Icons.Default.AccessibilityNew),
     EXERCISES("Ejercicios", Icons.Default.Insights),
-    BODY("Mi Cuerpo", Icons.Default.MonitorWeight)
+    BODY("Mi Cuerpo", Icons.Default.MonitorWeight),
+    SETTINGS("Ajustes", Icons.Default.Settings)
 }
 
 class MainActivity : ComponentActivity() {
@@ -148,7 +150,15 @@ class MainActivity : ComponentActivity() {
                                                     contentDescription = tab.label
                                                 )
                                             },
-                                            label = { Text(tab.label, fontSize = 11.sp) },
+                                            label = {
+                                                Text(
+                                                    text = tab.label,
+                                                    fontSize = 10.sp,
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            },
                                             colors = NavigationBarItemDefaults.colors(
                                                 selectedIconColor = GymOrange,
                                                 selectedTextColor = GymOrange,
@@ -175,7 +185,8 @@ class MainActivity : ComponentActivity() {
                                             liveFallbackDayName = day.name
                                             liveDayId = day.id
                                         },
-                                        onNavigateToExplore = { currentTabName = BottomNavTab.EXPLORE.name }
+                                        onNavigateToExplore = { currentTabName = BottomNavTab.EXPLORE.name },
+                                        onNavigateToSettings = { currentTabName = BottomNavTab.SETTINGS.name }
                                     )
                                     BottomNavTab.EXPLORE -> ExplorePrebuiltPlansScreen(
                                         viewModel = vm,
@@ -183,7 +194,11 @@ class MainActivity : ComponentActivity() {
                                     )
                                     BottomNavTab.FATIGUE -> MuscleFatigueScreen(viewModel = vm)
                                     BottomNavTab.EXERCISES -> CatalogAndStatsScreen(viewModel = vm)
-                                    BottomNavTab.BODY -> MyBodyScreen(viewModel = vm)
+                                    BottomNavTab.BODY -> MyBodyScreen(
+                                        viewModel = vm,
+                                        onNavigateToSettings = { currentTabName = BottomNavTab.SETTINGS.name }
+                                    )
+                                    BottomNavTab.SETTINGS -> SettingsScreen(viewModel = vm)
                                 }
                             }
                         }

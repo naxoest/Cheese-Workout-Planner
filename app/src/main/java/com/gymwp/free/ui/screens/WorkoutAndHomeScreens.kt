@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,9 +21,11 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -47,7 +50,8 @@ import java.util.Locale
 fun HomeWorkoutsScreen(
     viewModel: GymWpViewModel,
     onStartLiveWorkout: (WorkoutPlanEntity?, WorkoutDayEntity, List<WorkoutExerciseEntity>) -> Unit,
-    onNavigateToExplore: () -> Unit
+    onNavigateToExplore: () -> Unit,
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val plans by viewModel.workoutPlans.collectAsState()
@@ -55,6 +59,7 @@ fun HomeWorkoutsScreen(
     val allExercises by viewModel.allWorkoutExercises.collectAsState()
     val allCatalog by viewModel.allAvailableExercises.collectAsState()
     val favorites by viewModel.favoriteIds.collectAsState()
+    val finishedWorkouts by viewModel.finishedWorkouts.collectAsState()
     val allFinishedEx by viewModel.allFinishedExercises.collectAsState()
     val fatigueList by viewModel.muscleFatigueList.collectAsState()
     val driveSyncState by viewModel.driveSyncState.collectAsState()
@@ -69,6 +74,8 @@ fun HomeWorkoutsScreen(
     var showUserSwitcherDialog by remember { mutableStateOf(false) }
     var showNewPlanDialog by remember { mutableStateOf(false) }
     var showAddDayDialogForPlan by remember { mutableStateOf<Long?>(null) }
+    var editingDayTarget by remember { mutableStateOf<WorkoutDayEntity?>(null) }
+    val collapsedDayIds = remember { mutableStateListOf<Long>() }
     var showAddExerciseForDay by remember { mutableStateOf<Long?>(null) }
     var reorderingDayId by remember { mutableStateOf<Long?>(null) }
     var addingAlternativeForWEx by remember { mutableStateOf<Pair<WorkoutExerciseEntity, CatalogExercise?>?>(null) }
@@ -143,19 +150,19 @@ fun HomeWorkoutsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { showThemeDialog = true },
-                    modifier = Modifier.size(36.dp)
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Palette,
-                        contentDescription = "Cambiar Tema",
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Configuración",
                         tint = GymOrange,
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 IconButton(
                     onClick = { showDriveSyncDialog = true },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
                     val isLinked = !driveSyncState.linkedUri.isNullOrBlank()
                     Icon(
@@ -342,8 +349,8 @@ fun HomeWorkoutsScreen(
                     }
                 }
 
-                // Workout Days Cards
-                items(daysForActivePlan, key = { it.id }) { day ->
+                // Modern Routine Day Showcase Cards
+                itemsIndexed(daysForActivePlan, key = { _, d -> d.id }) { dayIdx, day ->
                     val dayExercises = remember(allExercises, day.id) {
                         allExercises.filter { it.workoutDayId == day.id }.sortedBy { it.orderIndex }
                     }
@@ -351,361 +358,670 @@ fun HomeWorkoutsScreen(
                     val totalSets = dayExercises.sumOf { it.setsCount }
                     val (minDur, maxDur) = WorkoutMetricsCalculator.estimateDurationWindowMinutes(totalSets, dayExercises.size)
                     val estKcal = WorkoutMetricsCalculator.calculateEstimatedCalories(totalSets, profile?.weightKg ?: 75f)
-                    val isReorderingThisDay = reorderingDayId == day.id && dayExercises.size > 1
+                    val isCollapsed = collapsedDayIds.contains(day.id)
+                    val isReorderingThisDay = !isCollapsed && reorderingDayId == day.id && dayExercises.size > 1
+
+                    val targetedMuscles = remember(dayExercises, allCatalog) {
+                        val counts = linkedMapOf<Int, Int>()
+                        dayExercises.forEach { wEx ->
+                            val mStr = viewModel.getCatalogExercise(wEx.exerciseId)?.muscles ?: return@forEach
+                            for (mId in 0..15) {
+                                val ch = mStr.getOrNull(mId) ?: '0'
+                                if (ch >= '2') {
+                                    counts[mId] = (counts[mId] ?: 0) + (if (ch == '3') 3 else 1)
+                                }
+                            }
+                        }
+                        counts.entries
+                            .sortedByDescending { it.value }
+                            .take(4)
+                            .map { (mId, _) ->
+                                MuscleCatalog.getName(mId).substringBefore(" (")
+                            }
+                    }
+
+                    val lastTrainedLabel = remember(finishedWorkouts, day.name) {
+                        val lastSession = finishedWorkouts
+                            .filter { it.dayName.equals(day.name, ignoreCase = true) }
+                            .maxByOrNull { it.timestampMillis }
+                        if (lastSession == null) {
+                            "Listo para hoy"
+                        } else {
+                            val daysAgo = ((System.currentTimeMillis() - lastSession.timestampMillis).coerceAtLeast(0L) / 86_400_000L).toInt()
+                            when {
+                                daysAgo <= 0 -> "Hecho hoy ✓"
+                                daysAgo == 1 -> "Hace 1 día"
+                                else -> "Hace $daysAgo días"
+                            }
+                        }
+                    }
 
                     Card(
                         colors = CardDefaults.cardColors(containerColor = GymCardBg),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(22.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = dayColor.copy(alpha = 0.38f),
+                                shape = RoundedCornerShape(22.dp)
+                            )
                     ) {
                         Column {
-                            // Colored Day Banner
-                            Row(
+                            // 1. Rich Gradient Day Header
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(dayColor)
-                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colors = listOf(
+                                                dayColor,
+                                                dayColor.copy(alpha = 0.76f)
+                                            )
+                                        )
+                                    )
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        text = day.name,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 16.sp
-                                    )
-                                    Text(
-                                        text = "${dayExercises.size} ejercicios • $totalSets series • $minDur-$maxDur min • ~$estKcal kcal",
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        fontSize = 12.sp
-                                    )
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (dayExercises.size > 1) {
-                                        Surface(
-                                            onClick = {
-                                                reorderingDayId = if (isReorderingThisDay) null else day.id
-                                            },
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = if (isReorderingThisDay) Color.White else Color.White.copy(alpha = 0.22f)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color.Black.copy(alpha = 0.28f))
+                                                .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                            Text(
+                                                text = "DÍA ${dayIdx + 1}",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color.White.copy(alpha = 0.20f))
+                                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        ) {
+                                            Text(
+                                                text = lastTrainedLabel,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        if (dayExercises.size > 1 && !isCollapsed) {
+                                            Surface(
+                                                onClick = {
+                                                    reorderingDayId = if (isReorderingThisDay) null else day.id
+                                                },
+                                                shape = RoundedCornerShape(9.dp),
+                                                color = if (isReorderingThisDay) Color.White else Color.Black.copy(alpha = 0.24f)
                                             ) {
-                                                Icon(
-                                                    imageVector = if (isReorderingThisDay) Icons.Default.Check else Icons.Default.SwapVert,
-                                                    contentDescription = if (isReorderingThisDay) "Terminar orden" else "Ordenar ejercicios",
-                                                    tint = if (isReorderingThisDay) dayColor else Color.White,
-                                                    modifier = Modifier.size(15.dp)
-                                                )
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isReorderingThisDay) Icons.Default.Check else Icons.Default.SwapVert,
+                                                        contentDescription = if (isReorderingThisDay) "Terminar orden" else "Ordenar ejercicios",
+                                                        tint = if (isReorderingThisDay) dayColor else Color.White,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Text(
+                                                        text = if (isReorderingThisDay) "Listo" else "Ordenar",
+                                                        color = if (isReorderingThisDay) dayColor else Color.White,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        fontSize = 11.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(30.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.22f))
+                                                .clickable { editingDayTarget = day },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = "Editar nombre o color del día",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(30.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.22f))
+                                                .clickable { dayPendingDelete = day },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.DeleteOutline,
+                                                contentDescription = "Eliminar día",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(30.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.22f))
+                                                .clickable {
+                                                    if (isCollapsed) collapsedDayIds.remove(day.id)
+                                                    else {
+                                                        if (reorderingDayId == day.id) reorderingDayId = null
+                                                        collapsedDayIds.add(day.id)
+                                                    }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                                                contentDescription = if (isCollapsed) "Ver ejercicios" else "Contraer día",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(Modifier.height(8.dp))
+
+                                Text(
+                                    text = day.name,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 18.sp,
+                                    lineHeight = 22.sp,
+                                    modifier = Modifier.clickable { editingDayTarget = day }
+                                )
+
+                                Spacer(Modifier.height(8.dp))
+
+                                // Frosted KPI Strip inside Header
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    DayHeaderKpiPill("🏋️ ${dayExercises.size} ejerc.", Modifier.weight(1f))
+                                    DayHeaderKpiPill("⚡ $totalSets series", Modifier.weight(1f))
+                                    DayHeaderKpiPill("⏱ $minDur-$maxDur m", Modifier.weight(1f))
+                                    DayHeaderKpiPill("🔥 ~$estKcal kcal", Modifier.weight(1f))
+                                }
+                            }
+
+                            // 2. Targeted Muscle Focus Strip
+                            if (targetedMuscles.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(dayColor.copy(alpha = 0.10f))
+                                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "🎯 Enfoque:",
+                                        color = GymTextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        targetedMuscles.forEach { mLabel ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(7.dp))
+                                                    .background(dayColor.copy(alpha = 0.18f))
+                                                    .border(1.dp, dayColor.copy(alpha = 0.40f), RoundedCornerShape(7.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
                                                 Text(
-                                                    text = if (isReorderingThisDay) "Listo" else "Ordenar",
-                                                    color = if (isReorderingThisDay) dayColor else Color.White,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    fontSize = 11.sp
+                                                    text = mLabel,
+                                                    color = GymTextPrimary,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.ExtraBold
                                                 )
                                             }
                                         }
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            viewModel.updateWorkoutDayColorOrName(
-                                                day.copy(colorIndex = (day.colorIndex + 1) % DayPalette.size)
-                                            )
-                                        }
-                                    ) {
-                                        Icon(Icons.Default.ColorLens, contentDescription = "Cambiar Color", tint = Color.White)
-                                    }
-                                    IconButton(onClick = { dayPendingDelete = day }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar Día", tint = Color.White)
                                     }
                                 }
                             }
 
-                            // Exercises inside this Day
+                            // 3. Exercises inside this Day (when expanded)
                             Column(Modifier.padding(12.dp)) {
-                                if (isReorderingThisDay) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 6.dp)
-                                            .background(dayColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.SwapVert,
-                                            contentDescription = null,
-                                            tint = dayColor,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = "Usa ↑ / ↓ para cambiar el orden y toca Listo al terminar.",
-                                            color = GymTextPrimary,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
-
-                                dayExercises.forEachIndexed { idx, wEx ->
-                                    val catEx = remember(allCatalog, wEx.exerciseId) {
-                                        viewModel.getCatalogExercise(wEx.exerciseId)
-                                    }
-                                    val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
-
-                                    if (wEx.isBiSet && idx > 0) {
+                                if (!isCollapsed) {
+                                    if (isReorderingThisDay) {
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 2.dp),
-                                            horizontalArrangement = Arrangement.Center
+                                                .padding(bottom = 8.dp)
+                                                .background(dayColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.SwapVert,
+                                                contentDescription = null,
+                                                tint = dayColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = "Usa ↑ / ↓ para cambiar el orden y toca Listo al terminar.",
+                                                color = GymTextPrimary,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+
+                                    if (dayExercises.isEmpty()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(GymSurfaceElevated.copy(alpha = 0.6f))
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = "⚡ BI-SERIE / SUPERSERIE (Sin descanso previo)",
-                                                color = GymAccentCyan,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
+                                                text = "Este día aún no tiene ejercicios. Toca \"+ Ejercicio\" abajo para armar tu sesión.",
+                                                color = GymTextSecondary,
+                                                fontSize = 12.sp
                                             )
                                         }
                                     }
 
-                                    val repsTokens = remember(wEx.repsPerSetCsv) {
-                                        wEx.repsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                                    }
-                                    val loadsTokens = remember(wEx.loadsPerSetCsv) {
-                                        wEx.loadsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                                    }
-                                    val unitSuffix = when (wEx.unitType) {
-                                        2 -> "seg"
-                                        3 -> "min"
-                                        else -> "reps"
-                                    }
-                                    val formattedSeriesText = if (repsTokens.distinct().size == 1 && repsTokens.isNotEmpty()) {
-                                        "${wEx.setsCount} × ${repsTokens.first()} $unitSuffix"
-                                    } else {
-                                        "${wEx.setsCount} series • ${repsTokens.joinToString("-")} $unitSuffix"
-                                    }
-                                    val formattedLoadsText = if (loadsTokens.distinct().size == 1 && loadsTokens.isNotEmpty()) {
-                                        "${loadsTokens.first()} kg"
-                                    } else {
-                                        "${loadsTokens.joinToString("-")} kg"
-                                    }
+                                    dayExercises.forEachIndexed { idx, wEx ->
+                                        val catEx = remember(allCatalog, wEx.exerciseId) {
+                                            viewModel.getCatalogExercise(wEx.exerciseId)
+                                        }
+                                        val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
+                                        val exPrimaryMuscle = remember(catEx?.muscles) {
+                                            if (catEx == null) ""
+                                            else (0..15)
+                                                .filter { it < catEx.muscles.length && catEx.muscles[it] == '3' }
+                                                .joinToString(" • ") { MuscleCatalog.getName(it).substringBefore(" (") }
+                                        }
 
-                                    val overloadSuggestion = remember(allFinishedEx, wEx.exerciseId, wEx.unitType) {
-                                        ProgressiveOverloadAdvisor.computeSuggestion(
-                                            unitType = wEx.unitType,
-                                            historyForExercise = allFinishedEx.filter { it.exerciseId == wEx.exerciseId }
-                                        )
-                                    }
-                                    val isOverloadApplied = remember(overloadSuggestion, loadsTokens, repsTokens) {
-                                        overloadSuggestion != null && ProgressiveOverloadAdvisor.isAlreadyApplied(
-                                            overloadSuggestion,
-                                            loadsTokens,
-                                            repsTokens
-                                        )
-                                    }
-
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 5.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(GymSurfaceElevated)
-                                            .let { mod ->
-                                                if (!isReorderingThisDay) mod.clickable { editingWorkoutExercise = wEx } else mod
-                                            }
-                                            .padding(10.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (isReorderingThisDay) {
+                                        if (wEx.isBiSet && idx > 0) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 2.dp),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .size(26.dp)
-                                                        .clip(CircleShape)
-                                                        .background(dayColor.copy(alpha = 0.22f)),
-                                                    contentAlignment = Alignment.Center
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(GymAccentCyan.copy(alpha = 0.14f))
+                                                        .border(1.dp, GymAccentCyan.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 10.dp, vertical = 3.dp)
                                                 ) {
                                                     Text(
-                                                        text = "${idx + 1}",
-                                                        color = dayColor,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        fontSize = 12.sp
-                                                    )
-                                                }
-                                                Spacer(Modifier.width(8.dp))
-                                            }
-
-                                            AnimatedExerciseGif(
-                                                gifAssetPath = catEx?.gifAssetPath.orEmpty(),
-                                                contentDescription = exName,
-                                                modifier = Modifier
-                                                    .size(56.dp)
-                                                    .clickable {
-                                                        if (catEx != null) inspectingCatalogExercise = catEx
-                                                        else if (!isReorderingThisDay) editingWorkoutExercise = wEx
-                                                    }
-                                            )
-                                            Spacer(Modifier.width(10.dp))
-                                            Column(Modifier.weight(1f)) {
-                                                Text(
-                                                    text = exName,
-                                                    color = GymTextPrimary,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 14.sp
-                                                )
-                                                Spacer(Modifier.height(2.dp))
-                                                Text(
-                                                    text = formattedSeriesText,
-                                                    color = GymOrange,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.ExtraBold
-                                                )
-                                                Text(
-                                                    text = if (wEx.unitType == 0) {
-                                                        "🏋️ $formattedLoadsText • ⏱ ${wEx.restSeconds}s"
-                                                    } else {
-                                                        "⏱ Descanso: ${wEx.restSeconds}s"
-                                                    },
-                                                    color = GymTextSecondary,
-                                                    fontSize = 11.sp
-                                                )
-                                            }
-
-                                            if (isReorderingThisDay) {
-                                                val canUp = idx > 0
-                                                val canDown = idx < dayExercises.lastIndex
-                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(36.dp)
-                                                            .clip(RoundedCornerShape(10.dp))
-                                                            .background(
-                                                                if (canUp) GymOrange.copy(alpha = 0.18f)
-                                                                else GymCardBg.copy(alpha = 0.5f)
-                                                            )
-                                                            .let { m ->
-                                                                if (canUp) {
-                                                                    m.clickable {
-                                                                        viewModel.moveWorkoutExercise(day.id, wEx.id, moveUp = true)
-                                                                    }
-                                                                } else m
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Default.KeyboardArrowUp,
-                                                            contentDescription = "Subir ejercicio",
-                                                            tint = if (canUp) GymOrange else GymTextSecondary.copy(alpha = 0.35f),
-                                                            modifier = Modifier.size(22.dp)
-                                                        )
-                                                    }
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(36.dp)
-                                                            .clip(RoundedCornerShape(10.dp))
-                                                            .background(
-                                                                if (canDown) GymOrange.copy(alpha = 0.18f)
-                                                                else GymCardBg.copy(alpha = 0.5f)
-                                                            )
-                                                            .let { m ->
-                                                                if (canDown) {
-                                                                    m.clickable {
-                                                                        viewModel.moveWorkoutExercise(day.id, wEx.id, moveUp = false)
-                                                                    }
-                                                                } else m
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Default.KeyboardArrowDown,
-                                                            contentDescription = "Bajar ejercicio",
-                                                            tint = if (canDown) GymOrange else GymTextSecondary.copy(alpha = 0.35f),
-                                                            modifier = Modifier.size(22.dp)
-                                                        )
-                                                    }
-                                                }
-                                            } else {
-                                                // Reemplazar ejercicio sin eliminarlo
-                                                IconButton(
-                                                    onClick = { replacingWorkoutExercise = wEx to exName },
-                                                    modifier = Modifier.size(34.dp)
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.SwapHoriz,
-                                                        contentDescription = "Reemplazar ejercicio",
-                                                        tint = GymOrange,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                }
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .clip(CircleShape)
-                                                        .background(GymOrange.copy(alpha = 0.14f))
-                                                        .clickable { editingWorkoutExercise = wEx },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Tune,
-                                                        contentDescription = "Editar series/carga",
-                                                        tint = GymOrange,
-                                                        modifier = Modifier.size(17.dp)
-                                                    )
-                                                }
-                                                Spacer(Modifier.width(2.dp))
-                                                IconButton(
-                                                    onClick = { exercisePendingDelete = wEx to exName },
-                                                    modifier = Modifier.size(32.dp)
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.DeleteOutline,
-                                                        contentDescription = "Eliminar ejercicio",
-                                                        tint = GymTextSecondary.copy(alpha = 0.7f),
-                                                        modifier = Modifier.size(18.dp)
+                                                        text = "⚡ SUPERSERIE CON EL ANTERIOR",
+                                                        color = GymAccentCyan,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.ExtraBold
                                                     )
                                                 }
                                             }
                                         }
 
-                                        if (!isReorderingThisDay) {
-                                            val alternatives = remember(wEx.notes) {
-                                                WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
-                                            }
-                                            Spacer(Modifier.height(6.dp))
-                                            if (alternatives.isNotEmpty()) {
+                                        val repsTokens = remember(wEx.repsPerSetCsv) {
+                                            wEx.repsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                        }
+                                        val loadsTokens = remember(wEx.loadsPerSetCsv) {
+                                            wEx.loadsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                        }
+                                        val unitSuffix = when (wEx.unitType) {
+                                            2 -> "seg"
+                                            3 -> "min"
+                                            else -> "reps"
+                                        }
+                                        val formattedSeriesText = if (repsTokens.distinct().size == 1 && repsTokens.isNotEmpty()) {
+                                            "${wEx.setsCount} × ${repsTokens.first()} $unitSuffix"
+                                        } else {
+                                            "${wEx.setsCount} series • ${repsTokens.joinToString("-")} $unitSuffix"
+                                        }
+                                        val formattedLoadsText = if (loadsTokens.distinct().size == 1 && loadsTokens.isNotEmpty()) {
+                                            "${loadsTokens.first()} kg"
+                                        } else {
+                                            "${loadsTokens.joinToString("-")} kg"
+                                        }
+
+                                        val overloadSuggestion = remember(allFinishedEx, wEx.exerciseId, wEx.unitType) {
+                                            ProgressiveOverloadAdvisor.computeSuggestion(
+                                                unitType = wEx.unitType,
+                                                historyForExercise = allFinishedEx.filter { it.exerciseId == wEx.exerciseId }
+                                            )
+                                        }
+                                        val isOverloadApplied = remember(overloadSuggestion, loadsTokens, repsTokens) {
+                                            overloadSuggestion != null && ProgressiveOverloadAdvisor.isAlreadyApplied(
+                                                overloadSuggestion,
+                                                loadsTokens,
+                                                repsTokens
+                                            )
+                                        }
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 5.dp)
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(GymSurfaceElevated)
+                                                .border(
+                                                    width = 1.dp,
+                                                    color = dayColor.copy(alpha = 0.22f),
+                                                    shape = RoundedCornerShape(16.dp)
+                                                )
+                                                .let { mod ->
+                                                    if (!isReorderingThisDay) mod.clickable { editingWorkoutExercise = wEx } else mod
+                                                }
+                                        ) {
+                                            // Colored Left Accent Bar
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(4.dp)
+                                                    .fillMaxHeight()
+                                                    .background(dayColor)
+                                            )
+
+                                            Column(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(10.dp)
+                                            ) {
                                                 Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .horizontalScroll(rememberScrollState()),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    alternatives.forEachIndexed { altIdx, altSpec ->
-                                                        val altCat = remember(allCatalog, altSpec.exerciseId) {
-                                                            viewModel.getCatalogExercise(altSpec.exerciseId)
+                                                    // Step Number Badge (01, 02...)
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(26.dp)
+                                                            .clip(CircleShape)
+                                                            .background(dayColor.copy(alpha = 0.20f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            text = "%02d".format(idx + 1),
+                                                            color = dayColor,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            fontSize = 11.sp
+                                                        )
+                                                    }
+                                                    Spacer(Modifier.width(8.dp))
+
+                                                    AnimatedExerciseGif(
+                                                        gifAssetPath = catEx?.gifAssetPath.orEmpty(),
+                                                        contentDescription = exName,
+                                                        modifier = Modifier
+                                                            .size(56.dp)
+                                                            .clickable {
+                                                                if (catEx != null) inspectingCatalogExercise = catEx
+                                                                else if (!isReorderingThisDay) editingWorkoutExercise = wEx
+                                                            }
+                                                    )
+                                                    Spacer(Modifier.width(10.dp))
+
+                                                    Column(Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = exName,
+                                                            color = GymTextPrimary,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            fontSize = 14.sp,
+                                                            lineHeight = 18.sp
+                                                        )
+                                                        if (exPrimaryMuscle.isNotBlank()) {
+                                                            Text(
+                                                                text = exPrimaryMuscle,
+                                                                color = dayColor,
+                                                                fontSize = 11.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
                                                         }
-                                                        val altShortName = (altCat?.name
-                                                            ?: altSpec.customExerciseName.ifBlank { "Ej. #${altSpec.exerciseId}" })
-                                                            .take(24)
+                                                        Spacer(Modifier.height(4.dp))
+                                                        // Structured Metric Badges
+                                                        Row(
+                                                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            DayExerciseMetricBadge(
+                                                                text = formattedSeriesText,
+                                                                bgColor = GymOrange.copy(alpha = 0.16f),
+                                                                textColor = GymOrange
+                                                            )
+                                                            if (wEx.unitType == 0) {
+                                                                DayExerciseMetricBadge(
+                                                                    text = "🏋️ $formattedLoadsText",
+                                                                    bgColor = GymCardBg,
+                                                                    textColor = GymTextPrimary
+                                                                )
+                                                            }
+                                                            DayExerciseMetricBadge(
+                                                                text = "⏱ ${wEx.restSeconds}s",
+                                                                bgColor = GymCardBg,
+                                                                textColor = GymTextSecondary
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (isReorderingThisDay) {
+                                                        val canUp = idx > 0
+                                                        val canDown = idx < dayExercises.lastIndex
+                                                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(34.dp)
+                                                                    .clip(RoundedCornerShape(10.dp))
+                                                                    .background(
+                                                                        if (canUp) dayColor.copy(alpha = 0.22f)
+                                                                        else GymCardBg.copy(alpha = 0.5f)
+                                                                    )
+                                                                    .let { m ->
+                                                                        if (canUp) {
+                                                                            m.clickable {
+                                                                                viewModel.moveWorkoutExercise(day.id, wEx.id, moveUp = true)
+                                                                            }
+                                                                        } else m
+                                                                    },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Default.KeyboardArrowUp,
+                                                                    contentDescription = "Subir ejercicio",
+                                                                    tint = if (canUp) dayColor else GymTextSecondary.copy(alpha = 0.35f),
+                                                                    modifier = Modifier.size(22.dp)
+                                                                )
+                                                            }
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(34.dp)
+                                                                    .clip(RoundedCornerShape(10.dp))
+                                                                    .background(
+                                                                        if (canDown) dayColor.copy(alpha = 0.22f)
+                                                                        else GymCardBg.copy(alpha = 0.5f)
+                                                                    )
+                                                                    .let { m ->
+                                                                        if (canDown) {
+                                                                            m.clickable {
+                                                                                viewModel.moveWorkoutExercise(day.id, wEx.id, moveUp = false)
+                                                                            }
+                                                                        } else m
+                                                                    },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Default.KeyboardArrowDown,
+                                                                    contentDescription = "Bajar ejercicio",
+                                                                    tint = if (canDown) dayColor else GymTextSecondary.copy(alpha = 0.35f),
+                                                                    modifier = Modifier.size(22.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    } else {
+                                                        Column(
+                                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                        ) {
+                                                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .size(30.dp)
+                                                                        .clip(CircleShape)
+                                                                        .background(GymOrange.copy(alpha = 0.14f))
+                                                                        .clickable { editingWorkoutExercise = wEx },
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        Icons.Default.Tune,
+                                                                        contentDescription = "Editar series/carga",
+                                                                        tint = GymOrange,
+                                                                        modifier = Modifier.size(16.dp)
+                                                                    )
+                                                                }
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .size(30.dp)
+                                                                        .clip(CircleShape)
+                                                                        .background(GymCardBg)
+                                                                        .clickable { replacingWorkoutExercise = wEx to exName },
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        Icons.Default.SwapHoriz,
+                                                                        contentDescription = "Reemplazar ejercicio",
+                                                                        tint = GymOrange,
+                                                                        modifier = Modifier.size(16.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(28.dp)
+                                                                    .clip(CircleShape)
+                                                                    .clickable { exercisePendingDelete = wEx to exName },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Default.DeleteOutline,
+                                                                    contentDescription = "Eliminar ejercicio",
+                                                                    tint = GymTextSecondary.copy(alpha = 0.7f),
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                // Parches (Secundario / Terciario / Opcional) — Full Width without clipping!
+                                                if (!isReorderingThisDay) {
+                                                    val alternatives = remember(wEx.notes) {
+                                                        WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
+                                                    }
+                                                    Spacer(Modifier.height(6.dp))
+                                                    if (alternatives.isNotEmpty()) {
+                                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                            alternatives.forEachIndexed { altIdx, altSpec ->
+                                                                val altCat = remember(allCatalog, altSpec.exerciseId) {
+                                                                    viewModel.getCatalogExercise(altSpec.exerciseId)
+                                                                }
+                                                                val altFullName = altCat?.name
+                                                                    ?: altSpec.customExerciseName.ifBlank { "Ej. #${altSpec.exerciseId}" }
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .clip(RoundedCornerShape(8.dp))
+                                                                        .background(GymCardBg)
+                                                                        .border(
+                                                                            width = 1.dp,
+                                                                            color = GymAccentCyan.copy(alpha = 0.32f),
+                                                                            shape = RoundedCornerShape(8.dp)
+                                                                        )
+                                                                        .clickable { editingWorkoutExercise = wEx }
+                                                                        .padding(horizontal = 8.dp, vertical = 5.dp),
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                                                ) {
+                                                                    Icon(
+                                                                        Icons.Default.CallSplit,
+                                                                        contentDescription = null,
+                                                                        tint = GymAccentCyan,
+                                                                        modifier = Modifier.size(13.dp)
+                                                                    )
+                                                                    Text(
+                                                                        text = "${WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)}:",
+                                                                        color = GymAccentCyan,
+                                                                        fontSize = 10.sp,
+                                                                        fontWeight = FontWeight.ExtraBold
+                                                                    )
+                                                                    Text(
+                                                                        text = altFullName,
+                                                                        color = GymTextPrimary,
+                                                                        fontSize = 11.sp,
+                                                                        fontWeight = FontWeight.SemiBold,
+                                                                        lineHeight = 14.sp,
+                                                                        modifier = Modifier.weight(1f)
+                                                                    )
+                                                                }
+                                                            }
+                                                            if (alternatives.size < 4) {
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .clip(RoundedCornerShape(8.dp))
+                                                                        .clickable { addingAlternativeForWEx = wEx to catEx }
+                                                                        .padding(vertical = 2.dp),
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                                ) {
+                                                                    Icon(Icons.Default.Add, contentDescription = null, tint = GymAccentCyan, modifier = Modifier.size(13.dp))
+                                                                    Text(
+                                                                        text = "Añadir otro ejercicio parche",
+                                                                        color = GymAccentCyan,
+                                                                        fontSize = 11.sp,
+                                                                        fontWeight = FontWeight.Bold
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    } else {
                                                         Row(
                                                             modifier = Modifier
                                                                 .clip(RoundedCornerShape(8.dp))
-                                                                .background(GymCardBg)
-                                                                .border(
-                                                                    width = 1.dp,
-                                                                    color = GymAccentCyan.copy(alpha = 0.35f),
-                                                                    shape = RoundedCornerShape(8.dp)
-                                                                )
-                                                                .clickable { editingWorkoutExercise = wEx }
-                                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                .clickable { addingAlternativeForWEx = wEx to catEx }
+                                                                .padding(vertical = 2.dp),
                                                             verticalAlignment = Alignment.CenterVertically,
                                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                         ) {
@@ -713,138 +1029,114 @@ fun HomeWorkoutsScreen(
                                                                 Icons.Default.CallSplit,
                                                                 contentDescription = null,
                                                                 tint = GymAccentCyan,
-                                                                modifier = Modifier.size(12.dp)
+                                                                modifier = Modifier.size(13.dp)
                                                             )
                                                             Text(
-                                                                text = "${WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)}: $altShortName",
-                                                                color = GymTextPrimary,
-                                                                fontSize = 10.sp,
+                                                                text = "+ Añadir ejercicio parche (si máquina está ocupada)",
+                                                                color = GymAccentCyan,
+                                                                fontSize = 11.sp,
                                                                 fontWeight = FontWeight.SemiBold
                                                             )
                                                         }
                                                     }
-                                                    if (alternatives.size < 4) {
+                                                }
+
+                                                if (!isReorderingThisDay && overloadSuggestion != null) {
+                                                    Spacer(Modifier.height(7.dp))
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .background(
+                                                                if (isOverloadApplied) FatigueGreen.copy(alpha = 0.13f)
+                                                                else GymOrange.copy(alpha = 0.12f)
+                                                            )
+                                                            .padding(horizontal = 9.dp, vertical = 6.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            modifier = Modifier.weight(1f)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.TrendingUp,
+                                                                contentDescription = null,
+                                                                tint = if (isOverloadApplied) FatigueGreen else GymOrange,
+                                                                modifier = Modifier.size(15.dp)
+                                                            )
+                                                            Spacer(Modifier.width(5.dp))
+                                                            Text(
+                                                                text = overloadSuggestion.summaryText,
+                                                                color = GymTextPrimary,
+                                                                fontSize = 11.sp,
+                                                                fontWeight = FontWeight.SemiBold,
+                                                                lineHeight = 14.sp
+                                                            )
+                                                        }
+                                                        Spacer(Modifier.width(6.dp))
                                                         Box(
                                                             modifier = Modifier
                                                                 .clip(RoundedCornerShape(8.dp))
-                                                                .background(GymAccentCyan.copy(alpha = 0.14f))
-                                                                .clickable { addingAlternativeForWEx = wEx to catEx }
+                                                                .background(
+                                                                    if (isOverloadApplied) FatigueGreen.copy(alpha = 0.22f)
+                                                                    else GymOrange
+                                                                )
+                                                                .clickable {
+                                                                    if (!isOverloadApplied) {
+                                                                        viewModel.applyOverloadSuggestionToWorkoutExercise(wEx, overloadSuggestion)
+                                                                    }
+                                                                }
                                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                                         ) {
                                                             Text(
-                                                                text = "+ Parche",
-                                                                color = GymAccentCyan,
-                                                                fontSize = 10.sp,
-                                                                fontWeight = FontWeight.ExtraBold
+                                                                text = if (isOverloadApplied) "✓ Meta activa" else overloadSuggestion.buttonLabel,
+                                                                color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
+                                                                fontWeight = FontWeight.ExtraBold,
+                                                                fontSize = 11.sp
                                                             )
                                                         }
                                                     }
                                                 }
-                                            } else {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .clickable { addingAlternativeForWEx = wEx to catEx }
-                                                        .padding(vertical = 2.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.CallSplit,
-                                                        contentDescription = null,
-                                                        tint = GymAccentCyan,
-                                                        modifier = Modifier.size(13.dp)
-                                                    )
-                                                    Text(
-                                                        text = "+ Añadir ejercicio parche (secundario / opcional)",
-                                                        color = GymAccentCyan,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.SemiBold
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        if (!isReorderingThisDay && overloadSuggestion != null) {
-                                            Spacer(Modifier.height(8.dp))
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(
-                                                        if (isOverloadApplied) FatigueGreen.copy(alpha = 0.13f)
-                                                        else GymOrange.copy(alpha = 0.12f)
-                                                    )
-                                                    .padding(horizontal = 9.dp, vertical = 6.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.weight(1f)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.TrendingUp,
-                                                        contentDescription = null,
-                                                        tint = if (isOverloadApplied) FatigueGreen else GymOrange,
-                                                        modifier = Modifier.size(15.dp)
-                                                    )
-                                                    Spacer(Modifier.width(5.dp))
-                                                    Text(
-                                                        text = overloadSuggestion.summaryText,
-                                                        color = GymTextPrimary,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.SemiBold
-                                                    )
-                                                }
-                                                Spacer(Modifier.width(6.dp))
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .background(
-                                                            if (isOverloadApplied) FatigueGreen.copy(alpha = 0.22f)
-                                                            else GymOrange
-                                                        )
-                                                        .clickable {
-                                                            if (!isOverloadApplied) {
-                                                                viewModel.applyOverloadSuggestionToWorkoutExercise(wEx, overloadSuggestion)
-                                                            }
-                                                        }
-                                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                                ) {
-                                                    Text(
-                                                        text = if (isOverloadApplied) "✓ Meta activa" else overloadSuggestion.buttonLabel,
-                                                        color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        fontSize = 11.sp
-                                                    )
-                                                }
                                             }
                                         }
                                     }
+
+                                    Spacer(Modifier.height(10.dp))
                                 }
 
-                                Spacer(Modifier.height(8.dp))
+                                // 4. Prominent Action Footer
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    TextButton(onClick = { showAddExerciseForDay = day.id }) {
-                                        Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = GymOrange)
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Añadir Ejercicio", color = GymOrange, fontWeight = FontWeight.Bold)
+                                    OutlinedButton(
+                                        onClick = {
+                                            collapsedDayIds.remove(day.id)
+                                            showAddExerciseForDay = day.id
+                                        },
+                                        shape = RoundedCornerShape(13.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                                    ) {
+                                        Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = GymOrange, modifier = Modifier.size(17.dp))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text("Ejercicio", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     }
+
                                     Button(
                                         onClick = {
                                             reorderingDayId = null
                                             onStartLiveWorkout(activePlan, day, dayExercises)
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = dayColor, contentColor = Color.White)
+                                        colors = ButtonDefaults.buttonColors(containerColor = dayColor, contentColor = Color.White),
+                                        shape = RoundedCornerShape(13.dp),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Iniciar Entrenamiento", fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Iniciar Entrenamiento", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                                     }
                                 }
                             }
@@ -994,6 +1286,69 @@ fun HomeWorkoutsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddDayDialogForPlan = null }) { Text("Cancelar", color = GymTextSecondary) }
+            },
+            containerColor = GymCardBg
+        )
+    }
+
+    // Dialog: Edit Day Name & Color
+    editingDayTarget?.let { targetDay ->
+        var editedName by remember(targetDay.id) { mutableStateOf(targetDay.name) }
+        var editedColor by remember(targetDay.id) { mutableIntStateOf(targetDay.colorIndex.coerceIn(0, DayPalette.lastIndex)) }
+        AlertDialog(
+            onDismissRequest = { editingDayTarget = null },
+            title = { Text("Personalizar Día de Rutina", color = GymTextPrimary, fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Nombre del día") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text("Color distintivo de la tarjeta:", fontSize = 13.sp, color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        DayPalette.forEachIndexed { idx, col ->
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(col)
+                                    .border(
+                                        width = if (editedColor == idx) 3.dp else 0.dp,
+                                        color = GymTextPrimary,
+                                        shape = CircleShape
+                                    )
+                                    .clickable { editedColor = idx }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateWorkoutDayColorOrName(
+                            targetDay.copy(
+                                name = editedName.trim().ifBlank { targetDay.name },
+                                colorIndex = editedColor
+                            )
+                        )
+                        editingDayTarget = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                ) {
+                    Text("Guardar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingDayTarget = null }) { Text("Cancelar", color = GymTextSecondary) }
             },
             containerColor = GymCardBg
         )
@@ -1919,31 +2274,51 @@ fun EditWorkoutExerciseDialog(
                                 color = GymTextSecondary,
                                 fontSize = 11.sp
                             )
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                // Opción 1: Principal
+                                // Opción 1: Principal (Full width, never cuts letters)
                                 val isMainSelected = safeSelectedIdx == 0
-                                Box(
+                                Row(
                                     modifier = Modifier
+                                        .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isMainSelected) GymOrange else GymCardBg)
+                                        .background(if (isMainSelected) GymOrange.copy(alpha = 0.18f) else GymCardBg)
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isMainSelected) GymOrange else Color.Transparent,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
                                         .clickable { selectedOptionIdx = 0 }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(if (isMainSelected) GymOrange else GymOrange.copy(alpha = 0.16f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "★ Principal",
+                                            color = if (isMainSelected) GymOnPrimary else GymOrange,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 10.sp
+                                        )
+                                    }
                                     Text(
-                                        text = "★ Principal: ${exerciseName.take(18)}",
-                                        color = if (isMainSelected) GymOnPrimary else GymTextPrimary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
+                                        text = exerciseName,
+                                        color = GymTextPrimary,
+                                        fontWeight = if (isMainSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp,
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
 
-                                // Opciones 2..N: Secundario / Terciario / Opcional
+                                // Opciones 2..N: Secundario / Terciario / Opcional (Full width, never cuts letters)
                                 altOptions.forEachIndexed { aIdx, altOpt ->
                                     val optTabIdx = aIdx + 1
                                     val isAltSelected = safeSelectedIdx == optTabIdx
@@ -1951,32 +2326,45 @@ fun EditWorkoutExerciseDialog(
                                         ?: altOpt.customExerciseName.ifBlank { "Ej. #${altOpt.exerciseId}" })
                                     Row(
                                         modifier = Modifier
+                                            .fillMaxWidth()
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(if (isAltSelected) GymAccentCyan else GymCardBg)
+                                            .background(if (isAltSelected) GymAccentCyan.copy(alpha = 0.18f) else GymCardBg)
                                             .border(
-                                                width = if (isAltSelected) 0.dp else 1.dp,
-                                                color = GymAccentCyan.copy(alpha = 0.35f),
+                                                width = 1.dp,
+                                                color = if (isAltSelected) GymAccentCyan else GymAccentCyan.copy(alpha = 0.30f),
                                                 shape = RoundedCornerShape(10.dp)
                                             )
                                             .clickable { selectedOptionIdx = optTabIdx }
-                                            .padding(start = 10.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                                            .padding(horizontal = 10.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(if (isAltSelected) GymAccentCyan else GymAccentCyan.copy(alpha = 0.16f))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = WorkoutExerciseAlternativesCodec.roleBadgeLabel(aIdx),
+                                                color = if (isAltSelected) Color.Black else GymAccentCyan,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 10.sp
+                                            )
+                                        }
                                         Text(
-                                            text = "${WorkoutExerciseAlternativesCodec.roleBadgeLabel(aIdx)}: ${altName.take(16)}",
-                                            color = if (isAltSelected) Color.Black else GymTextPrimary,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
+                                            text = altName,
+                                            color = GymTextPrimary,
+                                            fontWeight = if (isAltSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            lineHeight = 16.sp,
+                                            modifier = Modifier.weight(1f)
                                         )
                                         Box(
                                             modifier = Modifier
-                                                .size(20.dp)
+                                                .size(22.dp)
                                                 .clip(CircleShape)
-                                                .background(
-                                                    if (isAltSelected) Color.Black.copy(alpha = 0.16f)
-                                                    else GymSurfaceElevated
-                                                )
+                                                .background(GymSurfaceElevated)
                                                 .clickable {
                                                     altPendingDelete = altOpt.exerciseId to altName
                                                 },
@@ -1985,8 +2373,8 @@ fun EditWorkoutExerciseDialog(
                                             Icon(
                                                 Icons.Default.Close,
                                                 contentDescription = "Eliminar ejercicio parche",
-                                                tint = if (isAltSelected) Color.Black else GymTextSecondary,
-                                                modifier = Modifier.size(12.dp)
+                                                tint = GymTextSecondary,
+                                                modifier = Modifier.size(13.dp)
                                             )
                                         }
                                     }
@@ -1995,24 +2383,27 @@ fun EditWorkoutExerciseDialog(
                                 if (altOptions.size < 4) {
                                     Row(
                                         modifier = Modifier
+                                            .fillMaxWidth()
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(GymAccentCyan.copy(alpha = 0.16f))
+                                            .background(GymAccentCyan.copy(alpha = 0.14f))
+                                            .border(1.dp, GymAccentCyan.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                                             .clickable { showAddAltModal = true }
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                            .padding(horizontal = 10.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        horizontalArrangement = Arrangement.Center
                                     ) {
                                         Icon(
                                             Icons.Default.Add,
                                             contentDescription = null,
                                             tint = GymAccentCyan,
-                                            modifier = Modifier.size(14.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
+                                        Spacer(Modifier.width(5.dp))
                                         Text(
                                             text = "Añadir ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altOptions.size)}",
                                             color = GymAccentCyan,
                                             fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 11.sp
+                                            fontSize = 12.sp
                                         )
                                     }
                                 }
@@ -2767,5 +3158,50 @@ private fun EditorTactileStepperPill(
                 modifier = Modifier.size(15.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun DayHeaderKpiPill(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(9.dp))
+            .background(Color.Black.copy(alpha = 0.24f))
+            .padding(horizontal = 4.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun DayExerciseMetricBadge(
+    text: String,
+    bgColor: Color,
+    textColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(7.dp))
+            .background(bgColor)
+            .padding(horizontal = 7.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }

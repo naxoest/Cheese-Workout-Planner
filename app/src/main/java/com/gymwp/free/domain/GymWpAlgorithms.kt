@@ -9,6 +9,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -133,10 +134,25 @@ object WorkoutMetricsCalculator {
     }
 }
 
+data class SuggestedNutritionTargets(
+    val goalLabel: String,
+    val targetKcal: Int,
+    val proteinGrams: Int,
+    val carbsGrams: Int,
+    val fatGrams: Int,
+    val waterLiters: Float
+)
+
 /**
- * Clean-room implementation of CalculosImcPesoIdeal (Lcl/a;) & Body Fat Deurenberg (Ldl/b;)
+ * Clean-room implementation of CalculosImcPesoIdeal (Lcl/a;), Body Fat (Deurenberg & U.S. Navy),
+ * FFMI (Fat-Free Mass Index), BMR/TDEE (Mifflin-St Jeor) & Cardiometabolic Ratios
  */
 object BodyMetricsCalculator {
+
+    fun calculateAge(birthYear: Int): Int {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        return (currentYear - birthYear).coerceIn(14, 95)
+    }
 
     fun calculateBmi(weightKg: Float, heightCm: Float): Float {
         val hMeters = (heightCm / 100f).coerceAtLeast(0.5f)
@@ -162,11 +178,181 @@ object BodyMetricsCalculator {
 
     fun calculateDeurenbergBodyFat(weightKg: Float, heightCm: Float, birthYear: Int, gender: Int): Float {
         val bmi = calculateBmi(weightKg, heightCm)
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        val age = (currentYear - birthYear).coerceIn(14, 95)
+        val age = calculateAge(birthYear)
         val genderFactor = if (gender == 0) 1f else 0f // 1 = Masculino, 0 = Femenino
         val bf = (1.20f * bmi) - (10.8f * genderFactor) + (0.23f * age) - 8.305328f
         return bf.coerceIn(4f, 55f)
+    }
+
+    /**
+     * Fórmula antropométrica de la Marina de EE.UU. (U.S. Navy) con cinta métrica
+     */
+    fun calculateNavyBodyFat(
+        gender: Int,
+        heightCm: Float,
+        neckCm: Float,
+        waistCm: Float,
+        hipCm: Float = 0f
+    ): Float? {
+        if (heightCm < 100f || neckCm < 15f || waistCm <= neckCm) return null
+        return if (gender == 0) {
+            val diff = waistCm - neckCm
+            if (diff <= 1f) null
+            else {
+                val denom = 1.0324f - 0.19077f * log10(diff) + 0.15456f * log10(heightCm)
+                if (denom <= 0.1f) null else ((495f / denom) - 450f).coerceIn(3f, 55f)
+            }
+        } else {
+            if (hipCm < 40f) return null
+            val sum = waistCm + hipCm - neckCm
+            if (sum <= 1f) null
+            else {
+                val denom = 1.29579f - 0.35004f * log10(sum) + 0.22100f * log10(heightCm)
+                if (denom <= 0.1f) null else ((495f / denom) - 450f).coerceIn(8f, 60f)
+            }
+        }
+    }
+
+    fun getBodyFatCategoryEs(bfPercent: Float, gender: Int): String {
+        return if (gender == 0) {
+            when {
+                bfPercent < 6f -> "Grasa Esencial"
+                bfPercent < 14f -> "Nivel Atlético"
+                bfPercent < 18f -> "Fitness / Definido"
+                bfPercent < 25f -> "Rango Saludable"
+                else -> "Porcentaje Elevado"
+            }
+        } else {
+            when {
+                bfPercent < 14f -> "Grasa Esencial"
+                bfPercent < 21f -> "Nivel Atlético"
+                bfPercent < 25f -> "Fitness / Definida"
+                bfPercent < 32f -> "Rango Saludable"
+                else -> "Porcentaje Elevado"
+            }
+        }
+    }
+
+    fun calculateFatMassKg(weightKg: Float, bfPercent: Float): Float {
+        return (weightKg * (bfPercent.coerceIn(3f, 65f) / 100f)).coerceAtLeast(1f)
+    }
+
+    fun calculateLeanMassKg(weightKg: Float, bfPercent: Float): Float {
+        return (weightKg - calculateFatMassKg(weightKg, bfPercent)).coerceAtLeast(15f)
+    }
+
+    /**
+     * Retorna Pair(FFMI crudo, FFMI normalizado a 1.80 m)
+     */
+    fun calculateFfmi(weightKg: Float, heightCm: Float, bfPercent: Float): Pair<Float, Float> {
+        val hMeters = (heightCm / 100f).coerceAtLeast(1.0f)
+        val leanKg = calculateLeanMassKg(weightKg, bfPercent)
+        val rawFfmi = leanKg / (hMeters * hMeters)
+        val normalizedFfmi = rawFfmi + 6.1f * (1.80f - hMeters)
+        return rawFfmi to normalizedFfmi
+    }
+
+    fun getFfmiClassificationEs(normalizedFfmi: Float, gender: Int): String {
+        return if (gender == 0) {
+            when {
+                normalizedFfmi < 18f -> "Complexión Delgada"
+                normalizedFfmi < 20f -> "Masa Muscular Promedio"
+                normalizedFfmi < 22f -> "Atlético / Buena Masa"
+                normalizedFfmi < 25f -> "Musculatura Avanzada"
+                else -> "Musculatura Nivel Élite"
+            }
+        } else {
+            when {
+                normalizedFfmi < 14f -> "Complexión Delgada"
+                normalizedFfmi < 16f -> "Masa Muscular Promedio"
+                normalizedFfmi < 18f -> "Atlética / Buena Masa"
+                normalizedFfmi < 21f -> "Musculatura Avanzada"
+                else -> "Musculatura Nivel Élite"
+            }
+        }
+    }
+
+    fun calculateWaistToHeightRatio(waistCm: Float, heightCm: Float): Float? {
+        if (waistCm <= 20f || heightCm <= 100f) return null
+        return waistCm / heightCm
+    }
+
+    fun getWhtrStatusEs(ratio: Float): String = when {
+        ratio < 0.40f -> "Delgado"
+        ratio < 0.50f -> "Óptimo Cardiovascular"
+        ratio < 0.60f -> "Riesgo Moderado"
+        else -> "Riesgo Elevado"
+    }
+
+    fun calculateWaistToHipRatio(waistCm: Float, hipCm: Float): Float? {
+        if (waistCm <= 20f || hipCm <= 30f) return null
+        return waistCm / hipCm
+    }
+
+    fun getWhrStatusEs(whr: Float, gender: Int): String {
+        return if (gender == 0) {
+            when {
+                whr < 0.90f -> "Saludable (< 0.90)"
+                whr < 0.99f -> "Moderado"
+                else -> "Elevado"
+            }
+        } else {
+            when {
+                whr < 0.80f -> "Saludable (< 0.80)"
+                whr < 0.85f -> "Moderado"
+                else -> "Elevado"
+            }
+        }
+    }
+
+    fun calculateShoulderToWaistRatio(shoulderCm: Float, waistCm: Float): Float? {
+        if (shoulderCm <= 40f || waistCm <= 20f) return null
+        return shoulderCm / waistCm
+    }
+
+    fun calculateBmrMifflin(weightKg: Float, heightCm: Float, birthYear: Int, gender: Int): Int {
+        val age = calculateAge(birthYear)
+        val sexOffset = if (gender == 0) 5f else -161f
+        return (10f * weightKg + 6.25f * heightCm - 5f * age + sexOffset).roundToInt().coerceAtLeast(950)
+    }
+
+    fun calculateTdee(bmr: Int, daysPerWeek: Int): Int {
+        val factor = when {
+            daysPerWeek <= 1 -> 1.25f
+            daysPerWeek == 2 -> 1.375f
+            daysPerWeek in 3..4 -> 1.50f
+            daysPerWeek == 5 -> 1.62f
+            else -> 1.725f
+        }
+        return (bmr * factor).roundToInt()
+    }
+
+    fun calculateSuggestedNutrition(
+        weightKg: Float,
+        tdee: Int,
+        goal: Int,
+        daysPerWeek: Int
+    ): SuggestedNutritionTargets {
+        val (goalLabel, targetKcal, proteinPerKg) = when (goal) {
+            0 -> Triple("Superávit Limpio (Hipertrofia)", tdee + 280, 2.0f)
+            1 -> Triple("Déficit Moderado (Definición)", (tdee - 400).coerceAtLeast(1200), 2.1f)
+            2 -> Triple("Fuerza y Rendimiento", tdee + 180, 1.9f)
+            else -> Triple("Mantenimiento y Salud", tdee, 1.7f)
+        }
+        val proteinG = (weightKg * proteinPerKg).roundToInt().coerceAtLeast(70)
+        val fatG = (weightKg * 0.85f).roundToInt().coerceAtLeast(40)
+        val remainingKcal = (targetKcal - (proteinG * 4) - (fatG * 9)).coerceAtLeast(240)
+        val carbsG = (remainingKcal / 4f).roundToInt()
+        val waterL = (weightKg * 0.035f) + (daysPerWeek.coerceIn(0, 7) * 0.08f)
+
+        return SuggestedNutritionTargets(
+            goalLabel = goalLabel,
+            targetKcal = targetKcal,
+            proteinGrams = proteinG,
+            carbsGrams = carbsG,
+            fatGrams = fatG,
+            waterLiters = waterL
+        )
     }
 }
 

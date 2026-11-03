@@ -742,20 +742,28 @@ fun LiveWorkoutAssistantScreen(
             }
         }
 
-        // Optional toast banner (e.g. "Serie 1 replicada")
+        // Responsive toast banner inside screen margins (never overflows or clips text)
         feedbackBannerText?.let { msg ->
+            val isAltNotice = msg.startsWith("🔀")
+            val bannerColor = if (isAltNotice) GymAccentCyan else FatigueGreen
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(FatigueGreen.copy(alpha = 0.18f))
-                    .padding(vertical = 5.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(bannerColor.copy(alpha = 0.16f))
+                    .border(1.dp, bannerColor.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = msg,
-                    color = FatigueGreen,
+                    color = GymTextPrimary,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -859,12 +867,12 @@ fun LiveWorkoutAssistantScreen(
                         onSelectActiveExerciseId = { chosenId ->
                             currentSt.activeExerciseId = chosenId
                             if (chosenId == currentWEx.exerciseId) {
-                                feedbackBannerText = "★ Volviste al titular: $mainExName"
+                                feedbackBannerText = "★ Titular activo: $mainExName"
                             } else {
                                 val chosenName = viewModel.getCatalogExercise(chosenId)?.name
                                     ?: alternatives.firstOrNull { it.exerciseId == chosenId }?.customExerciseName
                                     ?: "Parche"
-                                feedbackBannerText = "🔀 Parche activo hoy: $chosenName (rutina intacta)"
+                                feedbackBannerText = "🔀 Parche hoy: $chosenName\nTu rutina titular se mantiene intacta"
                             }
                         },
                         onRequestAddAlternative = {
@@ -1050,12 +1058,12 @@ fun LiveWorkoutAssistantScreen(
                         onSelectActiveExerciseId = { chosenId ->
                             st.activeExerciseId = chosenId
                             if (chosenId == wEx.exerciseId) {
-                                feedbackBannerText = "★ Volviste al titular: $mainExName"
+                                feedbackBannerText = "★ Titular activo: $mainExName"
                             } else {
                                 val chosenName = viewModel.getCatalogExercise(chosenId)?.name
                                     ?: alternatives.firstOrNull { it.exerciseId == chosenId }?.customExerciseName
                                     ?: "Parche"
-                                feedbackBannerText = "🔀 Parche activo hoy: $chosenName (rutina intacta)"
+                                feedbackBannerText = "🔀 Parche hoy: $chosenName\nTu rutina titular se mantiene intacta"
                             }
                         },
                         onRequestAddAlternative = {
@@ -1386,7 +1394,7 @@ fun LiveWorkoutAssistantScreen(
                         st.activeExerciseId = createdSpec.exerciseId
                     }
                     addingLiveAltTarget = null
-                    feedbackBannerText = "🔀 Usando parche: ${chosen.name} (tu rutina titular no cambia)"
+                    feedbackBannerText = "🔀 Parche hoy: ${chosen.name}\nTu rutina titular se mantiene intacta"
                 }
             }
         )
@@ -1722,41 +1730,52 @@ private fun LiveGymWpExerciseCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                        .background(GymAccentCyan.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
-                        .border(1.dp, GymAccentCyan.copy(alpha = 0.40f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(bottom = 10.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GymAccentCyan.copy(alpha = 0.14f))
+                        .border(1.dp, GymAccentCyan.copy(alpha = 0.42f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(
-                            Icons.Default.AltRoute,
-                            contentDescription = null,
-                            tint = GymAccentCyan,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(5.dp))
+                    Icon(
+                        Icons.Default.AltRoute,
+                        contentDescription = null,
+                        tint = GymAccentCyan,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "PARCHE HOY • Titular intacto: $mainExName",
+                            text = "MODO PARCHE HOY • Rutina intacta",
                             color = GymAccentCyan,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            lineHeight = 14.sp
+                        )
+                        Text(
+                            text = "Titular guardado: $mainExName",
+                            color = GymTextPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
                         )
                     }
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Volver a ★",
-                        color = GymOrange,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 11.sp,
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(GymOrange.copy(alpha = 0.20f))
+                            .border(1.dp, GymOrange.copy(alpha = 0.50f), RoundedCornerShape(8.dp))
                             .clickable { onSelectActiveExerciseId(wEx.exerciseId) }
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "★ Titular",
+                            color = GymOrange,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
 
@@ -1785,7 +1804,8 @@ private fun LiveGymWpExerciseCard(
                         },
                         color = if (isUsingAlt) GymAccentCyan else GymTextSecondary,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 15.sp
                     )
                     Text(
                         text = exName,
@@ -1800,14 +1820,16 @@ private fun LiveGymWpExerciseCard(
                             text = primaryMuscleNames,
                             color = GymOrange,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
                         )
                     }
                     if (equipmentLabel.isNotBlank()) {
                         Text(
                             text = equipmentLabel,
                             color = GymTextSecondary,
-                            fontSize = 11.sp
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
                         )
                     }
                 }
@@ -1815,141 +1837,207 @@ private fun LiveGymWpExerciseCard(
 
             Spacer(Modifier.height(10.dp))
 
-            // Parche (Secondary / Tertiary / Optional) 1-Tap Switcher for Busy Gym Machines!
+            // Parche (Secondary / Tertiary / Optional) 1-Tap Full-Width Switcher (zero clipping / zero overflow!)
             if (alternatives.isEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(11.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(GymAccentCyan.copy(alpha = 0.11f))
-                        .border(1.dp, GymAccentCyan.copy(alpha = 0.35f), RoundedCornerShape(11.dp))
+                        .border(1.dp, GymAccentCyan.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                         .clickable { onRequestAddAlternative() }
-                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                        .padding(horizontal = 11.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(
-                            Icons.Default.AltRoute,
-                            contentDescription = null,
-                            tint = GymAccentCyan,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
+                    Icon(
+                        Icons.Default.AltRoute,
+                        contentDescription = null,
+                        tint = GymAccentCyan,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "¿Máquina ocupada? Usar ejercicio parche hoy",
+                        color = GymTextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(GymAccentCyan.copy(alpha = 0.20f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
                         Text(
-                            text = "¿Máquina ocupada? Usar ejercicio parche hoy",
-                            color = GymTextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            text = "+ Elegir",
+                            color = GymAccentCyan,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp
                         )
                     }
-                    Text(
-                        text = "+ Elegir",
-                        color = GymAccentCyan,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 11.sp
-                    )
                 }
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(
-                        text = "¿Máquina ocupada? Cambia en 1 toque sin alterar tu rutina:",
-                        color = GymTextSecondary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(GymSurfaceElevated.copy(alpha = 0.7f))
+                        .border(1.dp, GymAccentCyan.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "¿Máquina ocupada? Opciones para hoy:",
+                            color = GymTextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (alternatives.size < 4) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(GymAccentCyan.copy(alpha = 0.16f))
+                                    .clickable { onRequestAddAlternative() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = GymAccentCyan, modifier = Modifier.size(13.dp))
+                                Text(
+                                    text = "Parche",
+                                    color = GymAccentCyan,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Opción 1: ★ Principal (Full width, never cuts letters!)
+                    val mainSelected = state.activeExerciseId == wEx.exerciseId
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (mainSelected) GymOrange.copy(alpha = 0.18f) else GymCardBg
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (mainSelected) GymOrange else Color.Transparent,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onSelectActiveExerciseId(wEx.exerciseId) }
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // ★ Principal Chip
-                        val mainSelected = state.activeExerciseId == wEx.exerciseId
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (mainSelected) GymOrange else GymOrange.copy(alpha = 0.16f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "★ Titular",
+                                color = if (mainSelected) GymOnPrimary else GymOrange,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 10.sp
+                            )
+                        }
+                        Text(
+                            text = mainExName,
+                            color = GymTextPrimary,
+                            fontWeight = if (mainSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (mainSelected) {
+                            Text(
+                                text = "En uso",
+                                color = GymOrange,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    // Opciones 2..N: Secundario / Terciario / Opcional (Full width, never cuts letters!)
+                    alternatives.forEachIndexed { altIdx, altSpec ->
+                        val altSelected = state.activeExerciseId == altSpec.exerciseId
+                        val altCat = viewModel.getCatalogExercise(altSpec.exerciseId)
+                        val altName = altCat?.name
+                            ?: altSpec.customExerciseName.ifBlank { "Parche ${altIdx + 2}" }
+                        val roleBadge = WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)
+
                         Row(
                             modifier = Modifier
+                                .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
-                                    if (mainSelected) GymOrange else GymSurfaceElevated
+                                    if (altSelected) GymAccentCyan.copy(alpha = 0.18f) else GymCardBg
                                 )
                                 .border(
                                     width = 1.dp,
-                                    color = if (mainSelected) GymOrange else GymOrange.copy(alpha = 0.35f),
+                                    color = if (altSelected) GymAccentCyan else Color.Transparent,
                                     shape = RoundedCornerShape(10.dp)
                                 )
-                                .clickable { onSelectActiveExerciseId(wEx.exerciseId) }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .clickable { onSelectActiveExerciseId(altSpec.exerciseId) }
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "★ Principal: ${mainExName.take(16)}",
-                                color = if (mainSelected) GymOnPrimary else GymTextPrimary,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 11.sp
-                            )
-                        }
-
-                        // Configured Secondary / Tertiary / Optional Parche Chips
-                        alternatives.forEachIndexed { altIdx, altSpec ->
-                            val altSelected = state.activeExerciseId == altSpec.exerciseId
-                            val altCat = viewModel.getCatalogExercise(altSpec.exerciseId)
-                            val altName = altCat?.name
-                                ?: altSpec.customExerciseName.ifBlank { "Parche ${altIdx + 2}" }
-                            val roleShort = WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)
-
-                            Row(
+                            Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(
-                                        if (altSelected) GymAccentCyan.copy(alpha = 0.24f) else GymSurfaceElevated
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (altSelected) GymAccentCyan else GymAccentCyan.copy(alpha = 0.32f),
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { onSelectActiveExerciseId(altSpec.exerciseId) }
-                                    .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (altSelected) GymAccentCyan else GymAccentCyan.copy(alpha = 0.16f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = "$roleShort: ${altName.take(16)}",
-                                    color = if (altSelected) GymAccentCyan else GymTextPrimary,
-                                    fontWeight = if (altSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                    fontSize = 11.sp
+                                    text = roleBadge,
+                                    color = if (altSelected) Color.Black else GymAccentCyan,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 10.sp
                                 )
+                            }
+                            Text(
+                                text = altName,
+                                color = GymTextPrimary,
+                                fontWeight = if (altSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (altSelected) {
+                                Text(
+                                    text = "En uso",
+                                    color = GymAccentCyan,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 10.sp
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(GymSurfaceElevated)
+                                    .clickable { onRequestDeleteAlternative(altSpec.exerciseId, altName) },
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Quitar parche",
                                     tint = GymTextSecondary,
-                                    modifier = Modifier
-                                        .size(15.dp)
-                                        .clip(CircleShape)
-                                        .clickable { onRequestDeleteAlternative(altSpec.exerciseId, altName) }
-                                )
-                            }
-                        }
-
-                        // Add another Parche option (up to 4)
-                        if (alternatives.size < 4) {
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(GymSurfaceElevated)
-                                    .border(1.dp, GymAccentCyan.copy(alpha = 0.40f), RoundedCornerShape(10.dp))
-                                    .clickable { onRequestAddAlternative() }
-                                    .padding(horizontal = 9.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, tint = GymAccentCyan, modifier = Modifier.size(14.dp))
-                                Text(
-                                    text = "Parche",
-                                    color = GymAccentCyan,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
+                                    modifier = Modifier.size(13.dp)
                                 )
                             }
                         }
