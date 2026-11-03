@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymwp.free.data.*
 import com.gymwp.free.domain.MuscleFatigueCalculator
+import com.gymwp.free.domain.OverloadSuggestion
+import com.gymwp.free.domain.ProgressiveOverloadAdvisor
 import com.gymwp.free.domain.SmartWorkoutGenerator
 import com.gymwp.free.domain.WorkoutMetricsCalculator
 import com.gymwp.free.ui.theme.AppThemeOption
@@ -19,7 +21,8 @@ data class CompletedExerciseLog(
     val exerciseName: String,
     val muscles: String,
     val loadsPerSet: List<Float>,
-    val repsPerSet: List<Int>
+    val repsPerSet: List<Int>,
+    val unitType: Int = 0
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -607,6 +610,28 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun applyOverloadSuggestionToWorkoutExercise(
+        target: WorkoutExerciseEntity,
+        suggestion: OverloadSuggestion
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sets = target.setsCount.coerceAtLeast(1)
+            val updated = when {
+                suggestion.suggestedLoadKg != null -> {
+                    val cleanLoad = ProgressiveOverloadAdvisor.formatWeight(suggestion.suggestedLoadKg)
+                    target.copy(loadsPerSetCsv = List(sets) { cleanLoad }.joinToString(","))
+                }
+                suggestion.suggestedRepsOrTime != null -> {
+                    val cleanReps = suggestion.suggestedRepsOrTime.coerceAtLeast(1).toString()
+                    target.copy(repsPerSetCsv = List(sets) { cleanReps }.joinToString(","))
+                }
+                else -> target
+            }
+            dao.updateWorkoutExercise(updated)
+            triggerAutoDriveSync()
+        }
+    }
+
     fun deleteWorkoutExercise(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteWorkoutExercise(id)
@@ -747,7 +772,18 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 val vol = log.loadsPerSet.zip(log.repsPerSet).sumOf { (l, r) -> (l * r).toDouble() }.toFloat()
                 val repsSum = log.repsPerSet.sum()
                 val detail = log.loadsPerSet.zip(log.repsPerSet)
-                    .mapIndexed { idx, (l, r) -> "S${idx + 1}: ${r}x${l}kg" }
+                    .mapIndexed { idx, (l, r) ->
+                        when (log.unitType) {
+                            2 -> "S${idx + 1}: $r seg"
+                            3 -> "S${idx + 1}: $r min"
+                            1 -> "S${idx + 1}: $r reps"
+                            else -> if (l > 0f) {
+                                "S${idx + 1}: $r × ${ProgressiveOverloadAdvisor.formatWeight(l)} kg"
+                            } else {
+                                "S${idx + 1}: $r reps"
+                            }
+                        }
+                    }
                     .joinToString(" | ")
                 FinishedExerciseEntity(
                     userId = uid,

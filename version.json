@@ -1,6 +1,6 @@
 {
-  "versionCode": 204,
-  "versionName": "2.4.0",
+  "versionCode": 205,
+  "versionName": "2.5.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Corrección completa de las 57 rutinas predefinidas: cada plan ('Pectoral Grande', 'Aumentar Masa Muscular', 'Pierde Peso con Salud', etc.) ahora importa exactamente sus días y ejercicios reales.\n• Corrección del scroll en la vista previa de planes: ahora puedes deslizar libremente tanto la descripción completa como los días del plan antes de importarlo.\n• Fotos en ejercicios personalizados: ahora puedes tomar una foto con la cámara o elegir una imagen de tu galería al crear o editar máquinas/ejercicios (con respaldo en Google Drive).\n• Nuevo editor amigable de ejercicios antes de entrenar: controles táctiles -/+ estilo Gym WP, vista previa animada/foto, replicar Serie 1, chips visuales de descanso y tarjeta moderna de Bi-Serie."
+  "releaseNotes": "• Ordenar ejercicios en rutinas: nuevo botón 'Ordenar' en el encabezado de cada día para subir o bajar ejercicios cómodamente antes de entrenar.\n• Historial exclusivo en Ejercicios -> Estadísticas: la pestaña Entrenar queda limpia para tus rutinas y el historial vive únicamente en Estadísticas.\n• Vista de solo lectura de entrenamientos realizados: toca cualquier entrenamiento en Estadísticas para abrir la rutina ejecutada con sus series, repeticiones y cargas exactas.\n• Sugerencia de sobrecarga progresiva en 1 toque: mensajes cortos basados en tu última sesión (+2.5 kg, +2 reps, +10s o +2 min) tanto antes como durante el entrenamiento."
 }

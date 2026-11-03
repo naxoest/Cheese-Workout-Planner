@@ -1,9 +1,14 @@
 package com.gymwp.free.domain
 
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.data.MuscleFatigueEntity
 import com.gymwp.free.data.UserProfileEntity
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -370,5 +375,257 @@ object SmartWorkoutGenerator {
             colorIndex = 5,
             exercises = specs
         )
+    }
+}
+
+data class OverloadSuggestion(
+    val summaryText: String,
+    val buttonLabel: String,
+    val suggestedLoadKg: Float?,
+    val suggestedRepsOrTime: Int?
+)
+
+data class ParsedFinishedSet(
+    val setNumber: Int,
+    val repsDisplay: String,
+    val loadDisplay: String?
+)
+
+/**
+ * Sugeridor de Sobrecarga Progresiva gradual y parser de series ejecutadas.
+ */
+object ProgressiveOverloadAdvisor {
+
+    private val setLoadRegex = Regex("""^(\d+)\s*[x×]\s*([0-9.,]+)\s*kg$""", RegexOption.IGNORE_CASE)
+    private val setUnitOnlyRegex = Regex("""^(\d+)\s*(reps?|seg|s|min)$""", RegexOption.IGNORE_CASE)
+    private val leadingIntRegex = Regex("""^(\d+)""")
+
+    fun formatWeight(value: Float): String {
+        val clamped = value.coerceAtLeast(0f)
+        val rounded = kotlin.math.round(clamped * 100f) / 100f
+        return if (rounded % 1f == 0f) {
+            rounded.toInt().toString()
+        } else if ((rounded * 10f) % 1f == 0f) {
+            String.format(Locale.US, "%.1f", rounded)
+        } else {
+            String.format(Locale.US, "%.2f", rounded)
+        }
+    }
+
+    private fun computeRelativeDateLabel(timestampMillis: Long, nowMillis: Long): String {
+        val calThen = Calendar.getInstance().apply {
+            timeInMillis = timestampMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val calNow = Calendar.getInstance().apply {
+            timeInMillis = nowMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val diffDays = ((calNow.timeInMillis - calThen.timeInMillis) / 86_400_000L).toInt().coerceAtLeast(0)
+        return when {
+            diffDays == 0 -> "hoy"
+            diffDays == 1 -> "ayer"
+            diffDays in 2..4 -> "hace $diffDays días"
+            diffDays in 5..11 -> "sem. pasada"
+            else -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(timestampMillis))
+        }
+    }
+
+    private fun extractBestSetReps(entity: FinishedExerciseEntity, fallbackDefault: Int): Int {
+        if (entity.setsDetailText.isNotBlank()) {
+            val parsedVals = entity.setsDetailText.split("|").mapNotNull { chunk ->
+                val body = chunk.substringAfter(":", chunk).trim()
+                leadingIntRegex.find(body)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            }
+            val best = parsedVals.maxOrNull()
+            if (best != null && best > 0) return best
+        }
+        if (entity.setsCount > 0 && entity.totalReps > 0) {
+            return (entity.totalReps.toFloat() / entity.setsCount).roundToInt().coerceAtLeast(1)
+        }
+        return fallbackDefault
+    }
+
+    fun computeSuggestion(
+        unitType: Int,
+        historyForExercise: List<FinishedExerciseEntity>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): OverloadSuggestion? {
+        val latest = historyForExercise.maxByOrNull { it.timestampMillis } ?: return null
+        val whenLbl = computeRelativeDateLabel(latest.timestampMillis, nowMillis)
+        val prefix = if (whenLbl == "sem. pasada") "Sem. pasada" else "Última vez ($whenLbl)"
+
+        return when (unitType) {
+            0 -> {
+                if (latest.maxLoadKg > 0f) {
+                    val lastKg = formatWeight(latest.maxLoadKg)
+                    val nextLoad = latest.maxLoadKg + 2.5f
+                    val nextKg = formatWeight(nextLoad)
+                    OverloadSuggestion(
+                        summaryText = "$prefix: $lastKg kg → Prueba $nextKg kg",
+                        buttonLabel = "Usar $nextKg kg",
+                        suggestedLoadKg = nextLoad,
+                        suggestedRepsOrTime = null
+                    )
+                } else {
+                    val lastReps = extractBestSetReps(latest, 10)
+                    val nextReps = lastReps + 2
+                    OverloadSuggestion(
+                        summaryText = "$prefix: $lastReps reps → Prueba $nextReps reps",
+                        buttonLabel = "Usar $nextReps reps",
+                        suggestedLoadKg = null,
+                        suggestedRepsOrTime = nextReps
+                    )
+                }
+            }
+            2 -> {
+                val lastSec = extractBestSetReps(latest, 30)
+                val nextSec = lastSec + 10
+                OverloadSuggestion(
+                    summaryText = "$prefix: ${lastSec}s → Prueba ${nextSec}s",
+                    buttonLabel = "Usar ${nextSec}s",
+                    suggestedLoadKg = null,
+                    suggestedRepsOrTime = nextSec
+                )
+            }
+            3 -> {
+                val lastMin = extractBestSetReps(latest, 10)
+                val nextMin = lastMin + 2
+                OverloadSuggestion(
+                    summaryText = "$prefix: $lastMin min → Prueba $nextMin min",
+                    buttonLabel = "Usar $nextMin min",
+                    suggestedLoadKg = null,
+                    suggestedRepsOrTime = nextMin
+                )
+            }
+            else -> {
+                val lastReps = extractBestSetReps(latest, 10)
+                val nextReps = lastReps + 2
+                OverloadSuggestion(
+                    summaryText = "$prefix: $lastReps reps → Prueba $nextReps reps",
+                    buttonLabel = "Usar $nextReps reps",
+                    suggestedLoadKg = null,
+                    suggestedRepsOrTime = nextReps
+                )
+            }
+        }
+    }
+
+    fun isAlreadyApplied(
+        suggestion: OverloadSuggestion,
+        loadsTokens: List<String>,
+        repsTokens: List<String>
+    ): Boolean {
+        return when {
+            suggestion.suggestedLoadKg != null -> {
+                loadsTokens.isNotEmpty() && loadsTokens.all { token ->
+                    val parsed = token.trim().replace(',', '.').toFloatOrNull() ?: -999f
+                    abs(parsed - suggestion.suggestedLoadKg) < 0.05f
+                }
+            }
+            suggestion.suggestedRepsOrTime != null -> {
+                repsTokens.isNotEmpty() && repsTokens.all { token ->
+                    (token.trim().toIntOrNull() ?: -999) == suggestion.suggestedRepsOrTime
+                }
+            }
+            else -> false
+        }
+    }
+
+    fun parseSetsDetail(
+        setsDetailText: String,
+        unitType: Int?,
+        fallbackSetsCount: Int,
+        fallbackTotalReps: Int,
+        fallbackMaxLoadKg: Float
+    ): List<ParsedFinishedSet> {
+        val defaultUnitSuffix = when (unitType) {
+            2 -> "seg"
+            3 -> "min"
+            else -> "reps"
+        }
+
+        if (setsDetailText.isNotBlank()) {
+            val chunks = setsDetailText.split("|").map { it.trim() }.filter { it.isNotBlank() }
+            if (chunks.isNotEmpty()) {
+                return chunks.mapIndexed { idx, chunk ->
+                    val setNum = chunk.substringBefore(":", "")
+                        .trim()
+                        .removePrefix("S")
+                        .removePrefix("s")
+                        .toIntOrNull() ?: (idx + 1)
+                    val body = chunk.substringAfter(":", chunk).trim()
+
+                    val loadMatch = setLoadRegex.matchEntire(body)
+                    val unitOnlyMatch = setUnitOnlyRegex.matchEntire(body)
+
+                    when {
+                        loadMatch != null -> {
+                            val r = loadMatch.groupValues[1].toIntOrNull() ?: 0
+                            val l = loadMatch.groupValues[2].replace(',', '.').toFloatOrNull() ?: 0f
+                            if ((unitType != null && unitType != 0 && l <= 0f) || (unitType == 1 && l <= 0f)) {
+                                ParsedFinishedSet(
+                                    setNumber = setNum,
+                                    repsDisplay = "$r $defaultUnitSuffix",
+                                    loadDisplay = null
+                                )
+                            } else if (l <= 0f) {
+                                ParsedFinishedSet(
+                                    setNumber = setNum,
+                                    repsDisplay = "$r $defaultUnitSuffix",
+                                    loadDisplay = null
+                                )
+                            } else {
+                                ParsedFinishedSet(
+                                    setNumber = setNum,
+                                    repsDisplay = "$r $defaultUnitSuffix",
+                                    loadDisplay = "${formatWeight(l)} kg"
+                                )
+                            }
+                        }
+                        unitOnlyMatch != null -> {
+                            val r = unitOnlyMatch.groupValues[1]
+                            val uRaw = unitOnlyMatch.groupValues[2].lowercase(Locale.ROOT)
+                            val uClean = when (uRaw) {
+                                "s", "seg" -> "seg"
+                                "min" -> "min"
+                                else -> "reps"
+                            }
+                            ParsedFinishedSet(
+                                setNumber = setNum,
+                                repsDisplay = "$r $uClean",
+                                loadDisplay = null
+                            )
+                        }
+                        else -> {
+                            ParsedFinishedSet(
+                                setNumber = setNum,
+                                repsDisplay = body,
+                                loadDisplay = null
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        val count = fallbackSetsCount.coerceAtLeast(1)
+        val avgReps = (fallbackTotalReps.toFloat() / count).roundToInt().coerceAtLeast(1)
+        val loadStr = if (fallbackMaxLoadKg > 0f && (unitType == null || unitType == 0)) {
+            "${formatWeight(fallbackMaxLoadKg)} kg"
+        } else null
+        return List(count) { idx ->
+            ParsedFinishedSet(
+                setNumber = idx + 1,
+                repsDisplay = "$avgReps $defaultUnitSuffix",
+                loadDisplay = loadStr
+            )
+        }
     }
 }

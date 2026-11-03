@@ -44,6 +44,8 @@ import com.gymwp.free.data.AppUpdateManager
 import com.gymwp.free.data.CatalogExercise
 import com.gymwp.free.data.WorkoutExerciseEntity
 import com.gymwp.free.domain.MuscleCatalog
+import com.gymwp.free.domain.OverloadSuggestion
+import com.gymwp.free.domain.ProgressiveOverloadAdvisor
 import com.gymwp.free.ui.CompletedExerciseLog
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnatomyFatigueBodyMap
@@ -688,6 +690,12 @@ fun LiveWorkoutAssistantScreen(
                 viewModel.getCatalogExercise(currentWEx.exerciseId)
             }
             val exName = catEx?.name ?: currentWEx.customExerciseName.ifBlank { "Ejercicio #${currentWEx.exerciseId}" }
+            val focusedOverload = remember(allFinishedEx, currentWEx.exerciseId, currentWEx.unitType) {
+                ProgressiveOverloadAdvisor.computeSuggestion(
+                    unitType = currentWEx.unitType,
+                    historyForExercise = allFinishedEx.filter { it.exerciseId == currentWEx.exerciseId }
+                )
+            }
 
             LazyColumn(
                 modifier = Modifier
@@ -706,6 +714,25 @@ fun LiveWorkoutAssistantScreen(
                         exName = exName,
                         state = currentSt,
                         isHeroFocused = true,
+                        overloadSuggestion = focusedOverload,
+                        onApplyOverloadSuggestion = if (focusedOverload != null) {
+                            {
+                                val targetIndices = currentSt.done.indices.filter { !currentSt.done[it] }
+                                    .ifEmpty { currentSt.done.indices.toList() }
+                                when {
+                                    focusedOverload.suggestedLoadKg != null -> {
+                                        val clean = formatWeightClean(focusedOverload.suggestedLoadKg)
+                                        targetIndices.forEach { i -> currentSt.loads[i] = clean }
+                                    }
+                                    focusedOverload.suggestedRepsOrTime != null -> {
+                                        val clean = focusedOverload.suggestedRepsOrTime.coerceAtLeast(1).toString()
+                                        targetIndices.forEach { i -> currentSt.reps[i] = clean }
+                                    }
+                                }
+                                persistExerciseState(currentWEx, currentSt)
+                                feedbackBannerText = "✓ Meta aplicada: ${focusedOverload.buttonLabel}"
+                            }
+                        } else null,
                         onInspectGuide = { if (catEx != null) inspectingExercise = catEx },
                         onReplaceExercise = { replacingExerciseTarget = currentWEx to exName },
                         onReplicateFirstSet = {
@@ -831,6 +858,12 @@ fun LiveWorkoutAssistantScreen(
                         viewModel.getCatalogExercise(wEx.exerciseId)
                     }
                     val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
+                    val itemOverload = remember(allFinishedEx, wEx.exerciseId, wEx.unitType) {
+                        ProgressiveOverloadAdvisor.computeSuggestion(
+                            unitType = wEx.unitType,
+                            historyForExercise = allFinishedEx.filter { it.exerciseId == wEx.exerciseId }
+                        )
+                    }
 
                     LiveGymWpExerciseCard(
                         exerciseIndex = exIdx,
@@ -840,6 +873,25 @@ fun LiveWorkoutAssistantScreen(
                         exName = exName,
                         state = st,
                         isHeroFocused = false,
+                        overloadSuggestion = itemOverload,
+                        onApplyOverloadSuggestion = if (itemOverload != null) {
+                            {
+                                val targetIndices = st.done.indices.filter { !st.done[it] }
+                                    .ifEmpty { st.done.indices.toList() }
+                                when {
+                                    itemOverload.suggestedLoadKg != null -> {
+                                        val clean = formatWeightClean(itemOverload.suggestedLoadKg)
+                                        targetIndices.forEach { i -> st.loads[i] = clean }
+                                    }
+                                    itemOverload.suggestedRepsOrTime != null -> {
+                                        val clean = itemOverload.suggestedRepsOrTime.coerceAtLeast(1).toString()
+                                        targetIndices.forEach { i -> st.reps[i] = clean }
+                                    }
+                                }
+                                persistExerciseState(wEx, st)
+                                feedbackBannerText = "✓ Meta aplicada: ${itemOverload.buttonLabel}"
+                            }
+                        } else null,
                         onInspectGuide = { if (catEx != null) inspectingExercise = catEx },
                         onReplaceExercise = { replacingExerciseTarget = wEx to exName },
                         onReplicateFirstSet = {
@@ -1026,7 +1078,8 @@ fun LiveWorkoutAssistantScreen(
                             exerciseName = exName,
                             muscles = muscles,
                             loadsPerSet = loadsDone,
-                            repsPerSet = repsDone
+                            repsPerSet = repsDone,
+                            unitType = wEx.unitType
                         )
                     }
                     viewModel.finishWorkoutSession(
@@ -1326,6 +1379,8 @@ private fun LiveGymWpExerciseCard(
     exName: String,
     state: LiveExerciseRuntimeState,
     isHeroFocused: Boolean,
+    overloadSuggestion: OverloadSuggestion? = null,
+    onApplyOverloadSuggestion: (() -> Unit)? = null,
     onInspectGuide: () -> Unit,
     onReplaceExercise: () -> Unit,
     onReplicateFirstSet: () -> Unit,
@@ -1510,6 +1565,76 @@ private fun LiveGymWpExerciseCard(
                     tintOverride = FatigueRed,
                     onClick = onDeleteExercise
                 )
+            }
+
+            if (overloadSuggestion != null) {
+                val isOverloadApplied = ProgressiveOverloadAdvisor.isAlreadyApplied(
+                    overloadSuggestion,
+                    state.loads.toList(),
+                    state.reps.toList()
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isOverloadApplied) FatigueGreen.copy(alpha = 0.14f)
+                            else GymOrange.copy(alpha = 0.13f)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isOverloadApplied) FatigueGreen.copy(alpha = 0.45f)
+                            else GymOrange.copy(alpha = 0.40f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = if (isOverloadApplied) FatigueGreen else GymOrange,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = overloadSuggestion.summaryText,
+                            color = GymTextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (onApplyOverloadSuggestion != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(
+                                    if (isOverloadApplied) FatigueGreen.copy(alpha = 0.22f)
+                                    else GymOrange
+                                )
+                                .clickable {
+                                    if (!isOverloadApplied) {
+                                        onApplyOverloadSuggestion()
+                                    }
+                                }
+                                .padding(horizontal = 9.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = if (isOverloadApplied) "✓ Meta activa" else overloadSuggestion.buttonLabel,
+                                color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(12.dp))

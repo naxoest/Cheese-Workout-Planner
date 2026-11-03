@@ -1,12 +1,15 @@
 package com.gymwp.free.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,11 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.gymwp.free.data.BodyMeasurementEntity
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.data.FinishedWorkoutDayEntity
 import com.gymwp.free.domain.BodyMetricsCalculator
 import com.gymwp.free.domain.MuscleCatalog
+import com.gymwp.free.domain.ProgressiveOverloadAdvisor
 import com.gymwp.free.ui.GymWpViewModel
 import com.gymwp.free.ui.components.AnimatedExerciseGif
 import com.gymwp.free.ui.components.AppThemeSelectorCard
@@ -54,10 +60,12 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
     var editingCustomExercise by remember { mutableStateOf<CatalogExercise?>(null) }
     var customExercisePendingDelete by remember { mutableStateOf<CatalogExercise?>(null) }
     var inspectingExercise by remember { mutableStateOf<CatalogExercise?>(null) }
+    var viewingFinishedWorkout by remember { mutableStateOf<FinishedWorkoutDayEntity?>(null) }
     var finishedWorkoutPendingDelete by remember { mutableStateOf<FinishedWorkoutDayEntity?>(null) }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
 
     val allCatalog by viewModel.allAvailableExercises.collectAsState()
+    val allDays by viewModel.allWorkoutDays.collectAsState()
     val favorites by viewModel.favoriteIds.collectAsState()
     val finishedWorkouts by viewModel.finishedWorkouts.collectAsState()
     val allFinishedEx by viewModel.allFinishedExercises.collectAsState()
@@ -375,12 +383,21 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                 }
 
                 item {
-                    Text(
-                        "Historial de Entrenamientos Finalizados",
-                        color = GymOrange,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                    Column {
+                        Text(
+                            "Historial de Entrenamientos Finalizados",
+                            color = GymOrange,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                        if (finishedWorkouts.isNotEmpty()) {
+                            Text(
+                                "Toca un entrenamiento para ver la rutina ejecutada en modo solo lectura.",
+                                color = GymTextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
                 }
 
                 if (finishedWorkouts.isEmpty()) {
@@ -393,10 +410,16 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     }
                 } else {
                     items(finishedWorkouts, key = { it.id }) { fw ->
+                        val exercisesCountForDay = remember(allFinishedEx, fw.id, fw.exercisesCount) {
+                            val recorded = allFinishedEx.count { it.finishedDayId == fw.id }
+                            if (recorded > 0) recorded else fw.exercisesCount
+                        }
                         Card(
                             colors = CardDefaults.cardColors(containerColor = GymCardBg),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewingFinishedWorkout = fw }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -408,18 +431,37 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                 Column(Modifier.weight(1f)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(fw.dayName, color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                         Text(dateFormat.format(Date(fw.timestampMillis)), color = GymTextSecondary, fontSize = 11.sp)
                                     }
-                                    Text(fw.planName, color = GymOrange, fontSize = 12.sp)
+                                    Text(fw.planName, color = GymOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series (${fw.totalReps} reps)",
+                                        text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series",
                                         color = GymTextSecondary,
                                         fontSize = 12.sp
                                     )
+                                    Spacer(Modifier.height(6.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Visibility,
+                                            contentDescription = null,
+                                            tint = GymOrange,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = "Ver rutina realizada ($exercisesCountForDay ejercicios) →",
+                                            color = GymOrange,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                                 IconButton(onClick = { finishedWorkoutPendingDelete = fw }) {
                                     Icon(
@@ -434,6 +476,27 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                 }
             }
         }
+    }
+
+    viewingFinishedWorkout?.let { fw ->
+        val sessionExercises = remember(allFinishedEx, fw.id) {
+            allFinishedEx.filter { it.finishedDayId == fw.id }
+        }
+        val matchedColorIdx = remember(allDays, fw.dayName, fw.id) {
+            allDays.firstOrNull { it.name == fw.dayName }?.colorIndex
+                ?: ((fw.id.toInt().coerceAtLeast(0)) % DayPalette.size)
+        }
+        FinishedWorkoutReadOnlyDialog(
+            workout = fw,
+            exercisesDone = sessionExercises,
+            dayColorIndex = matchedColorIdx,
+            dateText = dateFormat.format(Date(fw.timestampMillis)),
+            viewModel = viewModel,
+            onInspectCatalogExercise = { catEx ->
+                inspectingExercise = catEx
+            },
+            onDismiss = { viewingFinishedWorkout = null }
+        )
     }
 
     if (showCreateCustomModal) {
@@ -498,6 +561,308 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                 customExercisePendingDelete = target
             }
         )
+    }
+}
+
+@Composable
+private fun FinishedWorkoutReadOnlyDialog(
+    workout: FinishedWorkoutDayEntity,
+    exercisesDone: List<FinishedExerciseEntity>,
+    dayColorIndex: Int,
+    dateText: String,
+    viewModel: GymWpViewModel,
+    onInspectCatalogExercise: (CatalogExercise) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val allCatalog by viewModel.allAvailableExercises.collectAsState()
+    val dayColor = DayPalette[dayColorIndex.coerceIn(0, DayPalette.lastIndex)]
+    val displayExercisesCount = if (exercisesDone.isNotEmpty()) exercisesDone.size else workout.exercisesCount
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = GymCardBg,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.90f)
+                .padding(horizontal = 12.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Colored Day Header Banner (matching Entrenar routine card, in Read-Only mode)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(dayColor)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.Black.copy(alpha = 0.25f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "SOLO LECTURA • HISTORIAL",
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 10.sp
+                            )
+                        }
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Cerrar",
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = workout.dayName,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp
+                    )
+                    Text(
+                        text = "${workout.planName} • $dateText",
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "$displayExercisesCount ejercicios • ${workout.totalSets} series • ⏱ ${workout.durationSeconds / 60} min • 🔥 ${workout.caloriesBurned} kcal • 🏋️ ${workout.totalVolumeKg.toInt()} kg",
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontSize = 11.sp
+                    )
+                }
+
+                // Scrollable list of performed exercises (Read-Only)
+                if (exercisesDone.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Esta sesión registró ${workout.totalSets} series y ${workout.totalVolumeKg.toInt()} kg de volumen total, sin desglose individual de ejercicios.",
+                            color = GymTextSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        itemsIndexed(exercisesDone, key = { _, item -> item.id }) { idx, fEx ->
+                            val catEx = remember(allCatalog, fEx.exerciseId) {
+                                viewModel.getCatalogExercise(fEx.exerciseId)
+                            }
+                            val primaryMuscles = remember(fEx.muscles) {
+                                (0..16)
+                                    .filter { it < fEx.muscles.length && fEx.muscles[it] >= '2' }
+                                    .joinToString(" • ") { MuscleCatalog.getName(it) }
+                            }
+                            val parsedSets = remember(
+                                fEx.setsDetailText,
+                                catEx?.defaultUnitType,
+                                fEx.setsCount,
+                                fEx.totalReps,
+                                fEx.maxLoadKg
+                            ) {
+                                ProgressiveOverloadAdvisor.parseSetsDetail(
+                                    setsDetailText = fEx.setsDetailText,
+                                    unitType = catEx?.defaultUnitType,
+                                    fallbackSetsCount = fEx.setsCount,
+                                    fallbackTotalReps = fEx.totalReps,
+                                    fallbackMaxLoadKg = fEx.maxLoadKg
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(GymSurfaceElevated)
+                                    .padding(11.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(dayColor.copy(alpha = 0.20f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${idx + 1}",
+                                            color = dayColor,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    AnimatedExerciseGif(
+                                        gifAssetPath = catEx?.gifAssetPath.orEmpty(),
+                                        contentDescription = fEx.exerciseName,
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .let { m ->
+                                                if (catEx != null) m.clickable { onInspectCatalogExercise(catEx) } else m
+                                            }
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            text = fEx.exerciseName,
+                                            color = GymTextPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        if (primaryMuscles.isNotBlank()) {
+                                            Text(
+                                                text = primaryMuscles,
+                                                color = GymOrange,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                        val summaryLine = if (fEx.maxLoadKg > 0f) {
+                                            "Máx: ${ProgressiveOverloadAdvisor.formatWeight(fEx.maxLoadKg)} kg • Volumen: ${fEx.totalVolumeKg.toInt()} kg"
+                                        } else {
+                                            "${fEx.setsCount} series completadas"
+                                        }
+                                        Text(
+                                            text = summaryLine,
+                                            color = GymTextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                    if (catEx != null) {
+                                        IconButton(
+                                            onClick = { onInspectCatalogExercise(catEx) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = "Ver ficha del ejercicio",
+                                                tint = GymOrange,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(Modifier.height(8.dp))
+
+                                // Read-Only Executed Sets List
+                                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    parsedSets.forEach { s ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(GymCardBg)
+                                                .border(
+                                                    width = 1.dp,
+                                                    color = FatigueGreen.copy(alpha = 0.25f),
+                                                    shape = RoundedCornerShape(10.dp)
+                                                )
+                                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .clip(CircleShape)
+                                                        .background(FatigueGreen.copy(alpha = 0.20f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = FatigueGreen,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
+                                                Text(
+                                                    text = "Serie ${s.setNumber}",
+                                                    color = GymTextSecondary,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                            Text(
+                                                text = if (s.loadDisplay != null) {
+                                                    "${s.repsDisplay}  ×  ${s.loadDisplay}"
+                                                } else {
+                                                    s.repsDisplay
+                                                },
+                                                color = GymTextPrimary,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.ExtraBold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom Read-Only Close Footer
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GymSurfaceElevated)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(containerColor = dayColor, contentColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cerrar Resumen", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 
