@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +71,7 @@ fun HomeWorkoutsScreen(
     var showAddDayDialogForPlan by remember { mutableStateOf<Long?>(null) }
     var showAddExerciseForDay by remember { mutableStateOf<Long?>(null) }
     var reorderingDayId by remember { mutableStateOf<Long?>(null) }
+    var addingAlternativeForWEx by remember { mutableStateOf<Pair<WorkoutExerciseEntity, CatalogExercise?>?>(null) }
     var replacingWorkoutExercise by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
     var editingWorkoutExercise by remember { mutableStateOf<WorkoutExerciseEntity?>(null) }
     var inspectingCatalogExercise by remember { mutableStateOf<CatalogExercise?>(null) }
@@ -673,6 +675,96 @@ fun HomeWorkoutsScreen(
                                             }
                                         }
 
+                                        if (!isReorderingThisDay) {
+                                            val alternatives = remember(wEx.notes) {
+                                                WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            if (alternatives.isNotEmpty()) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .horizontalScroll(rememberScrollState()),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    alternatives.forEachIndexed { altIdx, altSpec ->
+                                                        val altCat = remember(allCatalog, altSpec.exerciseId) {
+                                                            viewModel.getCatalogExercise(altSpec.exerciseId)
+                                                        }
+                                                        val altShortName = (altCat?.name
+                                                            ?: altSpec.customExerciseName.ifBlank { "Ej. #${altSpec.exerciseId}" })
+                                                            .take(24)
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .background(GymCardBg)
+                                                                .border(
+                                                                    width = 1.dp,
+                                                                    color = GymAccentCyan.copy(alpha = 0.35f),
+                                                                    shape = RoundedCornerShape(8.dp)
+                                                                )
+                                                                .clickable { editingWorkoutExercise = wEx }
+                                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                        ) {
+                                                            Icon(
+                                                                Icons.Default.CallSplit,
+                                                                contentDescription = null,
+                                                                tint = GymAccentCyan,
+                                                                modifier = Modifier.size(12.dp)
+                                                            )
+                                                            Text(
+                                                                text = "${WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)}: $altShortName",
+                                                                color = GymTextPrimary,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.SemiBold
+                                                            )
+                                                        }
+                                                    }
+                                                    if (alternatives.size < 4) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .background(GymAccentCyan.copy(alpha = 0.14f))
+                                                                .clickable { addingAlternativeForWEx = wEx to catEx }
+                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "+ Parche",
+                                                                color = GymAccentCyan,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.ExtraBold
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable { addingAlternativeForWEx = wEx to catEx }
+                                                        .padding(vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.CallSplit,
+                                                        contentDescription = null,
+                                                        tint = GymAccentCyan,
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                    Text(
+                                                        text = "+ Añadir ejercicio parche (secundario / opcional)",
+                                                        color = GymAccentCyan,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                }
+                                            }
+                                        }
+
                                         if (!isReorderingThisDay && overloadSuggestion != null) {
                                             Spacer(Modifier.height(8.dp))
                                             Row(
@@ -920,11 +1012,31 @@ fun HomeWorkoutsScreen(
         )
     }
 
+    // Dialog: Add a Secondary / Tertiary / Optional ("Parche") backup exercise to a routine slot
+    addingAlternativeForWEx?.let { (targetWEx, mainCatEx) ->
+        val existingAlts = WorkoutExerciseAlternativesCodec.decodeAlternatives(targetWEx.notes)
+        val roleTitle = WorkoutExerciseAlternativesCodec.roleFullTitle(existingAlts.size)
+        val excludedIds = setOf(targetWEx.exerciseId) + existingAlts.map { it.exerciseId }.toSet()
+        val defaultMuscle = WorkoutExerciseAlternativesCodec.primaryMuscleForFilter(mainCatEx?.muscles)
+        ExercisePickerModal(
+            viewModel = viewModel,
+            modalTitle = "Añadir $roleTitle",
+            initialMuscleFilter = defaultMuscle,
+            excludeExerciseIds = excludedIds,
+            helperBannerText = "Si la máquina principal está ocupada, podrás usar este ejercicio parche en 1 toque sin modificar tu rutina titular.",
+            onDismiss = { addingAlternativeForWEx = null },
+            onSelectExercise = { altEx ->
+                viewModel.addAlternativeToWorkoutExercise(targetWEx, altEx)
+                addingAlternativeForWEx = null
+            }
+        )
+    }
+
     // Dialog: Replace an existing exercise in-place without deleting it
     replacingWorkoutExercise?.let { (targetWEx, oldName) ->
         ExercisePickerModal(
             viewModel = viewModel,
-            modalTitle = "Reemplazar: $oldName",
+            modalTitle = "Reemplazar titular: $oldName",
             onDismiss = { replacingWorkoutExercise = null },
             onSelectExercise = { replacementEx ->
                 viewModel.replaceWorkoutExercise(targetWEx, replacementEx)
@@ -933,8 +1045,9 @@ fun HomeWorkoutsScreen(
         )
     }
 
-    // Dialog: Edit Sets / Reps / Loads / Replicate Set 1 / BiSet for a WorkoutExerciseEntity
-    editingWorkoutExercise?.let { wEx ->
+    // Dialog: Edit Sets / Reps / Loads / Replicate Set 1 / Parches / BiSet for a WorkoutExerciseEntity
+    editingWorkoutExercise?.let { selectedWEx ->
+        val wEx = allExercises.firstOrNull { it.id == selectedWEx.id } ?: selectedWEx
         val catEx = viewModel.getCatalogExercise(wEx.exerciseId)
         val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio" }
         val suggestion = ProgressiveOverloadAdvisor.computeSuggestion(
@@ -946,6 +1059,8 @@ fun HomeWorkoutsScreen(
             exerciseName = exName,
             catalogExercise = catEx,
             overloadSuggestion = suggestion,
+            viewModel = viewModel,
+            allFinishedExercises = allFinishedEx,
             onDismiss = { editingWorkoutExercise = null },
             onRequestReplace = {
                 editingWorkoutExercise = null
@@ -1280,12 +1395,15 @@ fun FreestyleGeneratorDialog(
 fun ExercisePickerModal(
     viewModel: GymWpViewModel,
     modalTitle: String = "Seleccionar Ejercicio",
+    initialMuscleFilter: Int? = null,
+    excludeExerciseIds: Set<Int> = emptySet(),
+    helperBannerText: String? = null,
     onDismiss: () -> Unit,
     onSelectExercise: (CatalogExercise) -> Unit
 ) {
     val catalog by viewModel.allAvailableExercises.collectAsState()
     var search by remember { mutableStateOf("") }
-    var selectedMuscle by remember { mutableStateOf<Int?>(null) }
+    var selectedMuscle by remember(initialMuscleFilter) { mutableStateOf(initialMuscleFilter) }
     var selectedEquipment by remember { mutableStateOf<String?>(null) }
     var onlyCustom by remember { mutableStateOf(false) }
     var showCreateCustomModal by remember { mutableStateOf(false) }
@@ -1297,13 +1415,14 @@ fun ExercisePickerModal(
         )
     }
 
-    val filtered = remember(catalog, search, selectedMuscle, selectedEquipment, onlyCustom) {
+    val filtered = remember(catalog, search, selectedMuscle, selectedEquipment, onlyCustom, excludeExerciseIds) {
         catalog.filter { ex ->
+            val notExcluded = ex.id !in excludeExerciseIds
             val matchesQuery = search.isBlank() || ex.name.contains(search, ignoreCase = true)
             val matchesMuscle = selectedMuscle == null || (selectedMuscle!! < ex.muscles.length && ex.muscles[selectedMuscle!!] >= '2')
             val matchesEquip = selectedEquipment == null || ex.equipment.contains(selectedEquipment)
             val matchesCustom = !onlyCustom || ex.id >= 10000
-            matchesQuery && matchesMuscle && matchesEquip && matchesCustom
+            notExcluded && matchesQuery && matchesMuscle && matchesEquip && matchesCustom
         }
     }
 
@@ -1334,6 +1453,31 @@ fun ExercisePickerModal(
                     )
                     IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GymTextPrimary)
+                    }
+                }
+
+                if (!helperBannerText.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(GymAccentCyan.copy(alpha = 0.14f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CallSplit,
+                            contentDescription = null,
+                            tint = GymAccentCyan,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = helperBannerText,
+                            color = GymTextPrimary,
+                            fontSize = 11.sp
+                        )
                     }
                 }
 
@@ -1498,45 +1642,108 @@ private fun formatEditorLoad(value: Float): String {
     }
 }
 
+private class EditableAlternativeOption(
+    val exerciseId: Int,
+    val customExerciseName: String,
+    val unitType: Int,
+    val repsList: SnapshotStateList<String>,
+    val loadsList: SnapshotStateList<String>
+)
+
 @Composable
 fun EditWorkoutExerciseDialog(
     exercise: WorkoutExerciseEntity,
     exerciseName: String = "Ejercicio",
     catalogExercise: CatalogExercise? = null,
     overloadSuggestion: OverloadSuggestion? = null,
+    viewModel: GymWpViewModel? = null,
+    allFinishedExercises: List<FinishedExerciseEntity> = emptyList(),
     onDismiss: () -> Unit,
     onRequestReplace: (() -> Unit)? = null,
     onInspectGuide: (() -> Unit)? = null,
     onSave: (WorkoutExerciseEntity) -> Unit
 ) {
     val initialSets = exercise.setsCount.coerceIn(1, 12)
-    val parsedReps = remember(exercise) {
+    val parsedMainReps = remember(exercise.id) {
         val raw = exercise.repsPerSetCsv.split(",").mapNotNull { it.trim().toIntOrNull() }
         List(initialSets) { i -> raw.getOrElse(i) { raw.lastOrNull() ?: 10 }.toString() }
     }
-    val parsedLoads = remember(exercise) {
+    val parsedMainLoads = remember(exercise.id) {
         val raw = exercise.loadsPerSetCsv.split(",").mapNotNull { it.trim().toFloatOrNull() }
         List(initialSets) { i ->
             formatEditorLoad(raw.getOrElse(i) { raw.lastOrNull() ?: 20f })
         }
     }
 
-    val repsList = remember { mutableStateListOf(*parsedReps.toTypedArray()) }
-    val loadsList = remember { mutableStateListOf(*parsedLoads.toTypedArray()) }
+    val mainRepsList = remember(exercise.id) { mutableStateListOf(*parsedMainReps.toTypedArray()) }
+    val mainLoadsList = remember(exercise.id) { mutableStateListOf(*parsedMainLoads.toTypedArray()) }
+
+    val altOptions = remember(exercise.id) {
+        val decoded = WorkoutExerciseAlternativesCodec.decodeAlternatives(exercise.notes)
+        mutableStateListOf(
+            *decoded.map { spec ->
+                val cnt = spec.setsCount.coerceIn(1, 12)
+                val rRaw = spec.repsPerSetCsv.split(",").mapNotNull { it.trim().toIntOrNull() }
+                val lRaw = spec.loadsPerSetCsv.split(",").mapNotNull { it.trim().toFloatOrNull() }
+                EditableAlternativeOption(
+                    exerciseId = spec.exerciseId,
+                    customExerciseName = spec.customExerciseName,
+                    unitType = spec.unitType,
+                    repsList = mutableStateListOf(
+                        *List(cnt) { i -> rRaw.getOrElse(i) { rRaw.lastOrNull() ?: 10 }.toString() }.toTypedArray()
+                    ),
+                    loadsList = mutableStateListOf(
+                        *List(cnt) { i -> formatEditorLoad(lRaw.getOrElse(i) { lRaw.lastOrNull() ?: 15f }) }.toTypedArray()
+                    )
+                )
+            }.toTypedArray()
+        )
+    }
+
+    var selectedOptionIdx by remember { mutableIntStateOf(0) } // 0 = Principal, 1..N = Parches
+    var showAddAltModal by remember { mutableStateOf(false) }
+    var altPendingDelete by remember { mutableStateOf<Pair<Int, String>?>(null) }
+
+    val safeSelectedIdx = if (selectedOptionIdx in 0..altOptions.size) selectedOptionIdx else 0
+    val activeAlt = if (safeSelectedIdx > 0) altOptions.getOrNull(safeSelectedIdx - 1) else null
+
+    val activeCatEx: CatalogExercise? = if (activeAlt == null) {
+        catalogExercise
+    } else {
+        viewModel?.getCatalogExercise(activeAlt.exerciseId)
+    }
+    val activeExName: String = if (activeAlt == null) {
+        exerciseName
+    } else {
+        activeCatEx?.name ?: activeAlt.customExerciseName.ifBlank { "Ejercicio #${activeAlt.exerciseId}" }
+    }
+    val activeUnitType: Int = activeAlt?.unitType ?: exercise.unitType
+    val repsList: SnapshotStateList<String> = activeAlt?.repsList ?: mainRepsList
+    val loadsList: SnapshotStateList<String> = activeAlt?.loadsList ?: mainLoadsList
+
+    val activeOverloadSuggestion: OverloadSuggestion? = if (activeAlt == null) {
+        overloadSuggestion
+    } else {
+        ProgressiveOverloadAdvisor.computeSuggestion(
+            unitType = activeAlt.unitType,
+            historyForExercise = allFinishedExercises.filter { it.exerciseId == activeAlt.exerciseId }
+        )
+    }
+
     var restSeconds by remember { mutableIntStateOf(exercise.restSeconds.coerceIn(15, 600)) }
     var isBiSet by remember { mutableStateOf(exercise.isBiSet) }
     var replicatedBanner by remember { mutableStateOf<String?>(null) }
     var exactFieldTarget by remember { mutableStateOf<EditorExactFieldTarget?>(null) }
 
-    val unitLabel = when (exercise.unitType) {
+    val unitLabel = when (activeUnitType) {
         2 -> "seg"
         3 -> "min"
         else -> "reps"
     }
-    val repStepDelta = if (exercise.unitType == 2) 5 else 1
+    val repStepDelta = if (activeUnitType == 2) 5 else 1
 
-    val primaryMusclesLabel = remember(catalogExercise) {
-        catalogExercise?.let { cat ->
+    val primaryMusclesLabel = remember(activeCatEx) {
+        activeCatEx?.let { cat ->
             (0..16)
                 .filter { it < cat.muscles.length && cat.muscles[it] >= '2' }
                 .joinToString(" • ") { MuscleCatalog.getName(it) }
@@ -1552,7 +1759,7 @@ fun EditWorkoutExerciseDialog(
             color = GymCardBg,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.90f)
+                .fillMaxHeight(0.92f)
                 .padding(horizontal = 12.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -1568,18 +1775,33 @@ fun EditWorkoutExerciseDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AnimatedExerciseGif(
-                            gifAssetPath = catalogExercise?.gifAssetPath.orEmpty(),
-                            contentDescription = exerciseName,
+                            gifAssetPath = activeCatEx?.gifAssetPath.orEmpty(),
+                            contentDescription = activeExName,
                             modifier = Modifier
                                 .size(64.dp)
                                 .let { mod ->
-                                    if (onInspectGuide != null) mod.clickable { onInspectGuide() } else mod
+                                    if (activeAlt == null && onInspectGuide != null) mod.clickable { onInspectGuide() } else mod
                                 }
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
+                            if (activeAlt != null) {
+                                Text(
+                                    text = "🔀 ${WorkoutExerciseAlternativesCodec.roleFullTitle(safeSelectedIdx - 1)}",
+                                    color = GymAccentCyan,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp
+                                )
+                            } else {
+                                Text(
+                                    text = "★ Ejercicio Principal (Titular)",
+                                    color = GymOrange,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp
+                                )
+                            }
                             Text(
-                                text = exerciseName,
+                                text = activeExName,
                                 color = GymTextPrimary,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 16.sp
@@ -1592,9 +1814,9 @@ fun EditWorkoutExerciseDialog(
                                     fontSize = 12.sp
                                 )
                             }
-                            if (!catalogExercise?.equipment.isNullOrEmpty()) {
+                            if (!activeCatEx?.equipment.isNullOrEmpty()) {
                                 Text(
-                                    text = catalogExercise!!.equipment.joinToString(" • "),
+                                    text = activeCatEx!!.equipment.joinToString(" • "),
                                     color = GymTextSecondary,
                                     fontSize = 11.sp
                                 )
@@ -1605,7 +1827,7 @@ fun EditWorkoutExerciseDialog(
                         }
                     }
 
-                    if (onRequestReplace != null || onInspectGuide != null) {
+                    if (activeAlt == null && (onRequestReplace != null || onInspectGuide != null)) {
                         Spacer(Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1624,7 +1846,7 @@ fun EditWorkoutExerciseDialog(
                                 ) {
                                     Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Cambiar Ejercicio", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("Cambiar Titular", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                             }
                             if (onInspectGuide != null) {
@@ -1647,7 +1869,7 @@ fun EditWorkoutExerciseDialog(
                     }
                 }
 
-                // 2. Scrollable Body: Series Toolbar + Tactile Set Steppers + Rest Chips + Bi-Serie Switch
+                // 2. Scrollable Body: Parches Selector + Overload + Series Toolbar + Tactile Set Steppers + Rest Chips + Bi-Serie Switch
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -1656,9 +1878,151 @@ fun EditWorkoutExerciseDialog(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (overloadSuggestion != null) {
+                    // Ejercicios Parche (Secundario / Terciario / Opcional) Card
+                    if (viewModel != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(GymSurfaceElevated)
+                                .border(
+                                    width = 1.dp,
+                                    color = GymAccentCyan.copy(alpha = 0.30f),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.CallSplit,
+                                        contentDescription = null,
+                                        tint = GymAccentCyan,
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Ejercicios Parche (Si la máquina está ocupada)",
+                                        color = GymTextPrimary,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Toca una opción para configurar sus series/peso propios sin alterar tu ejercicio principal:",
+                                color = GymTextSecondary,
+                                fontSize = 11.sp
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Opción 1: Principal
+                                val isMainSelected = safeSelectedIdx == 0
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isMainSelected) GymOrange else GymCardBg)
+                                        .clickable { selectedOptionIdx = 0 }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "★ Principal: ${exerciseName.take(18)}",
+                                        color = if (isMainSelected) GymOnPrimary else GymTextPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+
+                                // Opciones 2..N: Secundario / Terciario / Opcional
+                                altOptions.forEachIndexed { aIdx, altOpt ->
+                                    val optTabIdx = aIdx + 1
+                                    val isAltSelected = safeSelectedIdx == optTabIdx
+                                    val altName = (viewModel.getCatalogExercise(altOpt.exerciseId)?.name
+                                        ?: altOpt.customExerciseName.ifBlank { "Ej. #${altOpt.exerciseId}" })
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isAltSelected) GymAccentCyan else GymCardBg)
+                                            .border(
+                                                width = if (isAltSelected) 0.dp else 1.dp,
+                                                color = GymAccentCyan.copy(alpha = 0.35f),
+                                                shape = RoundedCornerShape(10.dp)
+                                            )
+                                            .clickable { selectedOptionIdx = optTabIdx }
+                                            .padding(start = 10.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "${WorkoutExerciseAlternativesCodec.roleBadgeLabel(aIdx)}: ${altName.take(16)}",
+                                            color = if (isAltSelected) Color.Black else GymTextPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (isAltSelected) Color.Black.copy(alpha = 0.16f)
+                                                    else GymSurfaceElevated
+                                                )
+                                                .clickable {
+                                                    altPendingDelete = altOpt.exerciseId to altName
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Eliminar ejercicio parche",
+                                                tint = if (isAltSelected) Color.Black else GymTextSecondary,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (altOptions.size < 4) {
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(GymAccentCyan.copy(alpha = 0.16f))
+                                            .clickable { showAddAltModal = true }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = GymAccentCyan,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = "Añadir ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altOptions.size)}",
+                                            color = GymAccentCyan,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (activeOverloadSuggestion != null) {
                         val isAppliedInEditor = ProgressiveOverloadAdvisor.isAlreadyApplied(
-                            overloadSuggestion,
+                            activeOverloadSuggestion,
                             loadsList.toList(),
                             repsList.toList()
                         )
@@ -1692,7 +2056,7 @@ fun EditWorkoutExerciseDialog(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = overloadSuggestion.summaryText,
+                                    text = activeOverloadSuggestion.summaryText,
                                     color = GymTextPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -1708,25 +2072,25 @@ fun EditWorkoutExerciseDialog(
                                     )
                                     .clickable {
                                         when {
-                                            overloadSuggestion.suggestedLoadKg != null -> {
-                                                val clean = formatEditorLoad(overloadSuggestion.suggestedLoadKg)
+                                            activeOverloadSuggestion.suggestedLoadKg != null -> {
+                                                val clean = formatEditorLoad(activeOverloadSuggestion.suggestedLoadKg)
                                                 for (i in loadsList.indices) {
                                                     loadsList[i] = clean
                                                 }
                                             }
-                                            overloadSuggestion.suggestedRepsOrTime != null -> {
-                                                val clean = overloadSuggestion.suggestedRepsOrTime.coerceAtLeast(1).toString()
+                                            activeOverloadSuggestion.suggestedRepsOrTime != null -> {
+                                                val clean = activeOverloadSuggestion.suggestedRepsOrTime.coerceAtLeast(1).toString()
                                                 for (i in repsList.indices) {
                                                     repsList[i] = clean
                                                 }
                                             }
                                         }
-                                        replicatedBanner = "✓ Meta aplicada: ${overloadSuggestion.buttonLabel}"
+                                        replicatedBanner = "✓ Meta aplicada: ${activeOverloadSuggestion.buttonLabel}"
                                     }
                                     .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    text = if (isAppliedInEditor) "✓ Aplicado" else overloadSuggestion.buttonLabel,
+                                    text = if (isAppliedInEditor) "✓ Aplicado" else activeOverloadSuggestion.buttonLabel,
                                     color = if (isAppliedInEditor) FatigueGreen else GymOnPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 11.sp
@@ -1892,7 +2256,7 @@ fun EditWorkoutExerciseDialog(
                             )
 
                             // Load (kg) Stepper Pill when applicable
-                            if (exercise.unitType == 0) {
+                            if (activeUnitType == 0) {
                                 EditorTactileStepperPill(
                                     valueText = loadsList[idx],
                                     unitText = "kg",
@@ -2102,13 +2466,28 @@ fun EditWorkoutExerciseDialog(
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
+                            val builtAltSpecs = altOptions.map { altOpt ->
+                                AlternativeExerciseSpec(
+                                    exerciseId = altOpt.exerciseId,
+                                    customExerciseName = altOpt.customExerciseName,
+                                    unitType = altOpt.unitType,
+                                    setsCount = altOpt.repsList.size,
+                                    repsPerSetCsv = altOpt.repsList.joinToString(",") { it.trim().ifBlank { "10" } },
+                                    loadsPerSetCsv = altOpt.loadsList.joinToString(",") { it.trim().ifBlank { "0" } }
+                                )
+                            }
+                            val encodedNotes = WorkoutExerciseAlternativesCodec.encodeAlternatives(
+                                exercise.notes,
+                                builtAltSpecs
+                            )
                             onSave(
                                 exercise.copy(
-                                    setsCount = repsList.size,
-                                    repsPerSetCsv = repsList.joinToString(",") { it.trim().ifBlank { "10" } },
-                                    loadsPerSetCsv = loadsList.joinToString(",") { it.trim().ifBlank { "0" } },
+                                    setsCount = mainRepsList.size,
+                                    repsPerSetCsv = mainRepsList.joinToString(",") { it.trim().ifBlank { "10" } },
+                                    loadsPerSetCsv = mainLoadsList.joinToString(",") { it.trim().ifBlank { "0" } },
                                     restSeconds = restSeconds,
-                                    isBiSet = isBiSet
+                                    isBiSet = isBiSet,
+                                    notes = encodedNotes
                                 )
                             )
                         },
@@ -2248,6 +2627,71 @@ fun EditWorkoutExerciseDialog(
                 }
             },
             containerColor = GymCardBg
+        )
+    }
+
+    if (showAddAltModal && viewModel != null) {
+        val excludedIds = setOf(exercise.exerciseId) + altOptions.map { it.exerciseId }.toSet()
+        val defaultMuscle = WorkoutExerciseAlternativesCodec.primaryMuscleForFilter(catalogExercise?.muscles)
+        val roleTitle = WorkoutExerciseAlternativesCodec.roleFullTitle(altOptions.size)
+        ExercisePickerModal(
+            viewModel = viewModel,
+            modalTitle = "Añadir $roleTitle",
+            initialMuscleFilter = defaultMuscle,
+            excludeExerciseIds = excludedIds,
+            helperBannerText = "Elige un ejercicio parche para cuando la máquina o implemento principal esté ocupado.",
+            onDismiss = { showAddAltModal = false },
+            onSelectExercise = { chosenAlt ->
+                val lastMaxLoad = allFinishedExercises
+                    .filter { it.exerciseId == chosenAlt.id }
+                    .maxByOrNull { it.timestampMillis }
+                    ?.maxLoadKg
+                val defaultSpec = WorkoutExerciseAlternativesCodec.buildDefaultSpec(
+                    catEx = chosenAlt,
+                    parentSetsCount = mainRepsList.size,
+                    parentUnitType = exercise.unitType,
+                    parentRepsCsv = mainRepsList.joinToString(","),
+                    historicalMaxLoadKg = lastMaxLoad
+                )
+                val cnt = defaultSpec.setsCount.coerceIn(1, 12)
+                val rRaw = defaultSpec.repsPerSetCsv.split(",").mapNotNull { it.trim().toIntOrNull() }
+                val lRaw = defaultSpec.loadsPerSetCsv.split(",").mapNotNull { it.trim().toFloatOrNull() }
+                altOptions.add(
+                    EditableAlternativeOption(
+                        exerciseId = defaultSpec.exerciseId,
+                        customExerciseName = defaultSpec.customExerciseName,
+                        unitType = defaultSpec.unitType,
+                        repsList = mutableStateListOf(
+                            *List(cnt) { i -> rRaw.getOrElse(i) { 10 }.toString() }.toTypedArray()
+                        ),
+                        loadsList = mutableStateListOf(
+                            *List(cnt) { i -> formatEditorLoad(lRaw.getOrElse(i) { 15f }) }.toTypedArray()
+                        )
+                    )
+                )
+                selectedOptionIdx = altOptions.size
+                showAddAltModal = false
+                replicatedBanner = "✓ ${chosenAlt.name} añadido como ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altOptions.size - 1)}"
+            }
+        )
+    }
+
+    altPendingDelete?.let { (delExId, delName) ->
+        ConfirmDeleteDialog(
+            itemTitle = "el ejercicio parche \"$delName\" de este bloque",
+            onConfirm = {
+                val removeIdx = altOptions.indexOfFirst { it.exerciseId == delExId }
+                if (removeIdx >= 0) {
+                    altOptions.removeAt(removeIdx)
+                    if (selectedOptionIdx > altOptions.size || selectedOptionIdx == removeIdx + 1) {
+                        selectedOptionIdx = 0
+                    } else if (selectedOptionIdx > removeIdx + 1) {
+                        selectedOptionIdx -= 1
+                    }
+                }
+                altPendingDelete = null
+            },
+            onDismiss = { altPendingDelete = null }
         )
     }
 }

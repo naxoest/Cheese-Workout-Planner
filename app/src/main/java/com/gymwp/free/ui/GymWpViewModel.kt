@@ -554,10 +554,11 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
 
     fun replaceWorkoutExercise(target: WorkoutExerciseEntity, replacement: CatalogExercise) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sets = target.setsCount.coerceAtLeast(1)
+            val fresh = dao.getWorkoutExercises(target.workoutDayId).firstOrNull { it.id == target.id } ?: target
+            val sets = fresh.setsCount.coerceAtLeast(1)
             val newUnit = replacement.defaultUnitType
-            val updatedReps = if (target.unitType == newUnit) {
-                target.repsPerSetCsv
+            val updatedReps = if (fresh.unitType == newUnit) {
+                fresh.repsPerSetCsv
             } else {
                 when (newUnit) {
                     2 -> List(sets) { "45" }.joinToString(",")
@@ -566,20 +567,100 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             val updatedLoads = if (newUnit == 0) {
-                if (target.unitType == 0) target.loadsPerSetCsv else List(sets) { "20" }.joinToString(",")
+                if (fresh.unitType == 0) fresh.loadsPerSetCsv else List(sets) { "20" }.joinToString(",")
             } else {
                 List(sets) { "0" }.joinToString(",")
             }
+            val remainingAlts = WorkoutExerciseAlternativesCodec.decodeAlternatives(fresh.notes)
+                .filter { it.exerciseId != replacement.id }
+            val updatedNotes = WorkoutExerciseAlternativesCodec.encodeAlternatives(fresh.notes, remainingAlts)
             dao.updateWorkoutExercise(
-                target.copy(
+                fresh.copy(
                     exerciseId = replacement.id,
                     isCustomExercise = replacement.id >= 10000,
                     customExerciseName = if (replacement.id >= 10000) replacement.name else "",
                     unitType = newUnit,
                     repsPerSetCsv = updatedReps,
-                    loadsPerSetCsv = updatedLoads
+                    loadsPerSetCsv = updatedLoads,
+                    notes = updatedNotes
                 )
             )
+            triggerAutoDriveSync()
+        }
+    }
+
+    fun addAlternativeToWorkoutExercise(
+        target: WorkoutExerciseEntity,
+        altCatalogEx: CatalogExercise,
+        onAdded: (AlternativeExerciseSpec) -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val fresh = dao.getWorkoutExercises(target.workoutDayId).firstOrNull { it.id == target.id } ?: target
+            if (altCatalogEx.id == fresh.exerciseId) return@launch
+            val currentAlts = WorkoutExerciseAlternativesCodec.decodeAlternatives(fresh.notes).toMutableList()
+            val existing = currentAlts.firstOrNull { it.exerciseId == altCatalogEx.id }
+            val specToReturn = if (existing != null) {
+                existing
+            } else {
+                val lastMaxLoad = allFinishedExercises.value
+                    .filter { it.exerciseId == altCatalogEx.id }
+                    .maxByOrNull { it.timestampMillis }
+                    ?.maxLoadKg
+                val created = WorkoutExerciseAlternativesCodec.buildDefaultSpec(
+                    catEx = altCatalogEx,
+                    parentSetsCount = fresh.setsCount,
+                    parentUnitType = fresh.unitType,
+                    parentRepsCsv = fresh.repsPerSetCsv,
+                    historicalMaxLoadKg = lastMaxLoad
+                )
+                currentAlts.add(created)
+                val updatedNotes = WorkoutExerciseAlternativesCodec.encodeAlternatives(fresh.notes, currentAlts)
+                dao.updateWorkoutExercise(fresh.copy(notes = updatedNotes))
+                triggerAutoDriveSync()
+                created
+            }
+            launch(Dispatchers.Main) {
+                onAdded(specToReturn)
+            }
+        }
+    }
+
+    fun removeAlternativeFromWorkoutExercise(
+        target: WorkoutExerciseEntity,
+        altExerciseId: Int
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val fresh = dao.getWorkoutExercises(target.workoutDayId).firstOrNull { it.id == target.id } ?: target
+            val updatedAlts = WorkoutExerciseAlternativesCodec.decodeAlternatives(fresh.notes)
+                .filter { it.exerciseId != altExerciseId }
+            val updatedNotes = WorkoutExerciseAlternativesCodec.encodeAlternatives(fresh.notes, updatedAlts)
+            dao.updateWorkoutExercise(fresh.copy(notes = updatedNotes))
+            triggerAutoDriveSync()
+        }
+    }
+
+    fun updateAlternativeSetsAndLoads(
+        target: WorkoutExerciseEntity,
+        altExerciseId: Int,
+        setsCount: Int,
+        repsPerSetCsv: String,
+        loadsPerSetCsv: String
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val fresh = dao.getWorkoutExercises(target.workoutDayId).firstOrNull { it.id == target.id } ?: target
+            val currentAlts = WorkoutExerciseAlternativesCodec.decodeAlternatives(fresh.notes)
+            if (currentAlts.none { it.exerciseId == altExerciseId }) return@launch
+            val updatedAlts = currentAlts.map { alt ->
+                if (alt.exerciseId == altExerciseId) {
+                    alt.copy(
+                        setsCount = setsCount.coerceIn(1, 12),
+                        repsPerSetCsv = repsPerSetCsv,
+                        loadsPerSetCsv = loadsPerSetCsv
+                    )
+                } else alt
+            }
+            val updatedNotes = WorkoutExerciseAlternativesCodec.encodeAlternatives(fresh.notes, updatedAlts)
+            dao.updateWorkoutExercise(fresh.copy(notes = updatedNotes))
             triggerAutoDriveSync()
         }
     }

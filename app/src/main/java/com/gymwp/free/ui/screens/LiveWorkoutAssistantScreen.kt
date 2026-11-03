@@ -26,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,8 +41,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.gymwp.free.data.AlternativeExerciseSpec
 import com.gymwp.free.data.AppUpdateManager
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.WorkoutExerciseAlternativesCodec
 import com.gymwp.free.data.WorkoutExerciseEntity
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.domain.OverloadSuggestion
@@ -59,13 +62,32 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-private class LiveExerciseRuntimeState(
+private class LiveOptionRuntimeBuffer(
+    val exerciseId: Int,
+    var unitType: Int,
     val done: SnapshotStateList<Boolean>,
     val reps: SnapshotStateList<String>,
-    val loads: SnapshotStateList<String>,
-    var syncedExerciseId: Int,
-    var syncedUnitType: Int
+    val loads: SnapshotStateList<String>
 )
+
+private class LiveExerciseRuntimeState(
+    activeExerciseIdInit: Int,
+    var syncedMainExerciseId: Int,
+    var syncedMainUnitType: Int,
+    val buffersByExerciseId: SnapshotStateMap<Int, LiveOptionRuntimeBuffer>
+) {
+    var activeExerciseId by mutableIntStateOf(activeExerciseIdInit)
+
+    val activeBuffer: LiveOptionRuntimeBuffer
+        get() = buffersByExerciseId[activeExerciseId]
+            ?: buffersByExerciseId[syncedMainExerciseId]
+            ?: buffersByExerciseId.values.first()
+
+    val done: SnapshotStateList<Boolean> get() = activeBuffer.done
+    val reps: SnapshotStateList<String> get() = activeBuffer.reps
+    val loads: SnapshotStateList<String> get() = activeBuffer.loads
+    val activeUnitType: Int get() = activeBuffer.unitType
+}
 
 private fun formatWeightClean(value: Float): String {
     val clamped = value.coerceAtLeast(0f)
@@ -76,23 +98,72 @@ private fun formatWeightClean(value: Float): String {
     }
 }
 
-private fun createRuntimeStateFromEntity(wEx: WorkoutExerciseEntity): LiveExerciseRuntimeState {
-    val count = wEx.setsCount.coerceAtLeast(1)
-    val parsedReps = wEx.repsPerSetCsv.split(",").mapNotNull { it.trim().toIntOrNull() }
+private fun createOptionBuffer(
+    exerciseId: Int,
+    unitType: Int,
+    setsCount: Int,
+    repsCsv: String,
+    loadsCsv: String,
+    defaultLoadIfZero: Float = 20f
+): LiveOptionRuntimeBuffer {
+    val count = setsCount.coerceAtLeast(1)
+    val parsedReps = repsCsv.split(",").mapNotNull { it.trim().toIntOrNull() }
     val repsList = List(count) { i ->
         parsedReps.getOrElse(i) { parsedReps.lastOrNull() ?: 10 }.toString()
     }
-    val parsedLoads = wEx.loadsPerSetCsv.split(",").mapNotNull { it.trim().toFloatOrNull() }
+    val parsedLoads = loadsCsv.split(",").mapNotNull { it.trim().toFloatOrNull() }
     val loadsList = List(count) { i ->
-        val v = parsedLoads.getOrElse(i) { parsedLoads.lastOrNull() ?: if (wEx.unitType == 0) 20f else 0f }
+        val v = parsedLoads.getOrElse(i) { parsedLoads.lastOrNull() ?: if (unitType == 0) defaultLoadIfZero else 0f }
         formatWeightClean(v)
     }
-    return LiveExerciseRuntimeState(
+    return LiveOptionRuntimeBuffer(
+        exerciseId = exerciseId,
+        unitType = unitType,
         done = mutableStateListOf(*Array(count) { false }),
         reps = mutableStateListOf(*repsList.toTypedArray()),
-        loads = mutableStateListOf(*loadsList.toTypedArray()),
-        syncedExerciseId = wEx.exerciseId,
-        syncedUnitType = wEx.unitType
+        loads = mutableStateListOf(*loadsList.toTypedArray())
+    )
+}
+
+private fun syncOptionBufferSize(buf: LiveOptionRuntimeBuffer, targetCountRaw: Int) {
+    val targetCount = targetCountRaw.coerceAtLeast(1)
+    while (buf.done.size < targetCount) {
+        buf.done.add(false)
+        buf.reps.add(buf.reps.lastOrNull() ?: "10")
+        buf.loads.add(buf.loads.lastOrNull() ?: "20")
+    }
+    while (buf.done.size > targetCount && buf.done.size > 1) {
+        buf.done.removeAt(buf.done.lastIndex)
+        buf.reps.removeAt(buf.reps.lastIndex)
+        buf.loads.removeAt(buf.loads.lastIndex)
+    }
+}
+
+private fun createRuntimeStateFromEntity(wEx: WorkoutExerciseEntity): LiveExerciseRuntimeState {
+    val map = mutableStateMapOf<Int, LiveOptionRuntimeBuffer>()
+    map[wEx.exerciseId] = createOptionBuffer(
+        exerciseId = wEx.exerciseId,
+        unitType = wEx.unitType,
+        setsCount = wEx.setsCount,
+        repsCsv = wEx.repsPerSetCsv,
+        loadsCsv = wEx.loadsPerSetCsv,
+        defaultLoadIfZero = 20f
+    )
+    WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes).forEach { alt ->
+        map[alt.exerciseId] = createOptionBuffer(
+            exerciseId = alt.exerciseId,
+            unitType = alt.unitType,
+            setsCount = alt.setsCount,
+            repsCsv = alt.repsPerSetCsv,
+            loadsCsv = alt.loadsPerSetCsv,
+            defaultLoadIfZero = 15f
+        )
+    }
+    return LiveExerciseRuntimeState(
+        activeExerciseIdInit = wEx.exerciseId,
+        syncedMainExerciseId = wEx.exerciseId,
+        syncedMainUnitType = wEx.unitType,
+        buffersByExerciseId = map
     )
 }
 
@@ -180,10 +251,12 @@ fun LiveWorkoutAssistantScreen(
     var focusedExerciseIndex by rememberSaveable { mutableIntStateOf(0) }
     var feedbackBannerText by remember { mutableStateOf<String?>(null) }
 
-    // Dialog states for mid-workout routine editing
+    // Dialog states for mid-workout routine editing & Parche exercises
     var confirmingExitSession by remember { mutableStateOf(false) }
     var showAddExerciseModal by remember { mutableStateOf(false) }
     var replacingExerciseTarget by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
+    var addingLiveAltTarget by remember { mutableStateOf<Pair<WorkoutExerciseEntity, CatalogExercise?>?>(null) }
+    var liveAltPendingDelete by remember { mutableStateOf<Triple<WorkoutExerciseEntity, Int, String>?>(null) }
     var exercisePendingDelete by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
     var restPickerTarget by remember { mutableStateOf<WorkoutExerciseEntity?>(null) }
     var editingDayNameDialog by remember { mutableStateOf(false) }
@@ -205,41 +278,71 @@ fun LiveWorkoutAssistantScreen(
     // Auto-hide feedback toast pill
     LaunchedEffect(feedbackBannerText) {
         if (feedbackBannerText != null) {
-            delay(2200L)
+            delay(2400L)
             feedbackBannerText = null
         }
     }
 
-    // Sync runtime map whenever exercises are added, replaced, or resized
+    // Sync runtime map whenever exercises or their Parche alternatives are added, replaced, or resized
     LaunchedEffect(liveExercises) {
         liveExercises.forEach { wEx ->
             val existing = perExerciseState[wEx.id]
             if (existing == null) {
                 perExerciseState[wEx.id] = createRuntimeStateFromEntity(wEx)
             } else {
-                // If the exercise was replaced in-place
-                if (existing.syncedExerciseId != wEx.exerciseId) {
-                    val fresh = createRuntimeStateFromEntity(wEx)
-                    if (existing.syncedUnitType != wEx.unitType) {
-                        existing.reps.clear()
-                        existing.reps.addAll(fresh.reps)
-                        existing.loads.clear()
-                        existing.loads.addAll(fresh.loads)
+                // If the main (Principal) exercise was permanently replaced
+                if (existing.syncedMainExerciseId != wEx.exerciseId) {
+                    existing.buffersByExerciseId[wEx.exerciseId] = createOptionBuffer(
+                        exerciseId = wEx.exerciseId,
+                        unitType = wEx.unitType,
+                        setsCount = wEx.setsCount,
+                        repsCsv = wEx.repsPerSetCsv,
+                        loadsCsv = wEx.loadsPerSetCsv,
+                        defaultLoadIfZero = 20f
+                    )
+                    existing.activeExerciseId = wEx.exerciseId
+                    existing.syncedMainExerciseId = wEx.exerciseId
+                    existing.syncedMainUnitType = wEx.unitType
+                }
+
+                // Sync Principal buffer set count & unitType
+                val mainBuf = existing.buffersByExerciseId[wEx.exerciseId]
+                if (mainBuf == null) {
+                    existing.buffersByExerciseId[wEx.exerciseId] = createOptionBuffer(
+                        exerciseId = wEx.exerciseId,
+                        unitType = wEx.unitType,
+                        setsCount = wEx.setsCount,
+                        repsCsv = wEx.repsPerSetCsv,
+                        loadsCsv = wEx.loadsPerSetCsv,
+                        defaultLoadIfZero = 20f
+                    )
+                } else {
+                    mainBuf.unitType = wEx.unitType
+                    syncOptionBufferSize(mainBuf, wEx.setsCount)
+                }
+
+                // Sync Parche (Secondary / Tertiary / Optional) buffers
+                val alts = WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
+                alts.forEach { alt ->
+                    val altBuf = existing.buffersByExerciseId[alt.exerciseId]
+                    if (altBuf == null) {
+                        existing.buffersByExerciseId[alt.exerciseId] = createOptionBuffer(
+                            exerciseId = alt.exerciseId,
+                            unitType = alt.unitType,
+                            setsCount = alt.setsCount,
+                            repsCsv = alt.repsPerSetCsv,
+                            loadsCsv = alt.loadsPerSetCsv,
+                            defaultLoadIfZero = 15f
+                        )
+                    } else {
+                        altBuf.unitType = alt.unitType
+                        syncOptionBufferSize(altBuf, alt.setsCount)
                     }
-                    existing.syncedExerciseId = wEx.exerciseId
-                    existing.syncedUnitType = wEx.unitType
                 }
-                // Sync set count if changed externally
-                val targetCount = wEx.setsCount.coerceAtLeast(1)
-                while (existing.done.size < targetCount) {
-                    existing.done.add(false)
-                    existing.reps.add(existing.reps.lastOrNull() ?: "10")
-                    existing.loads.add(existing.loads.lastOrNull() ?: "20")
-                }
-                while (existing.done.size > targetCount && existing.done.size > 1) {
-                    existing.done.removeAt(existing.done.lastIndex)
-                    existing.reps.removeAt(existing.reps.lastIndex)
-                    existing.loads.removeAt(existing.loads.lastIndex)
+
+                // Fallback to Principal if active Parche was deleted
+                if (existing.activeExerciseId != wEx.exerciseId && alts.none { it.exerciseId == existing.activeExerciseId }) {
+                    existing.activeExerciseId = wEx.exerciseId
                 }
             }
         }
@@ -363,13 +466,26 @@ fun LiveWorkoutAssistantScreen(
     }
 
     fun persistExerciseState(wEx: WorkoutExerciseEntity, st: LiveExerciseRuntimeState) {
-        viewModel.updateWorkoutExercise(
-            wEx.copy(
-                setsCount = st.done.size.coerceAtLeast(1),
-                repsPerSetCsv = st.reps.joinToString(",") { it.trim().ifBlank { "10" } },
-                loadsPerSetCsv = st.loads.joinToString(",") { it.trim().ifBlank { "0" } }
+        val setsCnt = st.done.size.coerceAtLeast(1)
+        val repsCsv = st.reps.joinToString(",") { it.trim().ifBlank { "10" } }
+        val loadsCsv = st.loads.joinToString(",") { it.trim().ifBlank { "0" } }
+        if (st.activeExerciseId == wEx.exerciseId) {
+            viewModel.updateWorkoutExercise(
+                wEx.copy(
+                    setsCount = setsCnt,
+                    repsPerSetCsv = repsCsv,
+                    loadsPerSetCsv = loadsCsv
+                )
             )
-        )
+        } else {
+            viewModel.updateAlternativeSetsAndLoads(
+                target = wEx,
+                altExerciseId = st.activeExerciseId,
+                setsCount = setsCnt,
+                repsPerSetCsv = repsCsv,
+                loadsPerSetCsv = loadsCsv
+            )
+        }
     }
 
     // Ensure immediate runtime state entries for visible exercises
@@ -561,20 +677,29 @@ fun LiveWorkoutAssistantScreen(
                     val totCnt = st?.done?.size ?: wEx.setsCount
                     val allDone = totCnt > 0 && doneCnt == totCnt
                     val isFocused = focusedMode && idx == focusedExerciseIndex
-                    val shortName = remember(allCatalog, wEx.exerciseId, wEx.customExerciseName) {
-                        (viewModel.getCatalogExercise(wEx.exerciseId)?.name
-                            ?: wEx.customExerciseName.ifBlank { "Ej. ${idx + 1}" })
-                            .take(18)
+                    val activeExId = st?.activeExerciseId ?: wEx.exerciseId
+                    val isUsingAlt = activeExId != wEx.exerciseId
+                    val altsForStrip = remember(wEx.notes) {
+                        WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
+                    }
+                    val shortName = remember(allCatalog, activeExId, wEx.exerciseId, wEx.customExerciseName, altsForStrip) {
+                        val altCustom = altsForStrip.firstOrNull { it.exerciseId == activeExId }?.customExerciseName
+                        val resolved = viewModel.getCatalogExercise(activeExId)?.name
+                            ?: (if (isUsingAlt) altCustom else wEx.customExerciseName)?.ifBlank { null }
+                            ?: "Ej. ${idx + 1}"
+                        if (isUsingAlt) "🔀 ${resolved.take(15)}" else resolved.take(18)
                     }
 
                     val pillBg = when {
                         isFocused -> GymOrange
                         allDone -> FatigueGreen.copy(alpha = 0.20f)
+                        isUsingAlt -> GymAccentCyan.copy(alpha = 0.16f)
                         else -> GymSurfaceElevated
                     }
                     val pillText = when {
                         isFocused -> GymOnPrimary
                         allDone -> FatigueGreen
+                        isUsingAlt -> GymAccentCyan
                         else -> GymTextPrimary
                     }
 
@@ -583,10 +708,11 @@ fun LiveWorkoutAssistantScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(pillBg)
                             .border(
-                                width = if (isFocused || allDone) 1.dp else 0.dp,
+                                width = if (isFocused || allDone || isUsingAlt) 1.dp else 0.dp,
                                 color = when {
                                     isFocused -> GymOrange
                                     allDone -> FatigueGreen.copy(alpha = 0.6f)
+                                    isUsingAlt -> GymAccentCyan.copy(alpha = 0.55f)
                                     else -> Color.Transparent
                                 },
                                 shape = RoundedCornerShape(20.dp)
@@ -686,14 +812,26 @@ fun LiveWorkoutAssistantScreen(
             val safeIdx = focusedExerciseIndex.coerceIn(0, liveExercises.lastIndex)
             val currentWEx = liveExercises[safeIdx]
             val currentSt = stateByExerciseId[currentWEx.id]!!
-            val catEx = remember(allCatalog, currentWEx.exerciseId) {
+            val alternatives = remember(currentWEx.notes) {
+                WorkoutExerciseAlternativesCodec.decodeAlternatives(currentWEx.notes)
+            }
+            val activeExId = currentSt.activeExerciseId
+            val isUsingAlt = activeExId != currentWEx.exerciseId
+            val mainCatEx = remember(allCatalog, currentWEx.exerciseId) {
                 viewModel.getCatalogExercise(currentWEx.exerciseId)
             }
-            val exName = catEx?.name ?: currentWEx.customExerciseName.ifBlank { "Ejercicio #${currentWEx.exerciseId}" }
-            val focusedOverload = remember(allFinishedEx, currentWEx.exerciseId, currentWEx.unitType) {
+            val mainExName = mainCatEx?.name ?: currentWEx.customExerciseName.ifBlank { "Ejercicio #${currentWEx.exerciseId}" }
+            val activeCatEx = remember(allCatalog, activeExId) {
+                viewModel.getCatalogExercise(activeExId)
+            }
+            val activeAltSpec = alternatives.firstOrNull { it.exerciseId == activeExId }
+            val activeExName = activeCatEx?.name
+                ?: (if (isUsingAlt) activeAltSpec?.customExerciseName else currentWEx.customExerciseName)?.ifBlank { null }
+                ?: "Ejercicio #$activeExId"
+            val focusedOverload = remember(allFinishedEx, activeExId, currentSt.activeUnitType) {
                 ProgressiveOverloadAdvisor.computeSuggestion(
-                    unitType = currentWEx.unitType,
-                    historyForExercise = allFinishedEx.filter { it.exerciseId == currentWEx.exerciseId }
+                    unitType = currentSt.activeUnitType,
+                    historyForExercise = allFinishedEx.filter { it.exerciseId == activeExId }
                 )
             }
 
@@ -710,11 +848,31 @@ fun LiveWorkoutAssistantScreen(
                         exerciseIndex = safeIdx,
                         totalExercises = liveExercises.size,
                         wEx = currentWEx,
-                        catEx = catEx,
-                        exName = exName,
+                        catEx = activeCatEx,
+                        exName = activeExName,
+                        mainExName = mainExName,
+                        alternatives = alternatives,
+                        viewModel = viewModel,
                         state = currentSt,
                         isHeroFocused = true,
                         overloadSuggestion = focusedOverload,
+                        onSelectActiveExerciseId = { chosenId ->
+                            currentSt.activeExerciseId = chosenId
+                            if (chosenId == currentWEx.exerciseId) {
+                                feedbackBannerText = "★ Volviste al titular: $mainExName"
+                            } else {
+                                val chosenName = viewModel.getCatalogExercise(chosenId)?.name
+                                    ?: alternatives.firstOrNull { it.exerciseId == chosenId }?.customExerciseName
+                                    ?: "Parche"
+                                feedbackBannerText = "🔀 Parche activo hoy: $chosenName (rutina intacta)"
+                            }
+                        },
+                        onRequestAddAlternative = {
+                            addingLiveAltTarget = currentWEx to mainCatEx
+                        },
+                        onRequestDeleteAlternative = { altExId, altExName ->
+                            liveAltPendingDelete = Triple(currentWEx, altExId, altExName)
+                        },
                         onApplyOverloadSuggestion = if (focusedOverload != null) {
                             {
                                 val targetIndices = currentSt.done.indices.filter { !currentSt.done[it] }
@@ -733,8 +891,8 @@ fun LiveWorkoutAssistantScreen(
                                 feedbackBannerText = "✓ Meta aplicada: ${focusedOverload.buttonLabel}"
                             }
                         } else null,
-                        onInspectGuide = { if (catEx != null) inspectingExercise = catEx },
-                        onReplaceExercise = { replacingExerciseTarget = currentWEx to exName },
+                        onInspectGuide = { if (activeCatEx != null) inspectingExercise = activeCatEx },
+                        onReplaceExercise = { replacingExerciseTarget = currentWEx to mainExName },
                         onReplicateFirstSet = {
                             if (currentSt.reps.size > 1) {
                                 val r0 = currentSt.reps.firstOrNull() ?: "10"
@@ -763,7 +921,7 @@ fun LiveWorkoutAssistantScreen(
                         onToggleBiSet = {
                             viewModel.updateWorkoutExercise(currentWEx.copy(isBiSet = !currentWEx.isBiSet))
                         },
-                        onDeleteExercise = { exercisePendingDelete = currentWEx to exName },
+                        onDeleteExercise = { exercisePendingDelete = currentWEx to mainExName },
                         onStepReps = { setIdx, delta ->
                             val cur = currentSt.reps[setIdx].toIntOrNull() ?: 10
                             currentSt.reps[setIdx] = (cur + delta).coerceAtLeast(1).toString()
@@ -854,14 +1012,26 @@ fun LiveWorkoutAssistantScreen(
             ) {
                 itemsIndexed(liveExercises, key = { _, item -> item.id }) { exIdx, wEx ->
                     val st = stateByExerciseId[wEx.id]!!
-                    val catEx = remember(allCatalog, wEx.exerciseId) {
+                    val alternatives = remember(wEx.notes) {
+                        WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
+                    }
+                    val activeExId = st.activeExerciseId
+                    val isUsingAlt = activeExId != wEx.exerciseId
+                    val mainCatEx = remember(allCatalog, wEx.exerciseId) {
                         viewModel.getCatalogExercise(wEx.exerciseId)
                     }
-                    val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
-                    val itemOverload = remember(allFinishedEx, wEx.exerciseId, wEx.unitType) {
+                    val mainExName = mainCatEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
+                    val activeCatEx = remember(allCatalog, activeExId) {
+                        viewModel.getCatalogExercise(activeExId)
+                    }
+                    val activeAltSpec = alternatives.firstOrNull { it.exerciseId == activeExId }
+                    val activeExName = activeCatEx?.name
+                        ?: (if (isUsingAlt) activeAltSpec?.customExerciseName else wEx.customExerciseName)?.ifBlank { null }
+                        ?: "Ejercicio #$activeExId"
+                    val itemOverload = remember(allFinishedEx, activeExId, st.activeUnitType) {
                         ProgressiveOverloadAdvisor.computeSuggestion(
-                            unitType = wEx.unitType,
-                            historyForExercise = allFinishedEx.filter { it.exerciseId == wEx.exerciseId }
+                            unitType = st.activeUnitType,
+                            historyForExercise = allFinishedEx.filter { it.exerciseId == activeExId }
                         )
                     }
 
@@ -869,11 +1039,31 @@ fun LiveWorkoutAssistantScreen(
                         exerciseIndex = exIdx,
                         totalExercises = liveExercises.size,
                         wEx = wEx,
-                        catEx = catEx,
-                        exName = exName,
+                        catEx = activeCatEx,
+                        exName = activeExName,
+                        mainExName = mainExName,
+                        alternatives = alternatives,
+                        viewModel = viewModel,
                         state = st,
                         isHeroFocused = false,
                         overloadSuggestion = itemOverload,
+                        onSelectActiveExerciseId = { chosenId ->
+                            st.activeExerciseId = chosenId
+                            if (chosenId == wEx.exerciseId) {
+                                feedbackBannerText = "★ Volviste al titular: $mainExName"
+                            } else {
+                                val chosenName = viewModel.getCatalogExercise(chosenId)?.name
+                                    ?: alternatives.firstOrNull { it.exerciseId == chosenId }?.customExerciseName
+                                    ?: "Parche"
+                                feedbackBannerText = "🔀 Parche activo hoy: $chosenName (rutina intacta)"
+                            }
+                        },
+                        onRequestAddAlternative = {
+                            addingLiveAltTarget = wEx to mainCatEx
+                        },
+                        onRequestDeleteAlternative = { altExId, altExName ->
+                            liveAltPendingDelete = Triple(wEx, altExId, altExName)
+                        },
                         onApplyOverloadSuggestion = if (itemOverload != null) {
                             {
                                 val targetIndices = st.done.indices.filter { !st.done[it] }
@@ -892,8 +1082,8 @@ fun LiveWorkoutAssistantScreen(
                                 feedbackBannerText = "✓ Meta aplicada: ${itemOverload.buttonLabel}"
                             }
                         } else null,
-                        onInspectGuide = { if (catEx != null) inspectingExercise = catEx },
-                        onReplaceExercise = { replacingExerciseTarget = wEx to exName },
+                        onInspectGuide = { if (activeCatEx != null) inspectingExercise = activeCatEx },
+                        onReplaceExercise = { replacingExerciseTarget = wEx to mainExName },
                         onReplicateFirstSet = {
                             if (st.reps.size > 1) {
                                 val r0 = st.reps.firstOrNull() ?: "10"
@@ -903,7 +1093,7 @@ fun LiveWorkoutAssistantScreen(
                                     st.loads[i] = l0
                                 }
                                 persistExerciseState(wEx, st)
-                                feedbackBannerText = "✓ Serie 1 replicada en $exName"
+                                feedbackBannerText = "✓ Serie 1 replicada en $activeExName"
                             }
                         },
                         onEditRestSeconds = { restPickerTarget = wEx },
@@ -916,7 +1106,7 @@ fun LiveWorkoutAssistantScreen(
                         onToggleBiSet = {
                             viewModel.updateWorkoutExercise(wEx.copy(isBiSet = !wEx.isBiSet))
                         },
-                        onDeleteExercise = { exercisePendingDelete = wEx to exName },
+                        onDeleteExercise = { exercisePendingDelete = wEx to mainExName },
                         onStepReps = { setIdx, delta ->
                             val cur = st.reps[setIdx].toIntOrNull() ?: 10
                             st.reps[setIdx] = (cur + delta).coerceAtLeast(1).toString()
@@ -1063,24 +1253,45 @@ fun LiveWorkoutAssistantScreen(
                     restRemainingSeconds = 0
                     AppUpdateManager.cancelRestNotification(context)
 
-                    val logs = liveExercises.mapNotNull { wEx ->
-                        val st = stateByExerciseId[wEx.id] ?: return@mapNotNull null
-                        val doneIndices = st.done.indices.filter { st.done[it] }
-                        if (doneIndices.isEmpty() && completedSetsCount > 0) return@mapNotNull null
-                        val activeIndices = if (doneIndices.isNotEmpty()) doneIndices else st.done.indices.toList()
-                        val catEx = viewModel.getCatalogExercise(wEx.exerciseId)
-                        val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
-                        val muscles = catEx?.muscles ?: "00000000000000000"
-                        val repsDone = activeIndices.map { i -> st.reps.getOrNull(i)?.toIntOrNull() ?: 10 }
-                        val loadsDone = activeIndices.map { i -> st.loads.getOrNull(i)?.toFloatOrNull() ?: 0f }
-                        CompletedExerciseLog(
-                            exerciseId = wEx.exerciseId,
-                            exerciseName = exName,
-                            muscles = muscles,
-                            loadsPerSet = loadsDone,
-                            repsPerSet = repsDone,
-                            unitType = wEx.unitType
-                        )
+                    val anySetCheckedInSession = liveExercises.any { wEx ->
+                        stateByExerciseId[wEx.id]?.buffersByExerciseId?.values?.any { buf ->
+                            buf.done.any { it }
+                        } == true
+                    }
+
+                    val logs = liveExercises.flatMap { wEx ->
+                        val st = stateByExerciseId[wEx.id] ?: return@flatMap emptyList()
+                        val alts = WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
+                        val buffersToLog = if (anySetCheckedInSession) {
+                            // Keep Principal first, then Parches in order, for any option where at least 1 set was checked
+                            val orderedIds = listOf(wEx.exerciseId) + alts.map { it.exerciseId }
+                            orderedIds.mapNotNull { id -> st.buffersByExerciseId[id] }
+                                .filter { buf -> buf.done.any { it } }
+                        } else {
+                            // Fallback if user finishes workout without ticking checkboxes: log currently active option
+                            listOf(st.activeBuffer)
+                        }
+
+                        buffersToLog.map { buf ->
+                            val doneIndices = buf.done.indices.filter { buf.done[it] }
+                            val activeIndices = if (doneIndices.isNotEmpty()) doneIndices else buf.done.indices.toList()
+                            val catEx = viewModel.getCatalogExercise(buf.exerciseId)
+                            val altSpec = alts.firstOrNull { it.exerciseId == buf.exerciseId }
+                            val exName = catEx?.name
+                                ?: (if (buf.exerciseId == wEx.exerciseId) wEx.customExerciseName else altSpec?.customExerciseName.orEmpty())
+                                    .ifBlank { "Ejercicio #${buf.exerciseId}" }
+                            val muscles = catEx?.muscles ?: "00000000000000000"
+                            val repsDone = activeIndices.map { i -> buf.reps.getOrNull(i)?.toIntOrNull() ?: 10 }
+                            val loadsDone = activeIndices.map { i -> buf.loads.getOrNull(i)?.toFloatOrNull() ?: 0f }
+                            CompletedExerciseLog(
+                                exerciseId = buf.exerciseId,
+                                exerciseName = exName,
+                                muscles = muscles,
+                                loadsPerSet = loadsDone,
+                                repsPerSet = repsDone,
+                                unitType = buf.unitType
+                            )
+                        }
                     }
                     viewModel.finishWorkoutSession(
                         planId = planId,
@@ -1129,17 +1340,74 @@ fun LiveWorkoutAssistantScreen(
         )
     }
 
-    // Dialog: Replace Exercise in-place during Live Workout
+    // Dialog: Replace Main Exercise permanently during Live Workout
     replacingExerciseTarget?.let { (targetWEx, oldName) ->
         ExercisePickerModal(
             viewModel = viewModel,
-            modalTitle = "Reemplazar: $oldName",
+            modalTitle = "Reemplazar titular: $oldName",
             onDismiss = { replacingExerciseTarget = null },
             onSelectExercise = { replacement ->
                 viewModel.replaceWorkoutExercise(targetWEx, replacement)
                 replacingExerciseTarget = null
-                feedbackBannerText = "⇄ Reemplazado por ${replacement.name}"
+                feedbackBannerText = "⇄ Titular reemplazado por ${replacement.name}"
             }
+        )
+    }
+
+    // Dialog: Pick / Add a "Parche" (Secondary / Tertiary / Optional) Exercise on the spot when a machine is busy!
+    addingLiveAltTarget?.let { (targetWEx, mainCatEx) ->
+        val freshWEx = liveExercises.firstOrNull { it.id == targetWEx.id } ?: targetWEx
+        val existingAlts = WorkoutExerciseAlternativesCodec.decodeAlternatives(freshWEx.notes)
+        val roleTitle = WorkoutExerciseAlternativesCodec.roleFullTitle(existingAlts.size)
+        val excludedIds = setOf(freshWEx.exerciseId) + existingAlts.map { it.exerciseId }
+        val defaultMuscle = WorkoutExerciseAlternativesCodec.primaryMuscleForFilter(mainCatEx?.muscles)
+
+        ExercisePickerModal(
+            viewModel = viewModel,
+            modalTitle = "Usar Parche: $roleTitle",
+            initialMuscleFilter = defaultMuscle,
+            excludeExerciseIds = excludedIds,
+            helperBannerText = "¿Máquina ocupada? Elige tu ejercicio parche: se activará hoy inmediatamente sin modificar el ejercicio titular de tu rutina.",
+            onDismiss = { addingLiveAltTarget = null },
+            onSelectExercise = { chosen ->
+                viewModel.addAlternativeToWorkoutExercise(freshWEx, chosen) { createdSpec ->
+                    val st = perExerciseState[freshWEx.id]
+                    if (st != null) {
+                        if (!st.buffersByExerciseId.containsKey(createdSpec.exerciseId)) {
+                            st.buffersByExerciseId[createdSpec.exerciseId] = createOptionBuffer(
+                                exerciseId = createdSpec.exerciseId,
+                                unitType = createdSpec.unitType,
+                                setsCount = createdSpec.setsCount,
+                                repsCsv = createdSpec.repsPerSetCsv,
+                                loadsCsv = createdSpec.loadsPerSetCsv,
+                                defaultLoadIfZero = 15f
+                            )
+                        }
+                        st.activeExerciseId = createdSpec.exerciseId
+                    }
+                    addingLiveAltTarget = null
+                    feedbackBannerText = "🔀 Usando parche: ${chosen.name} (tu rutina titular no cambia)"
+                }
+            }
+        )
+    }
+
+    // Dialog: Confirm removing a Parche exercise mid-workout
+    liveAltPendingDelete?.let { (targetWEx, altExId, altExName) ->
+        val freshWEx = liveExercises.firstOrNull { it.id == targetWEx.id } ?: targetWEx
+        ConfirmDeleteDialog(
+            itemTitle = "el ejercicio parche \"$altExName\"",
+            onConfirm = {
+                val st = perExerciseState[freshWEx.id]
+                if (st?.activeExerciseId == altExId) {
+                    st.activeExerciseId = freshWEx.exerciseId
+                }
+                st?.buffersByExerciseId?.remove(altExId)
+                viewModel.removeAlternativeFromWorkoutExercise(freshWEx, altExId)
+                liveAltPendingDelete = null
+                feedbackBannerText = "Parche eliminado"
+            },
+            onDismiss = { liveAltPendingDelete = null }
         )
     }
 
@@ -1377,9 +1645,15 @@ private fun LiveGymWpExerciseCard(
     wEx: WorkoutExerciseEntity,
     catEx: CatalogExercise?,
     exName: String,
+    mainExName: String,
+    alternatives: List<AlternativeExerciseSpec>,
+    viewModel: GymWpViewModel,
     state: LiveExerciseRuntimeState,
     isHeroFocused: Boolean,
     overloadSuggestion: OverloadSuggestion? = null,
+    onSelectActiveExerciseId: (Int) -> Unit,
+    onRequestAddAlternative: () -> Unit,
+    onRequestDeleteAlternative: (Int, String) -> Unit,
     onApplyOverloadSuggestion: (() -> Unit)? = null,
     onInspectGuide: () -> Unit,
     onReplaceExercise: () -> Unit,
@@ -1396,6 +1670,7 @@ private fun LiveGymWpExerciseCard(
     onAddSet: () -> Unit,
     onRemoveLastSet: () -> Unit
 ) {
+    val isUsingAlt = state.activeExerciseId != wEx.exerciseId
     val primaryMuscleNames = remember(catEx?.muscles) {
         if (catEx == null) ""
         else (0..15)
@@ -1405,7 +1680,7 @@ private fun LiveGymWpExerciseCard(
     val equipmentLabel = remember(catEx?.equipment) {
         catEx?.equipment?.joinToString(" • ") ?: ""
     }
-    val unitLabel = when (wEx.unitType) {
+    val unitLabel = when (state.activeUnitType) {
         2 -> "seg"
         3 -> "min"
         else -> "reps"
@@ -1414,7 +1689,13 @@ private fun LiveGymWpExerciseCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = GymCardBg),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isUsingAlt) {
+                    Modifier.border(1.dp, GymAccentCyan.copy(alpha = 0.50f), RoundedCornerShape(20.dp))
+                } else Modifier
+            )
     ) {
         Column(Modifier.padding(14.dp)) {
             if (wEx.isBiSet && exerciseIndex > 0) {
@@ -1437,6 +1718,48 @@ private fun LiveGymWpExerciseCard(
                 }
             }
 
+            if (isUsingAlt) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .background(GymAccentCyan.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
+                        .border(1.dp, GymAccentCyan.copy(alpha = 0.40f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            Icons.Default.AltRoute,
+                            contentDescription = null,
+                            tint = GymAccentCyan,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = "PARCHE HOY • Titular intacto: $mainExName",
+                            color = GymAccentCyan,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Volver a ★",
+                        color = GymOrange,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onSelectActiveExerciseId(wEx.exerciseId) }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
             // Hero Exercise Showcase (GIF + Name + Muscles + Equipment)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1454,8 +1777,13 @@ private fun LiveGymWpExerciseCard(
                 }
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "Ejercicio ${exerciseIndex + 1} de $totalExercises",
-                        color = GymTextSecondary,
+                        text = if (isUsingAlt) {
+                            val altIdx = alternatives.indexOfFirst { it.exerciseId == state.activeExerciseId }
+                            "Ejercicio ${exerciseIndex + 1} de $totalExercises • ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altIdx.coerceAtLeast(0))}"
+                        } else {
+                            "Ejercicio ${exerciseIndex + 1} de $totalExercises • ★ Principal"
+                        },
+                        color = if (isUsingAlt) GymAccentCyan else GymTextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1487,6 +1815,150 @@ private fun LiveGymWpExerciseCard(
 
             Spacer(Modifier.height(10.dp))
 
+            // Parche (Secondary / Tertiary / Optional) 1-Tap Switcher for Busy Gym Machines!
+            if (alternatives.isEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(GymAccentCyan.copy(alpha = 0.11f))
+                        .border(1.dp, GymAccentCyan.copy(alpha = 0.35f), RoundedCornerShape(11.dp))
+                        .clickable { onRequestAddAlternative() }
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            Icons.Default.AltRoute,
+                            contentDescription = null,
+                            tint = GymAccentCyan,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "¿Máquina ocupada? Usar ejercicio parche hoy",
+                            color = GymTextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Text(
+                        text = "+ Elegir",
+                        color = GymAccentCyan,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(
+                        text = "¿Máquina ocupada? Cambia en 1 toque sin alterar tu rutina:",
+                        color = GymTextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // ★ Principal Chip
+                        val mainSelected = state.activeExerciseId == wEx.exerciseId
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (mainSelected) GymOrange else GymSurfaceElevated
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (mainSelected) GymOrange else GymOrange.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { onSelectActiveExerciseId(wEx.exerciseId) }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "★ Principal: ${mainExName.take(16)}",
+                                color = if (mainSelected) GymOnPrimary else GymTextPrimary,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        // Configured Secondary / Tertiary / Optional Parche Chips
+                        alternatives.forEachIndexed { altIdx, altSpec ->
+                            val altSelected = state.activeExerciseId == altSpec.exerciseId
+                            val altCat = viewModel.getCatalogExercise(altSpec.exerciseId)
+                            val altName = altCat?.name
+                                ?: altSpec.customExerciseName.ifBlank { "Parche ${altIdx + 2}" }
+                            val roleShort = WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (altSelected) GymAccentCyan.copy(alpha = 0.24f) else GymSurfaceElevated
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (altSelected) GymAccentCyan else GymAccentCyan.copy(alpha = 0.32f),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable { onSelectActiveExerciseId(altSpec.exerciseId) }
+                                    .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Text(
+                                    text = "$roleShort: ${altName.take(16)}",
+                                    color = if (altSelected) GymAccentCyan else GymTextPrimary,
+                                    fontWeight = if (altSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                    fontSize = 11.sp
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Quitar parche",
+                                    tint = GymTextSecondary,
+                                    modifier = Modifier
+                                        .size(15.dp)
+                                        .clip(CircleShape)
+                                        .clickable { onRequestDeleteAlternative(altSpec.exerciseId, altName) }
+                                )
+                            }
+                        }
+
+                        // Add another Parche option (up to 4)
+                        if (alternatives.size < 4) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(GymSurfaceElevated)
+                                    .border(1.dp, GymAccentCyan.copy(alpha = 0.40f), RoundedCornerShape(10.dp))
+                                    .clickable { onRequestAddAlternative() }
+                                    .padding(horizontal = 9.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = GymAccentCyan, modifier = Modifier.size(14.dp))
+                                Text(
+                                    text = "Parche",
+                                    color = GymAccentCyan,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
             // Friendly Gym WP Quick Action Pills Bar
             Row(
                 modifier = Modifier
@@ -1505,10 +1977,10 @@ private fun LiveGymWpExerciseCard(
                     )
                 }
 
-                // 2. Replace Exercise in-place
+                // 2. Permanently Replace Titular Exercise in-place
                 LiveActionPill(
                     icon = Icons.Default.SwapHoriz,
-                    label = "Reemplazar",
+                    label = "Reemplazar ★",
                     highlighted = false,
                     onClick = onReplaceExercise
                 )
@@ -1688,7 +2160,7 @@ private fun LiveGymWpExerciseCard(
                     )
 
                     // Weight (kg) Stepper Control
-                    if (wEx.unitType == 0) {
+                    if (state.activeUnitType == 0) {
                         TactileStepperPill(
                             valueText = loadVal,
                             unitText = "kg",

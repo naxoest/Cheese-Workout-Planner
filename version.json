@@ -1,6 +1,6 @@
 {
-  "versionCode": 205,
-  "versionName": "2.5.0",
+  "versionCode": 206,
+  "versionName": "2.6.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Ordenar ejercicios en rutinas: nuevo botón 'Ordenar' en el encabezado de cada día para subir o bajar ejercicios cómodamente antes de entrenar.\n• Historial exclusivo en Ejercicios -> Estadísticas: la pestaña Entrenar queda limpia para tus rutinas y el historial vive únicamente en Estadísticas.\n• Vista de solo lectura de entrenamientos realizados: toca cualquier entrenamiento en Estadísticas para abrir la rutina ejecutada con sus series, repeticiones y cargas exactas.\n• Sugerencia de sobrecarga progresiva en 1 toque: mensajes cortos basados en tu última sesión (+2.5 kg, +2 reps, +10s o +2 min) tanto antes como durante el entrenamiento."
+  "releaseNotes": "• Ejercicios Parche (Secundario / Terciario / Opcional): configura alternativas para cada ejercicio de tu rutina cuando una máquina o implemento esté ocupado.\n• Cambio en 1 toque en vivo: durante el entrenamiento puedes alternar entre ★ Principal y tus Parches (o elegir uno nuevo al instante filtrado por el mismo músculo) sin sobrescribir tu rutina titular.\n• Series, cargas y progresión independientes: cada ejercicio parche recuerda sus propios kg y repeticiones, recibe sugerencias de sobrecarga progresiva y registra el ejercicio realmente ejecutado en Estadísticas."
 }
