@@ -174,7 +174,7 @@ object GoogleDriveBackupManager {
 
                 val now = System.currentTimeMillis()
                 val fileName = resolveDisplayName(context, targetUri)
-                val msg = "✅ Sincronizado en Google Drive ($fileName • ${allUsers.size} usuarios, ${payload.workoutPlans.size} planes, ${payload.finishedWorkouts.size} sesiones)"
+                val msg = "Sincronizado en Google Drive ($fileName • ${allUsers.size} usuarios, ${payload.workoutPlans.size} planes, ${payload.finishedWorkouts.size} sesiones)"
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 prefs.edit()
                     .putString(KEY_LINKED_URI, targetUri.toString())
@@ -184,7 +184,7 @@ object GoogleDriveBackupManager {
                     .apply()
                 Result.success(loadSyncState(context))
             } catch (e: Exception) {
-                val errMsg = "⚠️ Error al sincronizar con Google Drive: ${e.localizedMessage ?: "Permiso expirado"}"
+                val errMsg = "Error al sincronizar con Google Drive: ${e.localizedMessage ?: "Permiso expirado"}"
                 context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
                     .putString(KEY_LAST_STATUS, errMsg)
@@ -224,7 +224,7 @@ object GoogleDriveBackupManager {
             val profilesToRestore = when {
                 payload.userProfiles.isNotEmpty() -> payload.userProfiles
                 payload.userProfile != null -> listOf(payload.userProfile)
-                else -> listOf(UserProfileEntity(id = 1, name = "Ignacio"))
+                else -> listOf(UserProfileEntity(id = 1, name = "Usuario 1"))
             }
 
             dao.clearUserProfiles()
@@ -287,7 +287,7 @@ object GoogleDriveBackupManager {
 
             val now = System.currentTimeMillis()
             val fileName = resolveDisplayName(context, sourceUri)
-            val msg = "✅ Restaurado desde Google Drive ($fileName • ${profilesToRestore.size} usuarios, ${payload.workoutPlans.size} planes)"
+            val msg = "Restaurado desde Google Drive ($fileName • ${profilesToRestore.size} usuarios, ${payload.workoutPlans.size} planes)"
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit()
                 .putLong(KEY_LAST_SYNC_MILLIS, now)
@@ -295,7 +295,7 @@ object GoogleDriveBackupManager {
                 .apply()
             Result.success(loadSyncState(context))
         } catch (e: Exception) {
-            val errMsg = "⚠️ Error al restaurar desde Google Drive: ${e.localizedMessage ?: "Archivo inválido"}"
+            val errMsg = "Error al restaurar desde Google Drive: ${e.localizedMessage ?: "Archivo inválido"}"
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY_LAST_STATUS, errMsg)

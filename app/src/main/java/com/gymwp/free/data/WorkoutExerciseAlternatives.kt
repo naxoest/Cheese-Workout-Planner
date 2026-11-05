@@ -148,3 +148,73 @@ object WorkoutExerciseAlternativesCodec {
         )
     }
 }
+
+/**
+ * Codificador y decodificador de días de la semana asignados a un día de rutina (1=Lun .. 7=Dom).
+ * Almacena la programación de forma segura sin requerir migraciones destructivas de base de datos.
+ */
+object WorkoutDayScheduleCodec {
+    private const val PREFIX = "[DIAS:"
+    private const val SUFFIX = "]"
+
+    val DAY_LABELS = listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+    val DAY_FULL_NAMES = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+
+    fun getCleanName(rawName: String?): String {
+        if (rawName.isNullOrBlank()) return ""
+        val idx = rawName.indexOf(PREFIX)
+        return if (idx >= 0) rawName.substring(0, idx).trim() else rawName.trim()
+    }
+
+    fun getAssignedDays(rawName: String?): List<Int> {
+        if (rawName.isNullOrBlank()) return emptyList()
+        val start = rawName.indexOf(PREFIX)
+        if (start < 0) return emptyList()
+        val end = rawName.indexOf(SUFFIX, start)
+        if (end <= start) return emptyList()
+        val content = rawName.substring(start + PREFIX.length, end)
+        return content.split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it in 1..7 }
+            .distinct()
+            .sorted()
+    }
+
+    fun encodeName(cleanName: String, assignedDays: List<Int>): String {
+        val base = getCleanName(cleanName)
+        val validDays = assignedDays.distinct().filter { it in 1..7 }.sorted()
+        if (validDays.isEmpty()) return base
+        val csv = validDays.joinToString(",")
+        return "$base $PREFIX$csv$SUFFIX"
+    }
+
+    fun formatDaysSummary(assignedDays: List<Int>): String {
+        if (assignedDays.isEmpty()) return "Sin día asignado"
+        return assignedDays.mapNotNull { DAY_LABELS.getOrNull(it - 1) }.joinToString(", ")
+    }
+
+    fun isToday(assignedDays: List<Int>): Boolean {
+        if (assignedDays.isEmpty()) return false
+        val cal = java.util.Calendar.getInstance()
+        val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+            java.util.Calendar.MONDAY -> 1
+            java.util.Calendar.TUESDAY -> 2
+            java.util.Calendar.WEDNESDAY -> 3
+            java.util.Calendar.THURSDAY -> 4
+            java.util.Calendar.FRIDAY -> 5
+            java.util.Calendar.SATURDAY -> 6
+            java.util.Calendar.SUNDAY -> 7
+            else -> 1
+        }
+        return currentDay in assignedDays
+    }
+}
+
+/**
+ * Normaliza cadenas eliminando tildes y diacríticos (ej. "Press Francés" -> "press frances").
+ * Permite que las búsquedas y coincidencias de ejercicios sean completamente insensibles a tildes.
+ */
+fun String.normalizeForSearch(): String {
+    val normalized = java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+    return "\\p{InCombiningDiacriticalMarks}+".toRegex().replace(normalized, "").lowercase(Locale.ROOT).trim()
+}

@@ -380,16 +380,29 @@ fun HomeWorkoutsScreen(
                             }
                     }
 
-                    val lastTrainedLabel = remember(finishedWorkouts, day.name) {
+                    val cleanDayName = remember(day.name) {
+                        WorkoutDayScheduleCodec.getCleanName(day.name)
+                    }
+                    val assignedDays = remember(day.name) {
+                        WorkoutDayScheduleCodec.getAssignedDays(day.name)
+                    }
+                    val assignedDaysSummary = remember(assignedDays) {
+                        if (assignedDays.isNotEmpty()) WorkoutDayScheduleCodec.formatDaysSummary(assignedDays) else ""
+                    }
+                    val isScheduledForToday = remember(assignedDays) {
+                        WorkoutDayScheduleCodec.isToday(assignedDays)
+                    }
+
+                    val lastTrainedLabel = remember(finishedWorkouts, cleanDayName) {
                         val lastSession = finishedWorkouts
-                            .filter { it.dayName.equals(day.name, ignoreCase = true) }
+                            .filter { it.dayName.equals(cleanDayName, ignoreCase = true) || it.dayName.equals(day.name, ignoreCase = true) }
                             .maxByOrNull { it.timestampMillis }
                         if (lastSession == null) {
                             "Listo para hoy"
                         } else {
                             val daysAgo = ((System.currentTimeMillis() - lastSession.timestampMillis).coerceAtLeast(0L) / 86_400_000L).toInt()
                             when {
-                                daysAgo <= 0 -> "Hecho hoy ✓"
+                                daysAgo <= 0 -> "Hecho hoy"
                                 daysAgo == 1 -> "Hace 1 día"
                                 else -> "Hace $daysAgo días"
                             }
@@ -403,23 +416,16 @@ fun HomeWorkoutsScreen(
                             .fillMaxWidth()
                             .border(
                                 width = 1.dp,
-                                color = dayColor.copy(alpha = 0.38f),
+                                color = GymBorder,
                                 shape = RoundedCornerShape(22.dp)
                             )
                     ) {
                         Column {
-                            // 1. Rich Gradient Day Header
+                            // 1. Clean Neutral Day Header
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            colors = listOf(
-                                                dayColor,
-                                                dayColor.copy(alpha = 0.76f)
-                                            )
-                                        )
-                                    )
+                                    .background(GymSurfaceElevated)
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 Row(
@@ -434,12 +440,13 @@ fun HomeWorkoutsScreen(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(Color.Black.copy(alpha = 0.28f))
+                                                .background(GymCardBg)
+                                                .border(1.dp, GymBorder, RoundedCornerShape(8.dp))
                                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
                                             Text(
                                                 text = "DÍA ${dayIdx + 1}",
-                                                color = Color.White,
+                                                color = GymTextPrimary,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 fontSize = 10.sp
                                             )
@@ -447,15 +454,36 @@ fun HomeWorkoutsScreen(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(Color.White.copy(alpha = 0.20f))
+                                                .background(GymCardBg)
+                                                .border(1.dp, GymBorder, RoundedCornerShape(8.dp))
                                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
                                             Text(
                                                 text = lastTrainedLabel,
-                                                color = Color.White,
+                                                color = GymTextSecondary,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 10.sp
                                             )
+                                        }
+                                        if (assignedDaysSummary.isNotBlank()) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(if (isScheduledForToday) GymOrange.copy(alpha = 0.18f) else GymCardBg)
+                                                    .border(
+                                                        1.dp,
+                                                        if (isScheduledForToday) GymOrange.copy(alpha = 0.5f) else GymBorder,
+                                                        RoundedCornerShape(8.dp)
+                                                    )
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (isScheduledForToday) "Hoy • $assignedDaysSummary" else assignedDaysSummary,
+                                                    color = if (isScheduledForToday) GymOrange else GymTextSecondary,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 10.sp
+                                                )
+                                            }
                                         }
                                     }
 
@@ -469,7 +497,7 @@ fun HomeWorkoutsScreen(
                                                     reorderingDayId = if (isReorderingThisDay) null else day.id
                                                 },
                                                 shape = RoundedCornerShape(9.dp),
-                                                color = if (isReorderingThisDay) Color.White else Color.Black.copy(alpha = 0.24f)
+                                                color = if (isReorderingThisDay) GymOrange else GymCardBg
                                             ) {
                                                 Row(
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -479,12 +507,12 @@ fun HomeWorkoutsScreen(
                                                     Icon(
                                                         imageVector = if (isReorderingThisDay) Icons.Default.Check else Icons.Default.SwapVert,
                                                         contentDescription = if (isReorderingThisDay) "Terminar orden" else "Ordenar ejercicios",
-                                                        tint = if (isReorderingThisDay) dayColor else Color.White,
+                                                        tint = if (isReorderingThisDay) GymOnPrimary else GymTextSecondary,
                                                         modifier = Modifier.size(14.dp)
                                                     )
                                                     Text(
                                                         text = if (isReorderingThisDay) "Listo" else "Ordenar",
-                                                        color = if (isReorderingThisDay) dayColor else Color.White,
+                                                        color = if (isReorderingThisDay) GymOnPrimary else GymTextSecondary,
                                                         fontWeight = FontWeight.ExtraBold,
                                                         fontSize = 11.sp
                                                     )
@@ -496,14 +524,14 @@ fun HomeWorkoutsScreen(
                                             modifier = Modifier
                                                 .size(30.dp)
                                                 .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.22f))
+                                                .background(GymCardBg)
                                                 .clickable { editingDayTarget = day },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 Icons.Default.Edit,
                                                 contentDescription = "Editar nombre o color del día",
-                                                tint = Color.White,
+                                                tint = GymTextSecondary,
                                                 modifier = Modifier.size(15.dp)
                                             )
                                         }
@@ -512,14 +540,14 @@ fun HomeWorkoutsScreen(
                                             modifier = Modifier
                                                 .size(30.dp)
                                                 .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.22f))
+                                                .background(GymCardBg)
                                                 .clickable { dayPendingDelete = day },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 Icons.Default.DeleteOutline,
                                                 contentDescription = "Eliminar día",
-                                                tint = Color.White,
+                                                tint = GymTextSecondary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -528,7 +556,7 @@ fun HomeWorkoutsScreen(
                                             modifier = Modifier
                                                 .size(30.dp)
                                                 .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.22f))
+                                                .background(GymCardBg)
                                                 .clickable {
                                                     if (isCollapsed) collapsedDayIds.remove(day.id)
                                                     else {
@@ -541,7 +569,7 @@ fun HomeWorkoutsScreen(
                                             Icon(
                                                 imageVector = if (isCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
                                                 contentDescription = if (isCollapsed) "Ver ejercicios" else "Contraer día",
-                                                tint = Color.White,
+                                                tint = GymTextSecondary,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -551,8 +579,8 @@ fun HomeWorkoutsScreen(
                                 Spacer(Modifier.height(8.dp))
 
                                 Text(
-                                    text = day.name,
-                                    color = Color.White,
+                                    text = cleanDayName,
+                                    color = GymTextPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 18.sp,
                                     lineHeight = 22.sp,
@@ -566,10 +594,10 @@ fun HomeWorkoutsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    DayHeaderKpiPill("🏋️ ${dayExercises.size} ejerc.", Modifier.weight(1f))
-                                    DayHeaderKpiPill("⚡ $totalSets series", Modifier.weight(1f))
-                                    DayHeaderKpiPill("⏱ $minDur-$maxDur m", Modifier.weight(1f))
-                                    DayHeaderKpiPill("🔥 ~$estKcal kcal", Modifier.weight(1f))
+                                    DayHeaderKpiPill("${dayExercises.size} ejerc.", Modifier.weight(1f))
+                                    DayHeaderKpiPill("$totalSets series", Modifier.weight(1f))
+                                    DayHeaderKpiPill("$minDur-$maxDur m", Modifier.weight(1f))
+                                    DayHeaderKpiPill("~$estKcal kcal", Modifier.weight(1f))
                                 }
                             }
 
@@ -578,13 +606,13 @@ fun HomeWorkoutsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(dayColor.copy(alpha = 0.10f))
+                                        .background(GymCardBg.copy(alpha = 0.5f))
                                         .padding(horizontal = 12.dp, vertical = 7.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = "🎯 Enfoque:",
+                                        text = "Enfoque:",
                                         color = GymTextSecondary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -600,15 +628,15 @@ fun HomeWorkoutsScreen(
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(7.dp))
-                                                    .background(dayColor.copy(alpha = 0.18f))
-                                                    .border(1.dp, dayColor.copy(alpha = 0.40f), RoundedCornerShape(7.dp))
+                                                    .background(GymSurfaceElevated)
+                                                    .border(1.dp, GymBorder, RoundedCornerShape(7.dp))
                                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
                                                     text = mLabel,
                                                     color = GymTextPrimary,
                                                     fontSize = 10.sp,
-                                                    fontWeight = FontWeight.ExtraBold
+                                                    fontWeight = FontWeight.SemiBold
                                                 )
                                             }
                                         }
@@ -684,15 +712,15 @@ fun HomeWorkoutsScreen(
                                                 Box(
                                                     modifier = Modifier
                                                         .clip(RoundedCornerShape(8.dp))
-                                                        .background(GymAccentCyan.copy(alpha = 0.14f))
-                                                        .border(1.dp, GymAccentCyan.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                                        .background(GymCardBg)
+                                                        .border(1.dp, GymBorder, RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 10.dp, vertical = 3.dp)
                                                 ) {
                                                     Text(
-                                                        text = "⚡ SUPERSERIE CON EL ANTERIOR",
-                                                        color = GymAccentCyan,
+                                                        text = "SUPERSERIE CON EL ANTERIOR",
+                                                        color = GymTextSecondary,
                                                         fontSize = 10.sp,
-                                                        fontWeight = FontWeight.ExtraBold
+                                                        fontWeight = FontWeight.Bold
                                                     )
                                                 }
                                             }
@@ -742,24 +770,16 @@ fun HomeWorkoutsScreen(
                                                 .background(GymSurfaceElevated)
                                                 .border(
                                                     width = 1.dp,
-                                                    color = dayColor.copy(alpha = 0.22f),
+                                                    color = GymBorder,
                                                     shape = RoundedCornerShape(16.dp)
                                                 )
                                                 .let { mod ->
                                                     if (!isReorderingThisDay) mod.clickable { editingWorkoutExercise = wEx } else mod
                                                 }
                                         ) {
-                                            // Colored Left Accent Bar
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(4.dp)
-                                                    .fillMaxHeight()
-                                                    .background(dayColor)
-                                            )
-
                                             Column(
                                                 modifier = Modifier
-                                                    .weight(1f)
+                                                    .fillMaxWidth()
                                                     .padding(10.dp)
                                             ) {
                                                 Row(
@@ -771,13 +791,13 @@ fun HomeWorkoutsScreen(
                                                         modifier = Modifier
                                                             .size(26.dp)
                                                             .clip(CircleShape)
-                                                            .background(dayColor.copy(alpha = 0.20f)),
+                                                            .background(GymCardBg),
                                                         contentAlignment = Alignment.Center
                                                     ) {
                                                         Text(
                                                             text = "%02d".format(idx + 1),
-                                                            color = dayColor,
-                                                            fontWeight = FontWeight.ExtraBold,
+                                                            color = GymTextSecondary,
+                                                            fontWeight = FontWeight.Bold,
                                                             fontSize = 11.sp
                                                         )
                                                     }
@@ -806,9 +826,9 @@ fun HomeWorkoutsScreen(
                                                         if (exPrimaryMuscle.isNotBlank()) {
                                                             Text(
                                                                 text = exPrimaryMuscle,
-                                                                color = dayColor,
+                                                                color = GymTextSecondary,
                                                                 fontSize = 11.sp,
-                                                                fontWeight = FontWeight.Bold
+                                                                fontWeight = FontWeight.SemiBold
                                                             )
                                                         }
                                                         Spacer(Modifier.height(4.dp))
@@ -820,18 +840,18 @@ fun HomeWorkoutsScreen(
                                                         ) {
                                                             DayExerciseMetricBadge(
                                                                 text = formattedSeriesText,
-                                                                bgColor = GymOrange.copy(alpha = 0.16f),
-                                                                textColor = GymOrange
+                                                                bgColor = GymCardBg,
+                                                                textColor = GymTextPrimary
                                                             )
                                                             if (wEx.unitType == 0) {
                                                                 DayExerciseMetricBadge(
-                                                                    text = "🏋️ $formattedLoadsText",
+                                                                    text = formattedLoadsText,
                                                                     bgColor = GymCardBg,
                                                                     textColor = GymTextPrimary
                                                                 )
                                                             }
                                                             DayExerciseMetricBadge(
-                                                                text = "⏱ ${wEx.restSeconds}s",
+                                                                text = "${wEx.restSeconds}s",
                                                                 bgColor = GymCardBg,
                                                                 textColor = GymTextSecondary
                                                             )
@@ -846,10 +866,7 @@ fun HomeWorkoutsScreen(
                                                                 modifier = Modifier
                                                                     .size(34.dp)
                                                                     .clip(RoundedCornerShape(10.dp))
-                                                                    .background(
-                                                                        if (canUp) dayColor.copy(alpha = 0.22f)
-                                                                        else GymCardBg.copy(alpha = 0.5f)
-                                                                    )
+                                                                    .background(GymCardBg)
                                                                     .let { m ->
                                                                         if (canUp) {
                                                                             m.clickable {
@@ -862,7 +879,7 @@ fun HomeWorkoutsScreen(
                                                                 Icon(
                                                                     Icons.Default.KeyboardArrowUp,
                                                                     contentDescription = "Subir ejercicio",
-                                                                    tint = if (canUp) dayColor else GymTextSecondary.copy(alpha = 0.35f),
+                                                                    tint = if (canUp) GymTextPrimary else GymTextSecondary.copy(alpha = 0.35f),
                                                                     modifier = Modifier.size(22.dp)
                                                                 )
                                                             }
@@ -870,10 +887,7 @@ fun HomeWorkoutsScreen(
                                                                 modifier = Modifier
                                                                     .size(34.dp)
                                                                     .clip(RoundedCornerShape(10.dp))
-                                                                    .background(
-                                                                        if (canDown) dayColor.copy(alpha = 0.22f)
-                                                                        else GymCardBg.copy(alpha = 0.5f)
-                                                                    )
+                                                                    .background(GymCardBg)
                                                                     .let { m ->
                                                                         if (canDown) {
                                                                             m.clickable {
@@ -886,7 +900,7 @@ fun HomeWorkoutsScreen(
                                                                 Icon(
                                                                     Icons.Default.KeyboardArrowDown,
                                                                     contentDescription = "Bajar ejercicio",
-                                                                    tint = if (canDown) dayColor else GymTextSecondary.copy(alpha = 0.35f),
+                                                                    tint = if (canDown) GymTextPrimary else GymTextSecondary.copy(alpha = 0.35f),
                                                                     modifier = Modifier.size(22.dp)
                                                                 )
                                                             }
@@ -901,14 +915,14 @@ fun HomeWorkoutsScreen(
                                                                     modifier = Modifier
                                                                         .size(30.dp)
                                                                         .clip(CircleShape)
-                                                                        .background(GymOrange.copy(alpha = 0.14f))
+                                                                        .background(GymCardBg)
                                                                         .clickable { editingWorkoutExercise = wEx },
                                                                     contentAlignment = Alignment.Center
                                                                 ) {
                                                                     Icon(
                                                                         Icons.Default.Tune,
                                                                         contentDescription = "Editar series/carga",
-                                                                        tint = GymOrange,
+                                                                        tint = GymTextSecondary,
                                                                         modifier = Modifier.size(16.dp)
                                                                     )
                                                                 }
@@ -923,7 +937,7 @@ fun HomeWorkoutsScreen(
                                                                     Icon(
                                                                         Icons.Default.SwapHoriz,
                                                                         contentDescription = "Reemplazar ejercicio",
-                                                                        tint = GymOrange,
+                                                                        tint = GymTextSecondary,
                                                                         modifier = Modifier.size(16.dp)
                                                                     )
                                                                 }
@@ -967,7 +981,7 @@ fun HomeWorkoutsScreen(
                                                                         .background(GymCardBg)
                                                                         .border(
                                                                             width = 1.dp,
-                                                                            color = GymAccentCyan.copy(alpha = 0.32f),
+                                                                            color = GymBorder,
                                                                             shape = RoundedCornerShape(8.dp)
                                                                         )
                                                                         .clickable { editingWorkoutExercise = wEx }
@@ -978,14 +992,14 @@ fun HomeWorkoutsScreen(
                                                                     Icon(
                                                                         Icons.Default.CallSplit,
                                                                         contentDescription = null,
-                                                                        tint = GymAccentCyan,
+                                                                        tint = GymTextSecondary,
                                                                         modifier = Modifier.size(13.dp)
                                                                     )
                                                                     Text(
                                                                         text = "${WorkoutExerciseAlternativesCodec.roleShortChipLabel(altIdx)}:",
-                                                                        color = GymAccentCyan,
+                                                                        color = GymTextSecondary,
                                                                         fontSize = 10.sp,
-                                                                        fontWeight = FontWeight.ExtraBold
+                                                                        fontWeight = FontWeight.Bold
                                                                     )
                                                                     Text(
                                                                         text = altFullName,
@@ -1006,10 +1020,10 @@ fun HomeWorkoutsScreen(
                                                                     verticalAlignment = Alignment.CenterVertically,
                                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                                 ) {
-                                                                    Icon(Icons.Default.Add, contentDescription = null, tint = GymAccentCyan, modifier = Modifier.size(13.dp))
+                                                                    Icon(Icons.Default.Add, contentDescription = null, tint = GymTextSecondary, modifier = Modifier.size(13.dp))
                                                                     Text(
                                                                         text = "Añadir otro ejercicio parche",
-                                                                        color = GymAccentCyan,
+                                                                        color = GymTextSecondary,
                                                                         fontSize = 11.sp,
                                                                         fontWeight = FontWeight.Bold
                                                                     )
@@ -1028,12 +1042,12 @@ fun HomeWorkoutsScreen(
                                                             Icon(
                                                                 Icons.Default.CallSplit,
                                                                 contentDescription = null,
-                                                                tint = GymAccentCyan,
+                                                                tint = GymTextSecondary,
                                                                 modifier = Modifier.size(13.dp)
                                                             )
                                                             Text(
                                                                 text = "+ Añadir ejercicio parche (si máquina está ocupada)",
-                                                                color = GymAccentCyan,
+                                                                color = GymTextSecondary,
                                                                 fontSize = 11.sp,
                                                                 fontWeight = FontWeight.SemiBold
                                                             )
@@ -1090,7 +1104,7 @@ fun HomeWorkoutsScreen(
                                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                                         ) {
                                                             Text(
-                                                                text = if (isOverloadApplied) "✓ Meta activa" else overloadSuggestion.buttonLabel,
+                                                                text = if (isOverloadApplied) "Meta activa" else overloadSuggestion.buttonLabel,
                                                                 color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
                                                                 fontWeight = FontWeight.ExtraBold,
                                                                 fontSize = 11.sp
@@ -1129,7 +1143,7 @@ fun HomeWorkoutsScreen(
                                             reorderingDayId = null
                                             onStartLiveWorkout(activePlan, day, dayExercises)
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = dayColor, contentColor = Color.White),
+                                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
                                         shape = RoundedCornerShape(13.dp),
                                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                                         modifier = Modifier.weight(1f)
@@ -1241,6 +1255,7 @@ fun HomeWorkoutsScreen(
     showAddDayDialogForPlan?.let { targetPlanId ->
         var dayName by remember { mutableStateOf("") }
         var chosenColor by remember { mutableIntStateOf(0) }
+        var selectedDays by remember { mutableStateOf(emptyList<Int>()) }
         AlertDialog(
             onDismissRequest = { showAddDayDialogForPlan = null },
             title = { Text("Añadir Día de Entrenamiento", color = GymTextPrimary, fontWeight = FontWeight.Bold) },
@@ -1249,9 +1264,42 @@ fun HomeWorkoutsScreen(
                     OutlinedTextField(
                         value = dayName,
                         onValueChange = { dayName = it },
-                        label = { Text("Nombre (ej. Día A - Pecho y Tríceps)") }
+                        label = { Text("Nombre (ej. Día A - Pecho y Tríceps)") },
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Text("Color de la tarjeta:", fontSize = 13.sp, color = GymTextSecondary)
+                    Text("Días de la semana programados:", fontSize = 13.sp, color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        WorkoutDayScheduleCodec.DAY_LABELS.forEachIndexed { idx, shortLabel ->
+                            val dayNum = idx + 1
+                            val isSelected = dayNum in selectedDays
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) GymOrange else GymSurfaceElevated)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) GymOrange else GymBorder,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        selectedDays = if (isSelected) selectedDays.filter { it != dayNum } else (selectedDays + dayNum).sorted()
+                                    }
+                                    .padding(horizontal = 7.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = shortLabel,
+                                    color = if (isSelected) GymOnPrimary else GymTextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                    Text("Color distintivo (opcional):", fontSize = 13.sp, color = GymTextSecondary)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -1276,7 +1324,8 @@ fun HomeWorkoutsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.addWorkoutDay(targetPlanId, dayName, chosenColor)
+                        val encodedName = WorkoutDayScheduleCodec.encodeName(dayName.trim().ifBlank { "Nuevo Día" }, selectedDays)
+                        viewModel.addWorkoutDay(targetPlanId, encodedName, chosenColor)
                         showAddDayDialogForPlan = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
@@ -1291,10 +1340,17 @@ fun HomeWorkoutsScreen(
         )
     }
 
-    // Dialog: Edit Day Name & Color
+    // Dialog: Edit Day Name & Color & Weekdays
     editingDayTarget?.let { targetDay ->
-        var editedName by remember(targetDay.id) { mutableStateOf(targetDay.name) }
-        var editedColor by remember(targetDay.id) { mutableIntStateOf(targetDay.colorIndex.coerceIn(0, DayPalette.lastIndex)) }
+        var editedName by remember(targetDay.id) {
+            mutableStateOf(WorkoutDayScheduleCodec.getCleanName(targetDay.name))
+        }
+        var selectedDays by remember(targetDay.id) {
+            mutableStateOf(WorkoutDayScheduleCodec.getAssignedDays(targetDay.name))
+        }
+        var editedColor by remember(targetDay.id) {
+            mutableIntStateOf(targetDay.colorIndex.coerceIn(0, DayPalette.lastIndex))
+        }
         AlertDialog(
             onDismissRequest = { editingDayTarget = null },
             title = { Text("Personalizar Día de Rutina", color = GymTextPrimary, fontWeight = FontWeight.ExtraBold) },
@@ -1307,7 +1363,39 @@ fun HomeWorkoutsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text("Color distintivo de la tarjeta:", fontSize = 13.sp, color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
+                    Text("Días de la semana programados:", fontSize = 13.sp, color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        WorkoutDayScheduleCodec.DAY_LABELS.forEachIndexed { idx, shortLabel ->
+                            val dayNum = idx + 1
+                            val isSelected = dayNum in selectedDays
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) GymOrange else GymSurfaceElevated)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) GymOrange else GymBorder,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        selectedDays = if (isSelected) selectedDays.filter { it != dayNum } else (selectedDays + dayNum).sorted()
+                                    }
+                                    .padding(horizontal = 7.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = shortLabel,
+                                    color = if (isSelected) GymOnPrimary else GymTextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                    Text("Color distintivo (opcional):", fontSize = 13.sp, color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1334,9 +1422,13 @@ fun HomeWorkoutsScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        val encodedName = WorkoutDayScheduleCodec.encodeName(
+                            editedName.trim().ifBlank { WorkoutDayScheduleCodec.getCleanName(targetDay.name) },
+                            selectedDays
+                        )
                         viewModel.updateWorkoutDayColorOrName(
                             targetDay.copy(
-                                name = editedName.trim().ifBlank { targetDay.name },
+                                name = encodedName,
                                 colorIndex = editedColor
                             )
                         )
@@ -1771,9 +1863,10 @@ fun ExercisePickerModal(
     }
 
     val filtered = remember(catalog, search, selectedMuscle, selectedEquipment, onlyCustom, excludeExerciseIds) {
+        val queryNorm = search.normalizeForSearch()
         catalog.filter { ex ->
             val notExcluded = ex.id !in excludeExerciseIds
-            val matchesQuery = search.isBlank() || ex.name.contains(search, ignoreCase = true)
+            val matchesQuery = queryNorm.isBlank() || ex.name.normalizeForSearch().contains(queryNorm)
             val matchesMuscle = selectedMuscle == null || (selectedMuscle!! < ex.muscles.length && ex.muscles[selectedMuscle!!] >= '2')
             val matchesEquip = selectedEquipment == null || ex.equipment.contains(selectedEquipment)
             val matchesCustom = !onlyCustom || ex.id >= 10000
@@ -1886,7 +1979,7 @@ fun ExercisePickerModal(
                     FilterChip(
                         selected = onlyCustom,
                         onClick = { onlyCustom = !onlyCustom },
-                        label = { Text("★ Mis Ejercicios", fontSize = 11.sp) }
+                        label = { Text("Mis Ejercicios", fontSize = 11.sp) }
                     )
                     MuscleCatalog.ALL_MUSCLES.forEach { m ->
                         FilterChip(
@@ -1948,7 +2041,7 @@ fun ExercisePickerModal(
                                     )
                                     if (ex.id >= 10000) {
                                         Spacer(Modifier.width(6.dp))
-                                        Text("★ Propio", color = GymOrange, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                                        Text("Propio", color = GymOrange, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                                     }
                                 }
                                 if (primaryMuscles.isNotBlank()) {
@@ -2142,14 +2235,14 @@ fun EditWorkoutExerciseDialog(
                         Column(modifier = Modifier.weight(1f)) {
                             if (activeAlt != null) {
                                 Text(
-                                    text = "🔀 ${WorkoutExerciseAlternativesCodec.roleFullTitle(safeSelectedIdx - 1)}",
+                                    text = WorkoutExerciseAlternativesCodec.roleFullTitle(safeSelectedIdx - 1),
                                     color = GymAccentCyan,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 11.sp
                                 )
                             } else {
                                 Text(
-                                    text = "★ Ejercicio Principal (Titular)",
+                                    text = "Ejercicio Principal (Titular)",
                                     color = GymOrange,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 11.sp
@@ -2302,7 +2395,7 @@ fun EditWorkoutExerciseDialog(
                                             .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = "★ Principal",
+                                            text = "Principal",
                                             color = if (isMainSelected) GymOnPrimary else GymOrange,
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 10.sp
@@ -2476,12 +2569,12 @@ fun EditWorkoutExerciseDialog(
                                                 }
                                             }
                                         }
-                                        replicatedBanner = "✓ Meta aplicada: ${activeOverloadSuggestion.buttonLabel}"
+                                        replicatedBanner = "Meta aplicada: ${activeOverloadSuggestion.buttonLabel}"
                                     }
                                     .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    text = if (isAppliedInEditor) "✓ Aplicado" else activeOverloadSuggestion.buttonLabel,
+                                    text = if (isAppliedInEditor) "Aplicado" else activeOverloadSuggestion.buttonLabel,
                                     color = if (isAppliedInEditor) FatigueGreen else GymOnPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 11.sp
@@ -2558,7 +2651,7 @@ fun EditWorkoutExerciseDialog(
                                         repsList[i] = firstR
                                         loadsList[i] = firstL
                                     }
-                                    replicatedBanner = "✓ Serie 1 copiada a las ${repsList.size} series"
+                                    replicatedBanner = "Serie 1 copiada a las ${repsList.size} series"
                                 },
                                 colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = GymOrange,
@@ -2927,7 +3020,7 @@ fun EditWorkoutExerciseDialog(
                     }
                 }
                 if (replicateRemaining) {
-                    replicatedBanner = "✓ Valor replicado a las series siguientes"
+                    replicatedBanner = "Valor replicado a las series siguientes"
                 }
             }
             exactFieldTarget = null
@@ -3062,7 +3155,7 @@ fun EditWorkoutExerciseDialog(
                 )
                 selectedOptionIdx = altOptions.size
                 showAddAltModal = false
-                replicatedBanner = "✓ ${chosenAlt.name} añadido como ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altOptions.size - 1)}"
+                replicatedBanner = "${chosenAlt.name} añadido como ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altOptions.size - 1)}"
             }
         )
     }

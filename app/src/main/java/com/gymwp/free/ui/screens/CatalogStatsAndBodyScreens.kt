@@ -35,6 +35,7 @@ import com.gymwp.free.data.CatalogExercise
 import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.data.FinishedWorkoutDayEntity
 import com.gymwp.free.data.UserProfileEntity
+import com.gymwp.free.data.normalizeForSearch
 import com.gymwp.free.domain.BodyMetricsCalculator
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.domain.ProgressiveOverloadAdvisor
@@ -89,8 +90,9 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
     val filteredCatalog = remember(
         allCatalog, search, selectedMuscleId, selectedEquipment, onlyFavorites, onlyCustom, favorites
     ) {
+        val q = search.normalizeForSearch()
         allCatalog.filter { ex ->
-            val matchSearch = search.isBlank() || ex.name.contains(search, ignoreCase = true)
+            val matchSearch = q.isBlank() || ex.name.normalizeForSearch().contains(q)
             val matchMuscle = selectedMuscleId == null ||
                 (selectedMuscleId!! < ex.muscles.length && ex.muscles[selectedMuscleId!!] >= '2')
             val matchEquip = selectedEquipment == null || ex.equipment.contains(selectedEquipment)
@@ -171,12 +173,12 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                     FilterChip(
                         selected = onlyCustom,
                         onClick = { onlyCustom = !onlyCustom },
-                        label = { Text("★ Mis Ejercicios", fontSize = 11.sp) }
+                        label = { Text("Mis Ejercicios", fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = onlyFavorites,
                         onClick = { onlyFavorites = !onlyFavorites },
-                        label = { Text("♥ Favoritos", fontSize = 11.sp) }
+                        label = { Text("Favoritos", fontSize = 11.sp) }
                     )
                     MuscleCatalog.ALL_MUSCLES.forEach { m ->
                         FilterChip(
@@ -252,7 +254,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                     if (isCustom) {
                                         Spacer(Modifier.width(6.dp))
                                         Text(
-                                            text = "★ Propio",
+                                            text = "Personalizado",
                                             color = GymOrange,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.ExtraBold
@@ -489,7 +491,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                     Text(fw.planName, color = GymOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = "⏱ ${fw.durationSeconds / 60} min • 🔥 ${fw.caloriesBurned} kcal • 🏋️ Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series",
+                                        text = "${fw.durationSeconds / 60} min • ${fw.caloriesBurned} kcal • Vol: ${fw.totalVolumeKg.toInt()} kg • ${fw.totalSets} series",
                                         color = GymTextSecondary,
                                         fontSize = 12.sp
                                     )
@@ -700,7 +702,7 @@ private fun FinishedWorkoutReadOnlyDialog(
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "$displayExercisesCount ejercicios • ${workout.totalSets} series • ⏱ ${workout.durationSeconds / 60} min • 🔥 ${workout.caloriesBurned} kcal • 🏋️ ${workout.totalVolumeKg.toInt()} kg",
+                        text = "$displayExercisesCount ejercicios • ${workout.totalSets} series • ${workout.durationSeconds / 60} min • ${workout.caloriesBurned} kcal • Vol: ${workout.totalVolumeKg.toInt()} kg",
                         color = Color.White.copy(alpha = 0.92f),
                         fontSize = 11.sp
                     )
@@ -1242,7 +1244,7 @@ private fun WorkoutHistoryBarChartCard(finishedWorkouts: List<FinishedWorkoutDay
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        text = "📊 ${sel.fullRangeTitle}",
+                        text = sel.fullRangeTitle,
                         color = GymOrange,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp
@@ -1251,7 +1253,7 @@ private fun WorkoutHistoryBarChartCard(finishedWorkouts: List<FinishedWorkoutDay
                         text = if (sel.sessionsCount == 0) {
                             "Día/período de descanso • Sin entrenamientos registrados."
                         } else {
-                            "✓ ${sel.completedDays} día(s) completo(s) • ${sel.sessionsCount} sesión(es) • ${sel.totalSets} series • ${sel.totalVolumeKg.toInt()} kg • ${sel.totalMinutes} min (${sel.totalKcal} kcal)"
+                            "${sel.completedDays} día(s) completo(s) • ${sel.sessionsCount} sesión(es) • ${sel.totalSets} series • ${sel.totalVolumeKg.toInt()} kg • ${sel.totalMinutes} min (${sel.totalKcal} kcal)"
                         },
                         color = GymTextPrimary,
                         fontSize = 11.sp,
@@ -1370,7 +1372,7 @@ fun MyBodyScreen(
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
-                                    text = "👤 ${profile?.name ?: "Usuario"}",
+                                    text = "Perfil: ${profile?.name ?: "Usuario"}",
                                     color = GymTextPrimary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -1489,7 +1491,7 @@ fun MyBodyScreen(
             val weightStatusMsg = when {
                 currentWeight < idealMin -> "Estás ${"%.1f".format(idealMin - currentWeight)} kg por debajo del rango OMS."
                 currentWeight > idealMax -> "Estás ${"%.1f".format(currentWeight - idealMax)} kg sobre el rango OMS (si entrenas fuerza, revisa tu FFMI abajo)."
-                else -> "✓ Te encuentras dentro de tu rango de peso saludable OMS."
+                else -> "Te encuentras dentro de tu rango de peso saludable OMS."
             }
             Card(
                 colors = CardDefaults.cardColors(containerColor = GymCardBg),
@@ -1818,7 +1820,7 @@ fun MyBodyScreen(
                             )
                         }
                         Text(
-                            text = "🥩 Proteína: ${nutrition.proteinGrams} g  •  🍚 Carbos: ${nutrition.carbsGrams} g  •  🥑 Grasas: ${nutrition.fatGrams} g",
+                            text = "Proteína: ${nutrition.proteinGrams} g • Carbohidratos: ${nutrition.carbsGrams} g • Grasas: ${nutrition.fatGrams} g",
                             color = GymAccentCyan,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -1934,7 +1936,7 @@ fun MyBodyScreen(
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    text = "📅 ${dateFormat.format(Date(m.timestampMillis))} — ${"%.1f".format(m.weightKg)} kg",
+                                    text = "${dateFormat.format(Date(m.timestampMillis))} — ${"%.1f".format(m.weightKg)} kg",
                                     color = GymTextPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 14.sp
@@ -2336,7 +2338,7 @@ fun AddBodyMeasurementDialog(
                         )
                         if (calc != null) {
                             bf = "%.1f".format(Locale.US, calc)
-                            navyFeedback = "✓ % Grasa calculado con cinta (Marina EE.UU.): ${"%.1f".format(calc)}%"
+                            navyFeedback = "% Grasa calculado con cinta (Marina EE.UU.): ${"%.1f".format(calc)}%"
                         } else {
                             navyFeedback = if (gender == 0) {
                                 "Ingresa Altura, Cuello y Cintura en cm para calcular."
@@ -2567,18 +2569,18 @@ fun SettingsScreen(viewModel: GymWpViewModel) {
                         fontSize = 15.sp
                     )
                     Text(
-                        text = "🎯 Objetivo: ${goalNames.getOrElse(activeUser.goal) { goalNames[0] }}",
+                        text = "Objetivo: ${goalNames.getOrElse(activeUser.goal) { goalNames[0] }}",
                         color = GymTextPrimary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "🏅 Nivel: ${levelNames.getOrElse(activeUser.experienceLevel) { levelNames[1] }} • 📅 Frecuencia: ${activeUser.daysPerWeek} días/semana",
+                        text = "Nivel: ${levelNames.getOrElse(activeUser.experienceLevel) { levelNames[1] }} • Frecuencia: ${activeUser.daysPerWeek} días/semana",
                         color = GymTextSecondary,
                         fontSize = 12.sp
                     )
                     Text(
-                        text = "🏋️ Equipamiento habitual: ${placeNames.getOrElse(activeUser.trainingPlace) { placeNames[0] }}",
+                        text = "Equipamiento habitual: ${placeNames.getOrElse(activeUser.trainingPlace) { placeNames[0] }}",
                         color = GymTextSecondary,
                         fontSize = 12.sp
                     )
@@ -2613,6 +2615,48 @@ fun SettingsScreen(viewModel: GymWpViewModel) {
         // 5. Actualizaciones OTA desde GitHub sin perder datos
         item {
             AppUpdateCard(viewModel = viewModel)
+        }
+
+        // 6. Acerca de Cheese WP (Sin emojis, sin mención a GymWP)
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = GymCardBg),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Acerca de Cheese WP",
+                        color = GymOrange,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = "Cheese WP es un planificador y asistente de entrenamientos integral, diseñado de forma independiente con arquitectura nativa en Android (Kotlin, Jetpack Compose, Room SQLite). Ofrece gestión de rutinas personalizadas, soporte multi-usuario, sincronización en Google Drive, periodización y cálculo antropométrico avanzado.",
+                        color = GymTextPrimary,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                    HorizontalDivider(color = GymSurfaceElevated)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Versión de aplicación", color = GymTextSecondary, fontSize = 12.sp)
+                        Text("2.8.0 (Build 208)", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Privacidad", color = GymTextSecondary, fontSize = 12.sp)
+                        Text("100% Local y Privado", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 

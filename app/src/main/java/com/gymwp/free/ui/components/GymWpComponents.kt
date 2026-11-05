@@ -1615,7 +1615,7 @@ fun AppUpdateDialogIfNeeded(viewModel: GymWpViewModel) {
                             )
                         }
                         Text(
-                            text = "✅ Tus usuarios, rutinas, cargas, fatiga muscular, historial y mediciones se conservarán intactos al actualizar.",
+                            text = "Tus usuarios, rutinas, cargas, fatiga muscular, historial y mediciones se conservarán intactos al actualizar.",
                             color = FatigueGreen,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
@@ -1732,8 +1732,8 @@ fun AppUpdateCard(viewModel: GymWpViewModel) {
                 )
                 val statusText = when (val s = updateState) {
                     is AppUpdateState.Checking -> "Buscando actualizaciones en GitHub..."
-                    is AppUpdateState.UpToDate -> "✅ Tienes la última versión instalada"
-                    is AppUpdateState.UpdateAvailable -> "🚀 Nueva versión v${s.remote.versionName} disponible"
+                    is AppUpdateState.UpToDate -> "Tienes la última versión instalada"
+                    is AppUpdateState.UpdateAvailable -> "Nueva versión v${s.remote.versionName} disponible"
                     is AppUpdateState.Error -> s.message
                     else -> "Actualizaciones automáticas OTA desde GitHub activas"
                 }

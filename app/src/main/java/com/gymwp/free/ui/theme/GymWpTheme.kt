@@ -175,6 +175,9 @@ val GymTextPrimary: Color
 val GymTextSecondary: Color
     @Composable @ReadOnlyComposable get() = LocalGymPalette.current.textSecondary
 
+val GymBorder: Color
+    @Composable @ReadOnlyComposable get() = LocalGymPalette.current.textSecondary.copy(alpha = 0.22f)
+
 // Muscle Fatigue 4-Band Colors
 val FatigueGreen = Color(0xFF4CAF50)
 val FatigueBlue = Color(0xFF2196F3)

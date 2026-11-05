@@ -114,11 +114,10 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             var users = dao.getAllUsersSnapshot()
             if (users.isEmpty()) {
-                // Crear los 2 perfiles iniciales por defecto (Ignacio y Pareja)
                 val id1 = dao.saveUserProfile(
                     UserProfileEntity(
                         id = 1,
-                        name = "Ignacio",
+                        name = "Usuario 1",
                         avatarColorIndex = 9,
                         gender = 0,
                         onboardingDone = false
@@ -127,10 +126,18 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 users = dao.getAllUsersSnapshot()
                 _activeUserId.value = id1
                 GoogleDriveBackupManager.saveActiveUserId(appContext, id1)
-            } else if (users.none { it.id == _activeUserId.value }) {
-                val firstId = users.first().id
-                _activeUserId.value = firstId
-                GoogleDriveBackupManager.saveActiveUserId(appContext, firstId)
+            } else {
+                // Si el perfil inicial aún conserva el nombre placeholder anterior sin configurar, normalizarlo a Usuario 1
+                val defaultIgnacio = users.firstOrNull { it.id == 1 && it.name.equals("Ignacio", ignoreCase = true) && !it.onboardingDone }
+                if (defaultIgnacio != null) {
+                    dao.saveUserProfile(defaultIgnacio.copy(name = "Usuario 1"))
+                    users = dao.getAllUsersSnapshot()
+                }
+                if (users.none { it.id == _activeUserId.value }) {
+                    val firstId = users.first().id
+                    _activeUserId.value = firstId
+                    GoogleDriveBackupManager.saveActiveUserId(appContext, firstId)
+                }
             }
 
             ensureUserMuscleFatigueInitialized(_activeUserId.value)

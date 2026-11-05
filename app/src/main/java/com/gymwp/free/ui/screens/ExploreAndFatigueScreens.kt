@@ -25,6 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.gymwp.free.data.MuscleFatigueEntity
 import com.gymwp.free.data.PrebuiltPlan
+import com.gymwp.free.data.normalizeForSearch
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.domain.MuscleFatigueCalculator
 import com.gymwp.free.ui.GymWpViewModel
@@ -42,10 +43,11 @@ fun ExplorePrebuiltPlansScreen(
     var previewingPlan by remember { mutableStateOf<PrebuiltPlan?>(null) }
 
     val filteredPlans = remember(viewModel.prebuiltPlans, search) {
+        val q = search.normalizeForSearch()
         viewModel.prebuiltPlans.filter { plan ->
-            search.isBlank() ||
-            plan.name.contains(search, ignoreCase = true) ||
-            plan.description.contains(search, ignoreCase = true)
+            q.isBlank() ||
+            plan.name.normalizeForSearch().contains(q) ||
+            plan.description.normalizeForSearch().contains(q)
         }
     }
 
@@ -144,7 +146,7 @@ fun ExplorePrebuiltPlansScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "📅 ${plan.days.size} días/semana • 🏋️ $totalExercises ejercicios",
+                                    text = "${plan.days.size} días/semana • $totalExercises ejercicios",
                                     color = GymAccentCyan,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -203,7 +205,7 @@ fun ExplorePrebuiltPlansScreen(
                                 fontSize = 18.sp
                             )
                             Text(
-                                text = "📅 ${plan.days.size} días/semana • 🏋️ $totalPreviewExercises ejercicios",
+                                text = "${plan.days.size} días/semana • $totalPreviewExercises ejercicios",
                                 color = GymAccentCyan,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold

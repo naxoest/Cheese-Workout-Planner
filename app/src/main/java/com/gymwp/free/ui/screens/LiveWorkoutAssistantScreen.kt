@@ -556,7 +556,7 @@ fun LiveWorkoutAssistantScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "⏱ %02d:%02d".format(mins, secs),
+                        text = "%02d:%02d".format(mins, secs),
                         color = if (isPaused) FatigueYellow else GymOrange,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 14.sp
@@ -687,7 +687,7 @@ fun LiveWorkoutAssistantScreen(
                         val resolved = viewModel.getCatalogExercise(activeExId)?.name
                             ?: (if (isUsingAlt) altCustom else wEx.customExerciseName)?.ifBlank { null }
                             ?: "Ej. ${idx + 1}"
-                        if (isUsingAlt) "🔀 ${resolved.take(15)}" else resolved.take(18)
+                        if (isUsingAlt) "Parche: ${resolved.take(15)}" else resolved.take(18)
                     }
 
                     val pillBg = when {
@@ -732,7 +732,7 @@ fun LiveWorkoutAssistantScreen(
                             fontSize = 12.sp
                         )
                         Text(
-                            text = if (allDone) "✓" else "$doneCnt/$totCnt",
+                            text = if (allDone) "OK" else "$doneCnt/$totCnt",
                             color = pillText.copy(alpha = 0.9f),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 11.sp
@@ -744,7 +744,7 @@ fun LiveWorkoutAssistantScreen(
 
         // Responsive toast banner inside screen margins (never overflows or clips text)
         feedbackBannerText?.let { msg ->
-            val isAltNotice = msg.startsWith("🔀")
+            val isAltNotice = msg.startsWith("Parche")
             val bannerColor = if (isAltNotice) GymAccentCyan else FatigueGreen
             Box(
                 modifier = Modifier
@@ -867,12 +867,12 @@ fun LiveWorkoutAssistantScreen(
                         onSelectActiveExerciseId = { chosenId ->
                             currentSt.activeExerciseId = chosenId
                             if (chosenId == currentWEx.exerciseId) {
-                                feedbackBannerText = "★ Titular activo: $mainExName"
+                                feedbackBannerText = "Titular activo: $mainExName"
                             } else {
                                 val chosenName = viewModel.getCatalogExercise(chosenId)?.name
                                     ?: alternatives.firstOrNull { it.exerciseId == chosenId }?.customExerciseName
                                     ?: "Parche"
-                                feedbackBannerText = "🔀 Parche hoy: $chosenName\nTu rutina titular se mantiene intacta"
+                                feedbackBannerText = "Parche hoy: $chosenName\nTu rutina titular se mantiene intacta"
                             }
                         },
                         onRequestAddAlternative = {
@@ -896,7 +896,7 @@ fun LiveWorkoutAssistantScreen(
                                     }
                                 }
                                 persistExerciseState(currentWEx, currentSt)
-                                feedbackBannerText = "✓ Meta aplicada: ${focusedOverload.buttonLabel}"
+                                feedbackBannerText = "Meta aplicada: ${focusedOverload.buttonLabel}"
                             }
                         } else null,
                         onInspectGuide = { if (activeCatEx != null) inspectingExercise = activeCatEx },
@@ -910,7 +910,7 @@ fun LiveWorkoutAssistantScreen(
                                     currentSt.loads[i] = l0
                                 }
                                 persistExerciseState(currentWEx, currentSt)
-                                feedbackBannerText = "✓ Serie 1 replicada en las ${currentSt.reps.size} series"
+                                feedbackBannerText = "Serie 1 replicada en las ${currentSt.reps.size} series"
                             }
                         },
                         onEditRestSeconds = { restPickerTarget = currentWEx },
@@ -1058,12 +1058,12 @@ fun LiveWorkoutAssistantScreen(
                         onSelectActiveExerciseId = { chosenId ->
                             st.activeExerciseId = chosenId
                             if (chosenId == wEx.exerciseId) {
-                                feedbackBannerText = "★ Titular activo: $mainExName"
+                                feedbackBannerText = "Titular activo: $mainExName"
                             } else {
                                 val chosenName = viewModel.getCatalogExercise(chosenId)?.name
                                     ?: alternatives.firstOrNull { it.exerciseId == chosenId }?.customExerciseName
                                     ?: "Parche"
-                                feedbackBannerText = "🔀 Parche hoy: $chosenName\nTu rutina titular se mantiene intacta"
+                                feedbackBannerText = "Parche hoy: $chosenName\nTu rutina titular se mantiene intacta"
                             }
                         },
                         onRequestAddAlternative = {
@@ -1087,7 +1087,7 @@ fun LiveWorkoutAssistantScreen(
                                     }
                                 }
                                 persistExerciseState(wEx, st)
-                                feedbackBannerText = "✓ Meta aplicada: ${itemOverload.buttonLabel}"
+                                feedbackBannerText = "Meta aplicada: ${itemOverload.buttonLabel}"
                             }
                         } else null,
                         onInspectGuide = { if (activeCatEx != null) inspectingExercise = activeCatEx },
@@ -1101,7 +1101,7 @@ fun LiveWorkoutAssistantScreen(
                                     st.loads[i] = l0
                                 }
                                 persistExerciseState(wEx, st)
-                                feedbackBannerText = "✓ Serie 1 replicada en $activeExName"
+                                feedbackBannerText = "Serie 1 replicada en $activeExName"
                             }
                         },
                         onEditRestSeconds = { restPickerTarget = wEx },
@@ -1343,7 +1343,7 @@ fun LiveWorkoutAssistantScreen(
                 viewModel.addExerciseToDay(dayId, chosen.id)
                 showAddExerciseModal = false
                 focusedExerciseIndex = newIdx
-                feedbackBannerText = "✓ ${chosen.name} añadido a la rutina"
+                feedbackBannerText = "${chosen.name} añadido a la rutina"
             }
         )
     }
@@ -1394,7 +1394,7 @@ fun LiveWorkoutAssistantScreen(
                         st.activeExerciseId = createdSpec.exerciseId
                     }
                     addingLiveAltTarget = null
-                    feedbackBannerText = "🔀 Parche hoy: ${chosen.name}\nTu rutina titular se mantiene intacta"
+                    feedbackBannerText = "Parche hoy: ${chosen.name}\nTu rutina titular se mantiene intacta"
                 }
             }
         )
@@ -1529,7 +1529,7 @@ fun LiveWorkoutAssistantScreen(
                         }
                         persistExerciseState(target.workoutExercise, st)
                         if (replicateToRemaining) {
-                            feedbackBannerText = "✓ Valor replicado al resto de las series"
+                            feedbackBannerText = "Valor replicado al resto de las series"
                         }
                     }
                     activeSetFieldTarget = null
@@ -1583,7 +1583,7 @@ fun LiveWorkoutAssistantScreen(
             onDismissRequest = onExitSession,
             title = {
                 Text(
-                    "¡Entrenamiento Completado! 🏆",
+                    "¡Entrenamiento Completado!",
                     color = GymOrange,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -1770,7 +1770,7 @@ private fun LiveGymWpExerciseCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "★ Titular",
+                            text = "Titular",
                             color = GymOrange,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 11.sp
@@ -1800,7 +1800,7 @@ private fun LiveGymWpExerciseCard(
                             val altIdx = alternatives.indexOfFirst { it.exerciseId == state.activeExerciseId }
                             "Ejercicio ${exerciseIndex + 1} de $totalExercises • ${WorkoutExerciseAlternativesCodec.roleBadgeLabel(altIdx.coerceAtLeast(0))}"
                         } else {
-                            "Ejercicio ${exerciseIndex + 1} de $totalExercises • ★ Principal"
+                            "Ejercicio ${exerciseIndex + 1} de $totalExercises • Principal"
                         },
                         color = if (isUsingAlt) GymAccentCyan else GymTextSecondary,
                         fontSize = 11.sp,
@@ -1921,7 +1921,7 @@ private fun LiveGymWpExerciseCard(
                         }
                     }
 
-                    // Opción 1: ★ Principal (Full width, never cuts letters!)
+                    // Opcion 1: Principal (Full width, never cuts letters!)
                     val mainSelected = state.activeExerciseId == wEx.exerciseId
                     Row(
                         modifier = Modifier
@@ -1947,7 +1947,7 @@ private fun LiveGymWpExerciseCard(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "★ Titular",
+                                text = "Titular",
                                 color = if (mainSelected) GymOnPrimary else GymOrange,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 10.sp
@@ -2068,7 +2068,7 @@ private fun LiveGymWpExerciseCard(
                 // 2. Permanently Replace Titular Exercise in-place
                 LiveActionPill(
                     icon = Icons.Default.SwapHoriz,
-                    label = "Reemplazar ★",
+                    label = "Reemplazar titular",
                     highlighted = false,
                     onClick = onReplaceExercise
                 )
@@ -2187,7 +2187,7 @@ private fun LiveGymWpExerciseCard(
                                 .padding(horizontal = 9.dp, vertical = 5.dp)
                         ) {
                             Text(
-                                text = if (isOverloadApplied) "✓ Meta activa" else overloadSuggestion.buttonLabel,
+                                text = if (isOverloadApplied) "Meta activa" else overloadSuggestion.buttonLabel,
                                 color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 11.sp
