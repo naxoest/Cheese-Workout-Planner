@@ -1,5 +1,11 @@
 package com.gymwp.free.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +60,7 @@ fun HomeWorkoutsScreen(
     onNavigateToExplore: () -> Unit,
     onNavigateToSettings: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val profile by viewModel.userProfile.collectAsState()
     val plans by viewModel.workoutPlans.collectAsState()
     val allDays by viewModel.allWorkoutDays.collectAsState()
@@ -73,6 +81,10 @@ fun HomeWorkoutsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showUserSwitcherDialog by remember { mutableStateOf(false) }
     var showNewPlanDialog by remember { mutableStateOf(false) }
+    var showExportRoutineDialog by remember { mutableStateOf<WorkoutPlanEntity?>(null) }
+    var showImportRoutineDialog by remember { mutableStateOf(false) }
+    var routinePortMessage by remember { mutableStateOf<String?>(null) }
+    var pendingExportPlanId by remember { mutableStateOf<Long?>(null) }
     var showAddDayDialogForPlan by remember { mutableStateOf<Long?>(null) }
     var editingDayTarget by remember { mutableStateOf<WorkoutDayEntity?>(null) }
     val collapsedDayIds = remember { mutableStateListOf<Long>() }
@@ -87,6 +99,37 @@ fun HomeWorkoutsScreen(
     var planPendingDelete by remember { mutableStateOf<WorkoutPlanEntity?>(null) }
     var dayPendingDelete by remember { mutableStateOf<WorkoutDayEntity?>(null) }
     var exercisePendingDelete by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
+
+    val exportRoutineFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { targetUri ->
+        val planIdToExport = pendingExportPlanId
+        pendingExportPlanId = null
+        if (targetUri != null && planIdToExport != null) {
+            viewModel.exportRoutineToUri(planIdToExport, targetUri) { res ->
+                routinePortMessage = res.fold(
+                    onSuccess = { "Rutina exportada correctamente como archivo." },
+                    onFailure = { "Error al exportar: ${it.message}" }
+                )
+            }
+        }
+    }
+
+    val importRoutineFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { sourceUri ->
+        if (sourceUri != null) {
+            viewModel.importRoutineFromUri(sourceUri) { res ->
+                res.onSuccess { summary ->
+                    selectedPlanId = summary.planId
+                    showImportRoutineDialog = false
+                    routinePortMessage = "Rutina \"${summary.planName}\" importada (${summary.daysCount} días, ${summary.exercisesCount} ejercicios)."
+                }.onFailure { err ->
+                    routinePortMessage = "No se pudo importar el archivo: ${err.message}"
+                }
+            }
+        }
+    }
 
     // Trigger Smart Plan onboarding wizard automatically if no plans exist yet
     LaunchedEffect(profile, plans) {
@@ -206,7 +249,10 @@ fun HomeWorkoutsScreen(
                 val isSelected = plan.id == activePlan?.id
                 FilterChip(
                     selected = isSelected,
-                    onClick = { selectedPlanId = plan.id },
+                    onClick = {
+                        selectedPlanId = plan.id
+                        viewModel.setActiveWorkoutPlan(plan.id)
+                    },
                     label = {
                         Text(
                             text = plan.name,
@@ -237,6 +283,42 @@ fun HomeWorkoutsScreen(
                 Icon(Icons.Default.Add, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Crear Plan", color = GymOrange, fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = { showImportRoutineDialog = true },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Icon(Icons.Default.FileDownload, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Importar Rutina", color = GymOrange, fontSize = 12.sp)
+            }
+        }
+
+        routinePortMessage?.let { msg ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(GymSurfaceElevated)
+                    .border(1.dp, GymBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = msg,
+                    color = GymTextPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { routinePortMessage = null },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = GymTextSecondary, modifier = Modifier.size(16.dp))
+                }
             }
         }
 
@@ -275,6 +357,12 @@ fun HomeWorkoutsScreen(
                         OutlinedButton(onClick = onNavigateToExplore) {
                             Text("Ver 57 Planes", color = GymOrange)
                         }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = { showImportRoutineDialog = true }) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Importar Rutina", color = GymOrange)
                     }
                 }
             }
@@ -330,7 +418,8 @@ fun HomeWorkoutsScreen(
                             Spacer(Modifier.height(6.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = "Sesiones completadas: ${activePlan.completedSessionsCount} / ${activePlan.targetSessionsCount}",
@@ -345,6 +434,32 @@ fun HomeWorkoutsScreen(
                                     modifier = Modifier.clickable { showAddDayDialogForPlan = activePlan.id }
                                 )
                             }
+                            Spacer(Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showExportRoutineDialog = activePlan },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Default.FileUpload, contentDescription = null, tint = GymTextPrimary, modifier = Modifier.size(15.dp))
+                                    Spacer(Modifier.width(5.dp))
+                                    Text("Exportar Rutina", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                OutlinedButton(
+                                    onClick = { showImportRoutineDialog = true },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Default.FileDownload, contentDescription = null, tint = GymTextPrimary, modifier = Modifier.size(15.dp))
+                                    Spacer(Modifier.width(5.dp))
+                                    Text("Importar Rutina", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                         }
                     }
                 }
@@ -354,7 +469,6 @@ fun HomeWorkoutsScreen(
                     val dayExercises = remember(allExercises, day.id) {
                         allExercises.filter { it.workoutDayId == day.id }.sortedBy { it.orderIndex }
                     }
-                    val dayColor = DayPalette[day.colorIndex.coerceIn(0, DayPalette.lastIndex)]
                     val totalSets = dayExercises.sumOf { it.setsCount }
                     val (minDur, maxDur) = WorkoutMetricsCalculator.estimateDurationWindowMinutes(totalSets, dayExercises.size)
                     val estKcal = WorkoutMetricsCalculator.calculateEstimatedCalories(totalSets, profile?.weightKg ?: 75f)
@@ -530,7 +644,7 @@ fun HomeWorkoutsScreen(
                                         ) {
                                             Icon(
                                                 Icons.Default.Edit,
-                                                contentDescription = "Editar nombre o color del día",
+                                                contentDescription = "Editar nombre o programación del día",
                                                 tint = GymTextSecondary,
                                                 modifier = Modifier.size(15.dp)
                                             )
@@ -652,7 +766,7 @@ fun HomeWorkoutsScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(bottom = 8.dp)
-                                                .background(dayColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                                .background(GymOrange.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
                                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -660,7 +774,7 @@ fun HomeWorkoutsScreen(
                                             Icon(
                                                 Icons.Default.SwapVert,
                                                 contentDescription = null,
-                                                tint = dayColor,
+                                                tint = GymOrange,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Text(
@@ -1251,10 +1365,224 @@ fun HomeWorkoutsScreen(
         )
     }
 
+    // Dialog: Export Routine (contains all days & exercises)
+    showExportRoutineDialog?.let { targetPlan ->
+        val planDaysCount = remember(allDays, targetPlan.id) {
+            allDays.count { it.workoutPlanId == targetPlan.id }
+        }
+        val planExCount = remember(allDays, allExercises, targetPlan.id) {
+            val dayIds = allDays.filter { it.workoutPlanId == targetPlan.id }.map { it.id }.toSet()
+            allExercises.count { it.workoutDayId in dayIds }
+        }
+        AlertDialog(
+            onDismissRequest = { showExportRoutineDialog = null },
+            title = {
+                Text(
+                    text = "Exportar Rutina",
+                    color = GymTextPrimary,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Rutina: ${targetPlan.name}",
+                        color = GymOrange,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "Incluye $planDaysCount días de entrenamiento y $planExCount ejercicios con sus series, cargas, descansos, programación semanal y ejercicios parche.",
+                        color = GymTextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = {
+                            val cleanFileName = "Rutina_${targetPlan.name.replace(Regex("[^a-zA-Z0-9_-]"), "_")}.json"
+                            pendingExportPlanId = targetPlan.id
+                            showExportRoutineDialog = null
+                            exportRoutineFileLauncher.launch(cleanFileName)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Guardar archivo (.json)", fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.exportRoutineToJson(targetPlan.id) { res ->
+                                res.onSuccess { jsonText ->
+                                    showExportRoutineDialog = null
+                                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, "Rutina Cheese WP - ${targetPlan.name}")
+                                        putExtra(Intent.EXTRA_TEXT, jsonText)
+                                    }
+                                    context.startActivity(Intent.createChooser(sendIntent, "Compartir rutina"))
+                                }.onFailure { err ->
+                                    routinePortMessage = "Error al exportar: ${err.message}"
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, tint = GymTextPrimary, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Compartir rutina", color = GymTextPrimary, fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.exportRoutineToJson(targetPlan.id) { res ->
+                                res.onSuccess { jsonText ->
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                    clipboard?.setPrimaryClip(ClipData.newPlainText("Rutina Cheese WP", jsonText))
+                                    showExportRoutineDialog = null
+                                    routinePortMessage = "Código de la rutina \"${targetPlan.name}\" copiado al portapapeles."
+                                }.onFailure { err ->
+                                    routinePortMessage = "Error al copiar rutina: ${err.message}"
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = GymTextPrimary, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Copiar código al portapapeles", color = GymTextPrimary, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showExportRoutineDialog = null }) {
+                    Text("Cerrar", color = GymTextSecondary)
+                }
+            },
+            containerColor = GymCardBg
+        )
+    }
+
+    // Dialog: Import Routine (contains all days & exercises)
+    if (showImportRoutineDialog) {
+        var pastedRoutineJson by remember { mutableStateOf("") }
+        var importErrorText by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { showImportRoutineDialog = false },
+            title = {
+                Text(
+                    text = "Importar Rutina",
+                    color = GymTextPrimary,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Importa una rutina completa con todos sus días de entrenamiento, programación semanal, ejercicios, series y cargas.",
+                        color = GymTextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Button(
+                        onClick = {
+                            importRoutineFileLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Seleccionar archivo (.json)", fontWeight = FontWeight.Bold)
+                    }
+
+                    HorizontalDivider(color = GymBorder)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "O pega el código de la rutina:",
+                            color = GymTextSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        TextButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                val clipText = clipboard?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+                                if (clipText.isNotBlank()) {
+                                    pastedRoutineJson = clipText
+                                    importErrorText = null
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Pegar", color = GymOrange, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = pastedRoutineJson,
+                        onValueChange = {
+                            pastedRoutineJson = it
+                            importErrorText = null
+                        },
+                        label = { Text("Código JSON de la rutina") },
+                        maxLines = 5,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    importErrorText?.let { err ->
+                        Text(
+                            text = err,
+                            color = FatigueRed,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (pastedRoutineJson.isBlank()) {
+                            importErrorText = "Selecciona un archivo .json o pega el código de la rutina."
+                        } else {
+                            viewModel.importRoutineFromJson(pastedRoutineJson) { res ->
+                                res.onSuccess { summary ->
+                                    selectedPlanId = summary.planId
+                                    showImportRoutineDialog = false
+                                    routinePortMessage = "Rutina \"${summary.planName}\" importada (${summary.daysCount} días, ${summary.exercisesCount} ejercicios)."
+                                }.onFailure { err ->
+                                    importErrorText = "Formato inválido: ${err.message}"
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
+                ) {
+                    Text("Importar código", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportRoutineDialog = false }) {
+                    Text("Cancelar", color = GymTextSecondary)
+                }
+            },
+            containerColor = GymCardBg
+        )
+    }
+
     // Dialog: Add Day to Plan
     showAddDayDialogForPlan?.let { targetPlanId ->
         var dayName by remember { mutableStateOf("") }
-        var chosenColor by remember { mutableIntStateOf(0) }
         var selectedDays by remember { mutableStateOf(emptyList<Int>()) }
         AlertDialog(
             onDismissRequest = { showAddDayDialogForPlan = null },
@@ -1299,33 +1627,13 @@ fun HomeWorkoutsScreen(
                             }
                         }
                     }
-                    Text("Color distintivo (opcional):", fontSize = 13.sp, color = GymTextSecondary)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        DayPalette.take(8).forEachIndexed { idx, col ->
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(col)
-                                    .border(
-                                        width = if (chosenColor == idx) 3.dp else 0.dp,
-                                        color = GymTextPrimary,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { chosenColor = idx }
-                            )
-                        }
-                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         val encodedName = WorkoutDayScheduleCodec.encodeName(dayName.trim().ifBlank { "Nuevo Día" }, selectedDays)
-                        viewModel.addWorkoutDay(targetPlanId, encodedName, chosenColor)
+                        viewModel.addWorkoutDay(targetPlanId, encodedName)
                         showAddDayDialogForPlan = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
@@ -1340,16 +1648,13 @@ fun HomeWorkoutsScreen(
         )
     }
 
-    // Dialog: Edit Day Name & Color & Weekdays
+    // Dialog: Edit Day Name & Weekdays
     editingDayTarget?.let { targetDay ->
         var editedName by remember(targetDay.id) {
             mutableStateOf(WorkoutDayScheduleCodec.getCleanName(targetDay.name))
         }
         var selectedDays by remember(targetDay.id) {
             mutableStateOf(WorkoutDayScheduleCodec.getAssignedDays(targetDay.name))
-        }
-        var editedColor by remember(targetDay.id) {
-            mutableIntStateOf(targetDay.colorIndex.coerceIn(0, DayPalette.lastIndex))
         }
         AlertDialog(
             onDismissRequest = { editingDayTarget = null },
@@ -1395,28 +1700,6 @@ fun HomeWorkoutsScreen(
                             }
                         }
                     }
-                    Text("Color distintivo (opcional):", fontSize = 13.sp, color = GymTextSecondary, fontWeight = FontWeight.SemiBold)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        DayPalette.forEachIndexed { idx, col ->
-                            Box(
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clip(CircleShape)
-                                    .background(col)
-                                    .border(
-                                        width = if (editedColor == idx) 3.dp else 0.dp,
-                                        color = GymTextPrimary,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { editedColor = idx }
-                            )
-                        }
-                    }
                 }
             },
             confirmButton = {
@@ -1429,7 +1712,7 @@ fun HomeWorkoutsScreen(
                         viewModel.updateWorkoutDayColorOrName(
                             targetDay.copy(
                                 name = encodedName,
-                                colorIndex = editedColor
+                                colorIndex = 0
                             )
                         )
                         editingDayTarget = null

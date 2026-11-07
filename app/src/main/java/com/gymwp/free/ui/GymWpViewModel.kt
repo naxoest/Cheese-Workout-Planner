@@ -55,6 +55,15 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     private val _appUpdateState = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
     val appUpdateState: StateFlow<AppUpdateState> = _appUpdateState.asStateFlow()
 
+    private val _reminderSettings = MutableStateFlow(
+        ReminderSettingsState(
+            enabled = WorkoutReminderManager.isReminderEnabled(appContext),
+            hour = WorkoutReminderManager.getReminderHour(appContext),
+            minute = WorkoutReminderManager.getReminderMinute(appContext)
+        )
+    )
+    val reminderSettings: StateFlow<ReminderSettingsState> = _reminderSettings.asStateFlow()
+
     val userProfile: StateFlow<UserProfileEntity?> = _activeUserId
         .flatMapLatest { uid -> dao.observeUserProfile(uid) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -141,7 +150,42 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             ensureUserMuscleFatigueInitialized(_activeUserId.value)
+            WorkoutReminderManager.scheduleNextAlarm(appContext)
+            refreshReminderSettings(notifyTodayIfScheduled = true)
             _appUpdateState.value = AppUpdateManager.checkForUpdates(appContext, notifyIfAvailable = true)
+        }
+    }
+
+    fun refreshReminderSettings(notifyTodayIfScheduled: Boolean = false) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val summary = WorkoutReminderManager.getTodayScheduledSummary(appContext)
+            _reminderSettings.value = ReminderSettingsState(
+                enabled = WorkoutReminderManager.isReminderEnabled(appContext),
+                hour = WorkoutReminderManager.getReminderHour(appContext),
+                minute = WorkoutReminderManager.getReminderMinute(appContext),
+                todayScheduledSummary = summary
+            )
+            WorkoutReminderManager.scheduleNextAlarm(appContext)
+            if (notifyTodayIfScheduled) {
+                WorkoutReminderManager.checkAndNotifyTodayWorkout(appContext, forceNotify = false)
+            }
+        }
+    }
+
+    fun setWorkoutRemindersEnabled(enabled: Boolean) {
+        WorkoutReminderManager.setReminderEnabled(appContext, enabled)
+        refreshReminderSettings(notifyTodayIfScheduled = enabled)
+    }
+
+    fun setWorkoutReminderTime(hour: Int, minute: Int) {
+        WorkoutReminderManager.setReminderTime(appContext, hour, minute)
+        refreshReminderSettings(notifyTodayIfScheduled = false)
+    }
+
+    fun sendTestWorkoutReminder(onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sent = WorkoutReminderManager.checkAndNotifyTodayWorkout(appContext, forceNotify = true)
+            launch(Dispatchers.Main) { onResult(sent) }
         }
     }
 
@@ -206,6 +250,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 GoogleDriveBackupManager.getSavedThemeForUser(appContext, userId)
             )
             ensureUserMuscleFatigueInitialized(userId)
+            refreshReminderSettings(notifyTodayIfScheduled = true)
             triggerAutoDriveSync()
         }
     }
@@ -461,9 +506,66 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setActiveWorkoutPlan(planId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
+            val userPlans = dao.getAllWorkoutPlans().filter { it.userId == uid }
+            for (p in userPlans) {
+                val shouldBeActive = p.id == planId
+                if (p.isActive != shouldBeActive) {
+                    dao.updateWorkoutPlan(p.copy(isActive = shouldBeActive))
+                }
+            }
+            refreshReminderSettings(notifyTodayIfScheduled = true)
+            triggerAutoDriveSync()
+        }
+    }
+
+    fun exportRoutineToJson(planId: Long, onResult: (Result<String>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = WorkoutRoutinePortManager.exportRoutineToJson(dao, planId)
+            launch(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
+    fun exportRoutineToUri(planId: Long, targetUri: Uri, onResult: (Result<String>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = WorkoutRoutinePortManager.exportRoutineToUri(appContext, dao, planId, targetUri)
+            launch(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
+    fun importRoutineFromJson(rawJson: String, onResult: (Result<ImportedRoutineSummary>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
+            val result = WorkoutRoutinePortManager.importRoutineFromJson(dao, uid, rawJson)
+            if (result.isSuccess) {
+                refreshReminderSettings(notifyTodayIfScheduled = true)
+                triggerAutoDriveSync()
+            }
+            launch(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
+    fun importRoutineFromUri(sourceUri: Uri, onResult: (Result<ImportedRoutineSummary>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uid = _activeUserId.value
+            val result = WorkoutRoutinePortManager.importRoutineFromUri(appContext, dao, uid, sourceUri)
+            if (result.isSuccess) {
+                refreshReminderSettings(notifyTodayIfScheduled = true)
+                triggerAutoDriveSync()
+            }
+            launch(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
     fun createManualWorkoutPlan(name: String, description: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val uid = _activeUserId.value
+            val userPlans = dao.getAllWorkoutPlans().filter { it.userId == uid }
+            for (p in userPlans) {
+                if (p.isActive) dao.updateWorkoutPlan(p.copy(isActive = false))
+            }
             val planId = dao.insertWorkoutPlan(
                 WorkoutPlanEntity(
                     userId = uid,
@@ -481,6 +583,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                     orderIndex = 0
                 )
             )
+            refreshReminderSettings(notifyTodayIfScheduled = false)
             triggerAutoDriveSync()
         }
     }
@@ -488,28 +591,31 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteWorkoutPlan(planId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteWorkoutPlan(planId)
+            refreshReminderSettings(notifyTodayIfScheduled = false)
             triggerAutoDriveSync()
         }
     }
 
-    fun addWorkoutDay(planId: Long, name: String, colorIndex: Int) {
+    fun addWorkoutDay(planId: Long, name: String, colorIndex: Int = 0) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentDays = dao.getWorkoutDays(planId)
             dao.insertWorkoutDay(
                 WorkoutDayEntity(
                     workoutPlanId = planId,
                     name = name.ifBlank { "Día ${currentDays.size + 1}" },
-                    colorIndex = colorIndex % 10,
+                    colorIndex = 0,
                     orderIndex = currentDays.size
                 )
             )
+            refreshReminderSettings(notifyTodayIfScheduled = true)
             triggerAutoDriveSync()
         }
     }
 
     fun updateWorkoutDayColorOrName(day: WorkoutDayEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.updateWorkoutDay(day)
+            dao.updateWorkoutDay(day.copy(colorIndex = 0))
+            refreshReminderSettings(notifyTodayIfScheduled = true)
             triggerAutoDriveSync()
         }
     }
@@ -517,6 +623,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteWorkoutDay(dayId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteWorkoutDay(dayId)
+            refreshReminderSettings(notifyTodayIfScheduled = false)
             triggerAutoDriveSync()
         }
     }

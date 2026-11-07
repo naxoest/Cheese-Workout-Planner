@@ -1,6 +1,6 @@
 {
-  "versionCode": 208,
-  "versionName": "2.8.0",
+  "versionCode": 209,
+  "versionName": "2.9.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Eliminación de exceso de emojis en toda la aplicación para una interfaz limpia, sobria y profesional.\n• Reducción de exceso de color en la pestaña Entrenar: diseño neutral y elegante, reservando el color de acento únicamente para los botones de acción principal como Iniciar Entrenamiento.\n• Programación preliminar de días de la semana: asigna qué días (Lun - Dom) pretendes realizar cada sesión, con resaltado visual del día actual.\n• Búsqueda y creación insensible a tildes: soporte completo para acentos y caracteres diacríticos al buscar o añadir ejercicios.\n• Perfil inicial genérico: usuario nuevo registrado como Usuario 1 sin nombres preestablecidos.\n• Actualización del README y sección Acerca de sin mención a aplicaciones externas y sin emojis."
+  "releaseNotes": "• Notificaciones automáticas de entrenamiento: recibe un aviso en la barra de notificaciones de tu teléfono cuando hoy coincida con un día de entrenamiento programado en tu rutina, sin necesidad de abrir la aplicación.\n• Exportar e Importar Rutina completa: comparte o guarda tus rutinas completas con todos sus días, horarios, ejercicios, series, cargas y ejercicios parche en formato archivo o código.\n• Eliminación completa de la opción de cambiar colores a los días para mantener una interfaz uniforme y limpia.\n• Guía en el README renovada en lenguaje claro y sencillo."
 }

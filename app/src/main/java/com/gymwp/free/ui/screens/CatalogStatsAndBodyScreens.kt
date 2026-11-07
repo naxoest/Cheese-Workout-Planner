@@ -35,6 +35,7 @@ import com.gymwp.free.data.CatalogExercise
 import com.gymwp.free.data.FinishedExerciseEntity
 import com.gymwp.free.data.FinishedWorkoutDayEntity
 import com.gymwp.free.data.UserProfileEntity
+import com.gymwp.free.data.WorkoutDayScheduleCodec
 import com.gymwp.free.data.normalizeForSearch
 import com.gymwp.free.domain.BodyMetricsCalculator
 import com.gymwp.free.domain.MuscleCatalog
@@ -485,7 +486,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(fw.dayName, color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(WorkoutDayScheduleCodec.getCleanName(fw.dayName), color = GymTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                         Text(dateFormat.format(Date(fw.timestampMillis)), color = GymTextSecondary, fontSize = 11.sp)
                                     }
                                     Text(fw.planName, color = GymOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -533,14 +534,9 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
         val sessionExercises = remember(allFinishedEx, fw.id) {
             allFinishedEx.filter { it.finishedDayId == fw.id }
         }
-        val matchedColorIdx = remember(allDays, fw.dayName, fw.id) {
-            allDays.firstOrNull { it.name == fw.dayName }?.colorIndex
-                ?: ((fw.id.toInt().coerceAtLeast(0)) % DayPalette.size)
-        }
         FinishedWorkoutReadOnlyDialog(
             workout = fw,
             exercisesDone = sessionExercises,
-            dayColorIndex = matchedColorIdx,
             dateText = dateFormat.format(Date(fw.timestampMillis)),
             viewModel = viewModel,
             onInspectCatalogExercise = { catEx ->
@@ -587,7 +583,7 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
 
     finishedWorkoutPendingDelete?.let { targetFw ->
         ConfirmDeleteDialog(
-            itemTitle = "el entrenamiento realizado \"${targetFw.dayName}\" (${targetFw.planName}) del ${dateFormat.format(Date(targetFw.timestampMillis))}",
+            itemTitle = "el entrenamiento realizado \"${WorkoutDayScheduleCodec.getCleanName(targetFw.dayName)}\" (${targetFw.planName}) del ${dateFormat.format(Date(targetFw.timestampMillis))}",
             onConfirm = {
                 viewModel.deleteFinishedWorkoutDay(targetFw.id)
                 finishedWorkoutPendingDelete = null
@@ -619,15 +615,16 @@ fun CatalogAndStatsScreen(viewModel: GymWpViewModel) {
 private fun FinishedWorkoutReadOnlyDialog(
     workout: FinishedWorkoutDayEntity,
     exercisesDone: List<FinishedExerciseEntity>,
-    dayColorIndex: Int,
     dateText: String,
     viewModel: GymWpViewModel,
     onInspectCatalogExercise: (CatalogExercise) -> Unit,
     onDismiss: () -> Unit
 ) {
     val allCatalog by viewModel.allAvailableExercises.collectAsState()
-    val dayColor = DayPalette[dayColorIndex.coerceIn(0, DayPalette.lastIndex)]
     val displayExercisesCount = if (exercisesDone.isNotEmpty()) exercisesDone.size else workout.exercisesCount
+    val cleanDayName = remember(workout.dayName) {
+        WorkoutDayScheduleCodec.getCleanName(workout.dayName)
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -642,11 +639,11 @@ private fun FinishedWorkoutReadOnlyDialog(
                 .padding(horizontal = 12.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Colored Day Header Banner (matching Entrenar routine card, in Read-Only mode)
+                // Clean Neutral Day Header Banner (in Read-Only mode)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(dayColor)
+                        .background(GymSurfaceElevated)
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Row(
@@ -657,7 +654,8 @@ private fun FinishedWorkoutReadOnlyDialog(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Black.copy(alpha = 0.25f))
+                                .background(GymCardBg)
+                                .border(1.dp, GymBorder, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -665,12 +663,12 @@ private fun FinishedWorkoutReadOnlyDialog(
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = GymTextSecondary,
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = "SOLO LECTURA • HISTORIAL",
-                                color = Color.White,
+                                color = GymTextSecondary,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 10.sp
                             )
@@ -682,28 +680,28 @@ private fun FinishedWorkoutReadOnlyDialog(
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = "Cerrar",
-                                tint = Color.White
+                                tint = GymTextSecondary
                             )
                         }
                     }
 
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = workout.dayName,
-                        color = Color.White,
+                        text = cleanDayName,
+                        color = GymTextPrimary,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp
                     )
                     Text(
                         text = "${workout.planName} • $dateText",
-                        color = Color.White.copy(alpha = 0.92f),
+                        color = GymTextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = "$displayExercisesCount ejercicios • ${workout.totalSets} series • ${workout.durationSeconds / 60} min • ${workout.caloriesBurned} kcal • Vol: ${workout.totalVolumeKg.toInt()} kg",
-                        color = Color.White.copy(alpha = 0.92f),
+                        color = GymTextSecondary,
                         fontSize = 11.sp
                     )
                 }
@@ -772,12 +770,12 @@ private fun FinishedWorkoutReadOnlyDialog(
                                         modifier = Modifier
                                             .size(26.dp)
                                             .clip(CircleShape)
-                                            .background(dayColor.copy(alpha = 0.20f)),
+                                            .background(GymCardBg),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = "${idx + 1}",
-                                            color = dayColor,
+                                            color = GymTextSecondary,
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 12.sp
                                         )
@@ -906,7 +904,7 @@ private fun FinishedWorkoutReadOnlyDialog(
                 ) {
                     Button(
                         onClick = onDismiss,
-                        colors = ButtonDefaults.buttonColors(containerColor = dayColor, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Cerrar Resumen", fontWeight = FontWeight.Bold)
@@ -2602,22 +2600,27 @@ fun SettingsScreen(viewModel: GymWpViewModel) {
             }
         }
 
-        // 3. Temas de Aplicación (5 temas)
+        // 3. Recordatorios Diarios de Entrenamiento
+        item {
+            WorkoutReminderCard(viewModel = viewModel)
+        }
+
+        // 4. Temas de Aplicación (5 temas)
         item {
             AppThemeSelectorCard(viewModel = viewModel)
         }
 
-        // 4. Respaldo Automático por Usuario en Google Drive
+        // 5. Respaldo Automático por Usuario en Google Drive
         item {
             GoogleDriveSyncCard(viewModel = viewModel)
         }
 
-        // 5. Actualizaciones OTA desde GitHub sin perder datos
+        // 6. Actualizaciones OTA desde GitHub sin perder datos
         item {
             AppUpdateCard(viewModel = viewModel)
         }
 
-        // 6. Acerca de Cheese WP (Sin emojis, sin mención a GymWP)
+        // 7. Acerca de Cheese WP (Sin emojis, sin tecnicismos, sin mención a GymWP)
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = GymCardBg),
@@ -2635,7 +2638,7 @@ fun SettingsScreen(viewModel: GymWpViewModel) {
                         fontSize = 15.sp
                     )
                     Text(
-                        text = "Cheese WP es un planificador y asistente de entrenamientos integral, diseñado de forma independiente con arquitectura nativa en Android (Kotlin, Jetpack Compose, Room SQLite). Ofrece gestión de rutinas personalizadas, soporte multi-usuario, sincronización en Google Drive, periodización y cálculo antropométrico avanzado.",
+                        text = "Cheese WP es tu compañero para organizar, seguir y mejorar tus entrenamientos en el gimnasio o en casa. Permite crear o exportar tus rutinas completas, programar tus días de entrenamiento con avisos automáticos, seguir tus tiempos de descanso en vivo y llevar el registro de tu evolución corporal.",
                         color = GymTextPrimary,
                         fontSize = 12.sp,
                         lineHeight = 17.sp
@@ -2646,14 +2649,14 @@ fun SettingsScreen(viewModel: GymWpViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Versión de aplicación", color = GymTextSecondary, fontSize = 12.sp)
-                        Text("2.8.0 (Build 208)", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("2.9.0 (Build 209)", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Privacidad", color = GymTextSecondary, fontSize = 12.sp)
-                        Text("100% Local y Privado", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("100% en tu teléfono", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -2808,6 +2811,186 @@ private fun EditProfilePreferencesDialog(
                         Text("Guardar", fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkoutReminderCard(viewModel: GymWpViewModel) {
+    val reminderState by viewModel.reminderSettings.collectAsState()
+    var feedbackMessage by remember { mutableStateOf<String?>(null) }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = GymCardBg),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "Notificaciones de Entrenamiento",
+                        color = GymOrange,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = "Recibe un aviso en la barra de notificaciones los días que tengas un entrenamiento programado (Lun-Dom), sin necesidad de abrir la app.",
+                        color = GymTextSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Switch(
+                    checked = reminderState.enabled,
+                    onCheckedChange = { enabled ->
+                        viewModel.setWorkoutRemindersEnabled(enabled)
+                        feedbackMessage = if (enabled) "Notificaciones diarias activadas" else "Notificaciones desactivadas"
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = GymOnPrimary,
+                        checkedTrackColor = GymOrange
+                    )
+                )
+            }
+
+            if (reminderState.enabled) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = GymSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Hora del aviso diario:",
+                                color = GymTextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = String.format(Locale.getDefault(), "%02d:%02d hrs", reminderState.hour, reminderState.minute),
+                                color = GymOrange,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val quickHours = listOf(8, 9, 12, 18, 20)
+                            quickHours.forEach { hr ->
+                                val isSelected = reminderState.hour == hr && reminderState.minute == 0
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) GymOrange else GymCardBg,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            viewModel.setWorkoutReminderTime(hr, 0)
+                                            feedbackMessage = String.format(Locale.getDefault(), "Aviso programado a las %02d:00 hrs", hr)
+                                        }
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.padding(vertical = 7.dp)
+                                    ) {
+                                        Text(
+                                            text = String.format(Locale.getDefault(), "%02d:00", hr),
+                                            color = if (isSelected) GymOnPrimary else GymTextSecondary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val newHour = (reminderState.hour + 23) % 24
+                                    viewModel.setWorkoutReminderTime(newHour, reminderState.minute)
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(vertical = 6.dp)
+                            ) {
+                                Text("-1 hora", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val newHour = (reminderState.hour + 1) % 24
+                                    viewModel.setWorkoutReminderTime(newHour, reminderState.minute)
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(vertical = 6.dp)
+                            ) {
+                                Text("+1 hora", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val newMin = (reminderState.minute + 15) % 60
+                                    viewModel.setWorkoutReminderTime(reminderState.hour, newMin)
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(vertical = 6.dp)
+                            ) {
+                                Text("+15 min", color = GymTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        viewModel.sendTestWorkoutReminder()
+                        feedbackMessage = "Se envió una notificación de prueba a la barra de tu teléfono."
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = GymOrange, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Probar notificación ahora",
+                        color = GymOrange,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            feedbackMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = FatigueGreen,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
