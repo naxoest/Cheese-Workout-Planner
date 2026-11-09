@@ -44,8 +44,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.gymwp.free.data.AlternativeExerciseSpec
 import com.gymwp.free.data.AppUpdateManager
 import com.gymwp.free.data.CatalogExercise
+import com.gymwp.free.data.PersistedExerciseProgress
+import com.gymwp.free.data.PersistedOptionProgress
+import com.gymwp.free.data.PersistedWorkoutSession
 import com.gymwp.free.data.WorkoutExerciseAlternativesCodec
 import com.gymwp.free.data.WorkoutExerciseEntity
+import com.gymwp.free.data.WorkoutReminderManager
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.domain.OverloadSuggestion
 import com.gymwp.free.domain.ProgressiveOverloadAdvisor
@@ -139,9 +143,34 @@ private fun syncOptionBufferSize(buf: LiveOptionRuntimeBuffer, targetCountRaw: I
     }
 }
 
-private fun createRuntimeStateFromEntity(wEx: WorkoutExerciseEntity): LiveExerciseRuntimeState {
+private fun applyPersistedOptionBuffer(
+    buf: LiveOptionRuntimeBuffer,
+    persistedOpt: PersistedOptionProgress?,
+    targetCountRaw: Int
+) {
+    if (persistedOpt != null && persistedOpt.done.isNotEmpty()) {
+        buf.done.clear()
+        buf.reps.clear()
+        buf.loads.clear()
+        val count = persistedOpt.done.size.coerceAtLeast(1)
+        for (i in 0 until count) {
+            buf.done.add(persistedOpt.done.getOrElse(i) { false })
+            buf.reps.add(persistedOpt.reps.getOrElse(i) { "10" })
+            buf.loads.add(persistedOpt.loads.getOrElse(i) { "20" })
+        }
+        // Only shrink/grow to entity targetCount if persisted size differs AND entity was resized
+        syncOptionBufferSize(buf, count.coerceAtLeast(targetCountRaw))
+    } else {
+        syncOptionBufferSize(buf, targetCountRaw)
+    }
+}
+
+private fun createRuntimeStateFromEntity(
+    wEx: WorkoutExerciseEntity,
+    persisted: PersistedExerciseProgress? = null
+): LiveExerciseRuntimeState {
     val map = mutableStateMapOf<Int, LiveOptionRuntimeBuffer>()
-    map[wEx.exerciseId] = createOptionBuffer(
+    val mainBuf = createOptionBuffer(
         exerciseId = wEx.exerciseId,
         unitType = wEx.unitType,
         setsCount = wEx.setsCount,
@@ -149,8 +178,11 @@ private fun createRuntimeStateFromEntity(wEx: WorkoutExerciseEntity): LiveExerci
         loadsCsv = wEx.loadsPerSetCsv,
         defaultLoadIfZero = 20f
     )
+    applyPersistedOptionBuffer(mainBuf, persisted?.options?.get(wEx.exerciseId), wEx.setsCount)
+    map[wEx.exerciseId] = mainBuf
+
     WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes).forEach { alt ->
-        map[alt.exerciseId] = createOptionBuffer(
+        val altBuf = createOptionBuffer(
             exerciseId = alt.exerciseId,
             unitType = alt.unitType,
             setsCount = alt.setsCount,
@@ -158,9 +190,12 @@ private fun createRuntimeStateFromEntity(wEx: WorkoutExerciseEntity): LiveExerci
             loadsCsv = alt.loadsPerSetCsv,
             defaultLoadIfZero = 15f
         )
+        applyPersistedOptionBuffer(altBuf, persisted?.options?.get(alt.exerciseId), alt.setsCount)
+        map[alt.exerciseId] = altBuf
     }
+    val initialActiveId = persisted?.activeExerciseId?.takeIf { map.containsKey(it) } ?: wEx.exerciseId
     return LiveExerciseRuntimeState(
-        activeExerciseIdInit = wEx.exerciseId,
+        activeExerciseIdInit = initialActiveId,
         syncedMainExerciseId = wEx.exerciseId,
         syncedMainUnitType = wEx.unitType,
         buffersByExerciseId = map
@@ -168,16 +203,8 @@ private fun createRuntimeStateFromEntity(wEx: WorkoutExerciseEntity): LiveExerci
 }
 
 private fun triggerRestAlertFeedback(context: Context) {
-    try {
-        ToneGenerator(AudioManager.STREAM_ALARM, 95)
-            .startTone(ToneGenerator.TONE_PROP_BEEP2, 550)
-    } catch (_: Exception) {
-        try {
-            ToneGenerator(AudioManager.STREAM_NOTIFICATION, 95)
-                .startTone(ToneGenerator.TONE_PROP_BEEP2, 500)
-        } catch (_: Exception) {
-        }
-    }
+    // Play user-selected notification sound reliably across Samsung, Motorola, Xiaomi & Pixel
+    WorkoutReminderManager.playSelectedNotificationSound(context)
 
     try {
         val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -216,6 +243,7 @@ fun LiveWorkoutAssistantScreen(
     planName: String,
     dayId: Long,
     fallbackDayName: String,
+    initialPersistedSession: PersistedWorkoutSession? = null,
     onExitSession: () -> Unit
 ) {
     val context = LocalContext.current
@@ -234,21 +262,42 @@ fun LiveWorkoutAssistantScreen(
         allWorkoutExercises.filter { it.workoutDayId == dayId }.sortedBy { it.orderIndex }
     }
 
-    // Screen-lock-proof elapsed stopwatch state (SystemClock.elapsedRealtime() ticks during deep sleep & lock!)
-    var sessionStartElapsedMs by rememberSaveable { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    var accumulatedPausedMs by rememberSaveable { mutableLongStateOf(0L) }
-    var pauseStartedAtMs by rememberSaveable { mutableLongStateOf(0L) }
-    var isPaused by rememberSaveable { mutableStateOf(false) }
+    // Wall-clock persistent stopwatch state (survives both screen lock AND Android background process death!)
+    var startedWallClockMs by rememberSaveable {
+        mutableLongStateOf(initialPersistedSession?.startedWallClockMs?.takeIf { it > 0L } ?: System.currentTimeMillis())
+    }
+    var accumulatedPausedMs by rememberSaveable {
+        mutableLongStateOf(initialPersistedSession?.accumulatedPausedMs ?: 0L)
+    }
+    var pauseStartedWallClockMs by rememberSaveable {
+        mutableLongStateOf(initialPersistedSession?.pauseStartedWallClockMs ?: 0L)
+    }
+    var isPaused by rememberSaveable {
+        mutableStateOf(initialPersistedSession?.isPaused ?: false)
+    }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
 
-    // Screen-lock-proof Rest Countdown state
-    var restEndElapsedMs by rememberSaveable { mutableLongStateOf(0L) }
-    var restTotalSeconds by rememberSaveable { mutableIntStateOf(60) }
-    var restRemainingSeconds by remember { mutableIntStateOf(0) }
+    // Screen-lock & process-death-proof Rest Countdown state
+    val initialRestRemMs = remember {
+        val savedEndWall = initialPersistedSession?.restEndWallClockMs ?: 0L
+        (savedEndWall - System.currentTimeMillis()).coerceAtLeast(0L)
+    }
+    var restEndElapsedMs by rememberSaveable {
+        mutableLongStateOf(if (initialRestRemMs > 0L) SystemClock.elapsedRealtime() + initialRestRemMs else 0L)
+    }
+    var restEndWallClockMs by rememberSaveable {
+        mutableLongStateOf(if (initialRestRemMs > 0L) initialPersistedSession?.restEndWallClockMs ?: 0L else 0L)
+    }
+    var restTotalSeconds by rememberSaveable {
+        mutableIntStateOf(initialPersistedSession?.restTotalSeconds?.takeIf { it > 0 } ?: 60)
+    }
+    var restRemainingSeconds by remember {
+        mutableIntStateOf(((initialRestRemMs + 999L) / 1000L).toInt())
+    }
 
     // UI mode: Gym WP Focused Card Mode vs Full List Mode
-    var focusedMode by rememberSaveable { mutableStateOf(true) }
-    var focusedExerciseIndex by rememberSaveable { mutableIntStateOf(0) }
+    var focusedMode by rememberSaveable { mutableStateOf(initialPersistedSession?.focusedMode ?: true) }
+    var focusedExerciseIndex by rememberSaveable { mutableIntStateOf(initialPersistedSession?.focusedExerciseIndex ?: 0) }
     var feedbackBannerText by remember { mutableStateOf<String?>(null) }
 
     // Dialog states for mid-workout routine editing & Parche exercises
@@ -268,10 +317,60 @@ fun LiveWorkoutAssistantScreen(
     // Per-exercise runtime state map keyed by WorkoutExerciseEntity.id
     val perExerciseState = remember { mutableStateMapOf<Long, LiveExerciseRuntimeState>() }
 
+    fun saveSessionSnapshot() {
+        if (completedSummary != null) return
+        val exerciseStatesMap = mutableMapOf<Long, PersistedExerciseProgress>()
+        initialPersistedSession?.exerciseStates?.forEach { (k, v) ->
+            exerciseStatesMap[k] = v
+        }
+        perExerciseState.forEach { (wExId, st) ->
+            val opts = mutableMapOf<Int, PersistedOptionProgress>()
+            st.buffersByExerciseId.forEach { (exId, buf) ->
+                opts[exId] = PersistedOptionProgress(
+                    exerciseId = exId,
+                    unitType = buf.unitType,
+                    done = buf.done.toList(),
+                    reps = buf.reps.toList(),
+                    loads = buf.loads.toList()
+                )
+            }
+            exerciseStatesMap[wExId] = PersistedExerciseProgress(
+                workoutExerciseId = wExId,
+                activeExerciseId = st.activeExerciseId,
+                options = opts
+            )
+        }
+        viewModel.saveLiveWorkoutProgress(
+            PersistedWorkoutSession(
+                userId = initialPersistedSession?.userId ?: 1,
+                planId = planId,
+                planName = planName,
+                dayId = dayId,
+                fallbackDayName = currentDayName,
+                startedWallClockMs = startedWallClockMs,
+                accumulatedPausedMs = accumulatedPausedMs,
+                pauseStartedWallClockMs = pauseStartedWallClockMs,
+                isPaused = isPaused,
+                restEndWallClockMs = restEndWallClockMs,
+                restTotalSeconds = restTotalSeconds,
+                focusedMode = focusedMode,
+                focusedExerciseIndex = focusedExerciseIndex,
+                exerciseStates = exerciseStatesMap
+            )
+        )
+    }
+
     // Keep focused index in bounds when exercises are added/removed
     LaunchedEffect(liveExercises.size) {
         if (liveExercises.isNotEmpty() && focusedExerciseIndex !in liveExercises.indices) {
             focusedExerciseIndex = liveExercises.lastIndex.coerceAtLeast(0)
+        }
+    }
+
+    // Auto-save whenever mode, focused exercise, pause state, or rest timer changes
+    LaunchedEffect(isPaused, focusedMode, focusedExerciseIndex, restEndWallClockMs, currentDayName, liveExercises.size) {
+        if (liveExercises.isNotEmpty()) {
+            saveSessionSnapshot()
         }
     }
 
@@ -288,7 +387,10 @@ fun LiveWorkoutAssistantScreen(
         liveExercises.forEach { wEx ->
             val existing = perExerciseState[wEx.id]
             if (existing == null) {
-                perExerciseState[wEx.id] = createRuntimeStateFromEntity(wEx)
+                perExerciseState[wEx.id] = createRuntimeStateFromEntity(
+                    wEx = wEx,
+                    persisted = initialPersistedSession?.exerciseStates?.get(wEx.id)
+                )
             } else {
                 // If the main (Principal) exercise was permanently replaced
                 if (existing.syncedMainExerciseId != wEx.exerciseId) {
@@ -346,14 +448,17 @@ fun LiveWorkoutAssistantScreen(
                 }
             }
         }
+        if (liveExercises.isNotEmpty()) {
+            saveSessionSnapshot()
+        }
     }
 
     fun computeCurrentElapsedSeconds(): Int {
-        val now = SystemClock.elapsedRealtime()
-        val currentPauseDelta = if (isPaused && pauseStartedAtMs > 0L) {
-            (now - pauseStartedAtMs).coerceAtLeast(0L)
+        val now = System.currentTimeMillis()
+        val currentPauseDelta = if (isPaused && pauseStartedWallClockMs > 0L) {
+            (now - pauseStartedWallClockMs).coerceAtLeast(0L)
         } else 0L
-        val activeMs = (now - sessionStartElapsedMs - accumulatedPausedMs - currentPauseDelta).coerceAtLeast(0L)
+        val activeMs = (now - startedWallClockMs - accumulatedPausedMs - currentPauseDelta).coerceAtLeast(0L)
         return (activeMs / 1000L).toInt()
     }
 
@@ -363,26 +468,31 @@ fun LiveWorkoutAssistantScreen(
         return if (remMs <= 0L) 0 else ((remMs + 999L) / 1000L).toInt()
     }
 
-    // Refresh timers immediately on screen unlock / resume
+    // Refresh timers immediately on screen unlock / resume and auto-save on pause/stop
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                if (completedSummary == null) {
-                    elapsedSeconds = computeCurrentElapsedSeconds()
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    if (completedSummary == null) {
+                        elapsedSeconds = computeCurrentElapsedSeconds()
+                    }
+                    restRemainingSeconds = computeCurrentRestSeconds()
+                    AppUpdateManager.cancelRestNotification(context)
                 }
-                restRemainingSeconds = computeCurrentRestSeconds()
-                AppUpdateManager.cancelRestNotification(context)
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                    saveSessionSnapshot()
+                }
+                else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            AppUpdateManager.cancelRestNotification(context)
         }
     }
 
-    // Global workout stopwatch ticker (real monotonic clock)
-    LaunchedEffect(isPaused, completedSummary, sessionStartElapsedMs, accumulatedPausedMs) {
+    // Global workout stopwatch ticker
+    LaunchedEffect(isPaused, completedSummary, startedWallClockMs, accumulatedPausedMs) {
         elapsedSeconds = computeCurrentElapsedSeconds()
         while (!isPaused && completedSummary == null) {
             delay(500L)
@@ -390,7 +500,7 @@ fun LiveWorkoutAssistantScreen(
         }
     }
 
-    // Lockscreen-safe Rest Countdown Timer using bounded PARTIAL_WAKE_LOCK + Dispatchers.Default
+    // Lockscreen-safe Rest Countdown Timer using bounded PARTIAL_WAKE_LOCK + Exact Alarm backup
     LaunchedEffect(restEndElapsedMs) {
         val targetEnd = restEndElapsedMs
         if (targetEnd <= 0L) {
@@ -400,6 +510,7 @@ fun LiveWorkoutAssistantScreen(
         val initialRemMs = targetEnd - SystemClock.elapsedRealtime()
         if (initialRemMs <= 0L) {
             restEndElapsedMs = 0L
+            restEndWallClockMs = 0L
             restRemainingSeconds = 0
             return@LaunchedEffect
         }
@@ -422,14 +533,18 @@ fun LiveWorkoutAssistantScreen(
                     delay(250L)
                 }
             }
-            // Timer reached 0! Alert user even if phone screen is locked!
+            // Timer reached 0! Cancel backup alarm so it doesn't double-fire, then alert user
+            WorkoutReminderManager.cancelRestTimerAlarm(context)
             restRemainingSeconds = 0
             restEndElapsedMs = 0L
-            triggerRestAlertFeedback(context)
+            restEndWallClockMs = 0L
+            saveSessionSnapshot()
             val isScreenInteractive = pm?.isInteractive ?: true
             val isAppVisible = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             if (!isScreenInteractive || !isAppVisible) {
-                AppUpdateManager.postRestFinishedNotification(context, currentDayName)
+                WorkoutReminderManager.onRestTimerFinished(context, currentDayName)
+            } else {
+                triggerRestAlertFeedback(context)
             }
         } finally {
             try {
@@ -446,7 +561,10 @@ fun LiveWorkoutAssistantScreen(
         restTotalSeconds = safeSec
         restRemainingSeconds = safeSec
         restEndElapsedMs = SystemClock.elapsedRealtime() + safeSec * 1000L
+        restEndWallClockMs = System.currentTimeMillis() + safeSec * 1000L
         AppUpdateManager.cancelRestNotification(context)
+        WorkoutReminderManager.scheduleRestTimerAlarm(context, restEndElapsedMs, currentDayName)
+        saveSessionSnapshot()
     }
 
     fun adjustRestCountdown(deltaSec: Int) {
@@ -455,14 +573,19 @@ fun LiveWorkoutAssistantScreen(
         val updatedEnd = baseEnd + deltaSec * 1000L
         if (updatedEnd <= now) {
             restEndElapsedMs = 0L
+            restEndWallClockMs = 0L
             restRemainingSeconds = 0
+            WorkoutReminderManager.cancelRestTimerAlarm(context)
             AppUpdateManager.cancelRestNotification(context)
         } else {
             val newRem = ((updatedEnd - now + 999L) / 1000L).toInt().coerceAtMost(600)
             restRemainingSeconds = newRem
             if (newRem > restTotalSeconds) restTotalSeconds = newRem
             restEndElapsedMs = now + newRem * 1000L
+            restEndWallClockMs = System.currentTimeMillis() + newRem * 1000L
+            WorkoutReminderManager.scheduleRestTimerAlarm(context, restEndElapsedMs, currentDayName)
         }
+        saveSessionSnapshot()
     }
 
     fun persistExerciseState(wEx: WorkoutExerciseEntity, st: LiveExerciseRuntimeState) {
@@ -486,12 +609,16 @@ fun LiveWorkoutAssistantScreen(
                 loadsPerSetCsv = loadsCsv
             )
         }
+        saveSessionSnapshot()
     }
 
     // Ensure immediate runtime state entries for visible exercises
     val stateByExerciseId = liveExercises.associate { wEx ->
         val existing = perExerciseState[wEx.id]
-        val state = existing ?: createRuntimeStateFromEntity(wEx).also { perExerciseState[wEx.id] = it }
+        val state = existing ?: createRuntimeStateFromEntity(
+            wEx = wEx,
+            persisted = initialPersistedSession?.exerciseStates?.get(wEx.id)
+        ).also { perExerciseState[wEx.id] = it }
         wEx.id to state
     }
 
@@ -585,15 +712,16 @@ fun LiveWorkoutAssistantScreen(
                 FilledTonalIconButton(
                     onClick = {
                         if (!isPaused) {
-                            pauseStartedAtMs = SystemClock.elapsedRealtime()
+                            pauseStartedWallClockMs = System.currentTimeMillis()
                             isPaused = true
                         } else {
-                            if (pauseStartedAtMs > 0L) {
-                                accumulatedPausedMs += (SystemClock.elapsedRealtime() - pauseStartedAtMs).coerceAtLeast(0L)
+                            if (pauseStartedWallClockMs > 0L) {
+                                accumulatedPausedMs += (System.currentTimeMillis() - pauseStartedWallClockMs).coerceAtLeast(0L)
                             }
-                            pauseStartedAtMs = 0L
+                            pauseStartedWallClockMs = 0L
                             isPaused = false
                         }
+                        saveSessionSnapshot()
                     },
                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = GymSurfaceElevated,
@@ -866,6 +994,7 @@ fun LiveWorkoutAssistantScreen(
                         overloadSuggestion = focusedOverload,
                         onSelectActiveExerciseId = { chosenId ->
                             currentSt.activeExerciseId = chosenId
+                            saveSessionSnapshot()
                             if (chosenId == currentWEx.exerciseId) {
                                 feedbackBannerText = "Titular activo: $mainExName"
                             } else {
@@ -1057,6 +1186,7 @@ fun LiveWorkoutAssistantScreen(
                         overloadSuggestion = itemOverload,
                         onSelectActiveExerciseId = { chosenId ->
                             st.activeExerciseId = chosenId
+                            saveSessionSnapshot()
                             if (chosenId == wEx.exerciseId) {
                                 feedbackBannerText = "Titular activo: $mainExName"
                             } else {
@@ -1224,8 +1354,11 @@ fun LiveWorkoutAssistantScreen(
                                 Button(
                                     onClick = {
                                         restEndElapsedMs = 0L
+                                        restEndWallClockMs = 0L
                                         restRemainingSeconds = 0
+                                        WorkoutReminderManager.cancelRestTimerAlarm(context)
                                         AppUpdateManager.cancelRestNotification(context)
+                                        saveSessionSnapshot()
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color.Black.copy(alpha = 0.35f),
@@ -1258,7 +1391,9 @@ fun LiveWorkoutAssistantScreen(
                     val finalElapsed = computeCurrentElapsedSeconds().coerceAtLeast(elapsedSeconds).coerceAtLeast(60)
                     elapsedSeconds = finalElapsed
                     restEndElapsedMs = 0L
+                    restEndWallClockMs = 0L
                     restRemainingSeconds = 0
+                    WorkoutReminderManager.cancelRestTimerAlarm(context)
                     AppUpdateManager.cancelRestNotification(context)
 
                     val anySetCheckedInSession = liveExercises.any { wEx ->
@@ -1638,6 +1773,7 @@ fun LiveWorkoutAssistantScreen(
             confirmButtonText = "Sí, Salir",
             onConfirm = {
                 confirmingExitSession = false
+                WorkoutReminderManager.cancelRestTimerAlarm(context)
                 AppUpdateManager.cancelRestNotification(context)
                 onExitSession()
             },

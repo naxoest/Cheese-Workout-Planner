@@ -59,10 +59,16 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         ReminderSettingsState(
             enabled = WorkoutReminderManager.isReminderEnabled(appContext),
             hour = WorkoutReminderManager.getReminderHour(appContext),
-            minute = WorkoutReminderManager.getReminderMinute(appContext)
+            minute = WorkoutReminderManager.getReminderMinute(appContext),
+            selectedSoundId = WorkoutReminderManager.getSelectedSoundId(appContext)
         )
     )
     val reminderSettings: StateFlow<ReminderSettingsState> = _reminderSettings.asStateFlow()
+
+    private val _activeLiveSession = MutableStateFlow(
+        ActiveWorkoutSessionStore.loadSession(appContext, _activeUserId.value)
+    )
+    val activeLiveSession: StateFlow<PersistedWorkoutSession?> = _activeLiveSession.asStateFlow()
 
     val userProfile: StateFlow<UserProfileEntity?> = _activeUserId
         .flatMapLatest { uid -> dao.observeUserProfile(uid) }
@@ -150,10 +156,47 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             ensureUserMuscleFatigueInitialized(_activeUserId.value)
+            _activeLiveSession.value = ActiveWorkoutSessionStore.loadSession(appContext, _activeUserId.value)
+            WorkoutReminderManager.ensureChannels(appContext)
             WorkoutReminderManager.scheduleNextAlarm(appContext)
             refreshReminderSettings(notifyTodayIfScheduled = true)
             _appUpdateState.value = AppUpdateManager.checkForUpdates(appContext, notifyIfAvailable = true)
         }
+    }
+
+    fun startOrResumeLiveWorkout(
+        planId: Long?,
+        planName: String,
+        dayId: Long,
+        fallbackDayName: String
+    ) {
+        val uid = _activeUserId.value
+        val existing = ActiveWorkoutSessionStore.loadSession(appContext, uid)
+        val session = if (existing != null && existing.dayId == dayId) {
+            existing
+        } else {
+            PersistedWorkoutSession(
+                userId = uid,
+                planId = planId,
+                planName = planName,
+                dayId = dayId,
+                fallbackDayName = fallbackDayName,
+                startedWallClockMs = System.currentTimeMillis()
+            )
+        }
+        ActiveWorkoutSessionStore.saveSession(appContext, session)
+        _activeLiveSession.value = session
+    }
+
+    fun saveLiveWorkoutProgress(session: PersistedWorkoutSession) {
+        _activeLiveSession.value = session
+        ActiveWorkoutSessionStore.saveSession(appContext, session)
+    }
+
+    fun clearActiveLiveSession() {
+        val uid = _activeUserId.value
+        ActiveWorkoutSessionStore.clearSession(appContext, uid)
+        _activeLiveSession.value = null
     }
 
     fun refreshReminderSettings(notifyTodayIfScheduled: Boolean = false) {
@@ -163,6 +206,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 enabled = WorkoutReminderManager.isReminderEnabled(appContext),
                 hour = WorkoutReminderManager.getReminderHour(appContext),
                 minute = WorkoutReminderManager.getReminderMinute(appContext),
+                selectedSoundId = WorkoutReminderManager.getSelectedSoundId(appContext),
                 todayScheduledSummary = summary
             )
             WorkoutReminderManager.scheduleNextAlarm(appContext)
@@ -180,6 +224,30 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
     fun setWorkoutReminderTime(hour: Int, minute: Int) {
         WorkoutReminderManager.setReminderTime(appContext, hour, minute)
         refreshReminderSettings(notifyTodayIfScheduled = false)
+    }
+
+    fun setNotificationSound(soundId: String, preview: Boolean = true) {
+        WorkoutReminderManager.setSelectedSoundId(appContext, soundId)
+        _reminderSettings.value = _reminderSettings.value.copy(
+            selectedSoundId = WorkoutReminderManager.getSelectedSoundId(appContext)
+        )
+        if (preview) {
+            WorkoutReminderManager.playSelectedNotificationSound(
+                context = appContext,
+                soundIdOverride = soundId,
+                forceAlarmStream = true,
+                vibrate = true
+            )
+        }
+    }
+
+    fun previewNotificationSound(soundId: String) {
+        WorkoutReminderManager.playSelectedNotificationSound(
+            context = appContext,
+            soundIdOverride = soundId,
+            forceAlarmStream = true,
+            vibrate = true
+        )
     }
 
     fun sendTestWorkoutReminder(onResult: (Boolean) -> Unit = {}) {
@@ -249,6 +317,7 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
             _selectedTheme.value = AppThemeOption.fromId(
                 GoogleDriveBackupManager.getSavedThemeForUser(appContext, userId)
             )
+            _activeLiveSession.value = ActiveWorkoutSessionStore.loadSession(appContext, userId)
             ensureUserMuscleFatigueInitialized(userId)
             refreshReminderSettings(notifyTodayIfScheduled = true)
             triggerAutoDriveSync()
@@ -528,6 +597,13 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun exportRoutineToShareableFileUri(planId: Long, onResult: (Result<Pair<Uri, String>>) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = WorkoutRoutinePortManager.exportRoutineToShareableFileUri(appContext, dao, planId)
+            launch(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
     fun exportRoutineToUri(planId: Long, targetUri: Uri, onResult: (Result<String>) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val result = WorkoutRoutinePortManager.exportRoutineToUri(appContext, dao, planId, targetUri)
@@ -779,6 +855,20 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun reorderWorkoutExercises(dayId: Long, orderedExerciseIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = dao.getWorkoutExercises(dayId).associateBy { it.id }
+            val orderedEntities = orderedExerciseIds.mapNotNull { current[it] } +
+                current.values.filter { it.id !in orderedExerciseIds.toSet() }
+            orderedEntities.forEachIndexed { index, item ->
+                if (item.orderIndex != index) {
+                    dao.updateWorkoutExercise(item.copy(orderIndex = index))
+                }
+            }
+            triggerAutoDriveSync()
+        }
+    }
+
     fun moveWorkoutExercise(dayId: Long, workoutExerciseId: Long, moveUp: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val list = dao.getWorkoutExercises(dayId).toMutableList()
@@ -1015,10 +1105,83 @@ class GymWpViewModel(application: Application) : AndroidViewModel(application) {
                 }
             )
 
+            ActiveWorkoutSessionStore.clearSession(appContext, uid)
+            _activeLiveSession.value = null
             triggerAutoDriveSync()
 
             launch(Dispatchers.Main) {
                 onFinished(calories, updatedMap)
+            }
+        }
+    }
+
+    fun updateFinishedWorkoutSession(
+        finishedDayId: Long,
+        durationSeconds: Int,
+        updatedLogs: List<CompletedExerciseLog>,
+        onUpdated: () -> Unit = {}
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val existingDay = dao.getFinishedWorkoutDay(finishedDayId) ?: return@launch
+            val safeDuration = durationSeconds.coerceAtLeast(60)
+            val weightKg = userProfile.value?.weightKg ?: 75f
+            val totalSets = updatedLogs.sumOf { it.repsPerSet.size }
+            val totalReps = updatedLogs.sumOf { it.repsPerSet.sum() }
+            val totalVolume = updatedLogs.sumOf { log ->
+                log.loadsPerSet.zip(log.repsPerSet).sumOf { (load, rep) -> (load * rep).toDouble() }
+            }.toFloat()
+            val calories = WorkoutMetricsCalculator.calculateEstimatedCalories(totalSets, weightKg, safeDuration)
+
+            dao.insertFinishedWorkoutDay(
+                existingDay.copy(
+                    durationSeconds = safeDuration,
+                    caloriesBurned = calories,
+                    totalVolumeKg = totalVolume,
+                    totalSets = totalSets,
+                    totalReps = totalReps,
+                    exercisesCount = updatedLogs.size
+                )
+            )
+
+            dao.deleteFinishedExercisesForDay(finishedDayId)
+            val finishedExEntities = updatedLogs.map { log ->
+                val maxLoad = log.loadsPerSet.maxOrNull() ?: 0f
+                val avgLoad = if (log.loadsPerSet.isNotEmpty()) log.loadsPerSet.average().toFloat() else 0f
+                val vol = log.loadsPerSet.zip(log.repsPerSet).sumOf { (l, r) -> (l * r).toDouble() }.toFloat()
+                val repsSum = log.repsPerSet.sum()
+                val detail = log.loadsPerSet.zip(log.repsPerSet)
+                    .mapIndexed { idx, (l, r) ->
+                        when (log.unitType) {
+                            2 -> "S${idx + 1}: $r seg"
+                            3 -> "S${idx + 1}: $r min"
+                            1 -> "S${idx + 1}: $r reps"
+                            else -> if (l > 0f) {
+                                "S${idx + 1}: $r × ${ProgressiveOverloadAdvisor.formatWeight(l)} kg"
+                            } else {
+                                "S${idx + 1}: $r reps"
+                            }
+                        }
+                    }
+                    .joinToString(" | ")
+                FinishedExerciseEntity(
+                    userId = existingDay.userId,
+                    finishedDayId = finishedDayId,
+                    exerciseId = log.exerciseId,
+                    exerciseName = log.exerciseName,
+                    muscles = log.muscles,
+                    timestampMillis = existingDay.timestampMillis,
+                    maxLoadKg = maxLoad,
+                    avgLoadKg = avgLoad,
+                    totalVolumeKg = vol,
+                    totalReps = repsSum,
+                    setsCount = log.repsPerSet.size,
+                    setsDetailText = detail
+                )
+            }
+            dao.insertFinishedExercises(finishedExEntities)
+            triggerAutoDriveSync()
+            launch(Dispatchers.Main) {
+                onUpdated()
             }
         }
     }

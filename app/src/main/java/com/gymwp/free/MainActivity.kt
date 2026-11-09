@@ -102,11 +102,8 @@ class MainActivity : ComponentActivity() {
                     BottomNavTab.entries.firstOrNull { it.name == currentTabName } ?: BottomNavTab.HOME
                 }
 
-                // Live workout session persisted across screen locks & config changes
-                var liveDayId by rememberSaveable { mutableStateOf<Long?>(null) }
-                var livePlanId by rememberSaveable { mutableStateOf<Long?>(null) }
-                var livePlanName by rememberSaveable { mutableStateOf("Entrenamiento Libre") }
-                var liveFallbackDayName by rememberSaveable { mutableStateOf("Entrenamiento") }
+                // Live workout session persisted to disk so it stays open and auto-saved even if the user leaves the app
+                val activeLiveSession by vm.activeLiveSession.collectAsState()
 
                 Surface(
                     modifier = Modifier
@@ -116,17 +113,17 @@ class MainActivity : ComponentActivity() {
                         .imePadding(),
                     color = GymDarkBg
                 ) {
-                    val activeDayId = liveDayId
-                    if (activeDayId != null) {
+                    val liveSession = activeLiveSession
+                    if (liveSession != null) {
                         LiveWorkoutAssistantScreen(
                             viewModel = vm,
-                            planId = livePlanId,
-                            planName = livePlanName,
-                            dayId = activeDayId,
-                            fallbackDayName = liveFallbackDayName,
+                            planId = liveSession.planId,
+                            planName = liveSession.planName,
+                            dayId = liveSession.dayId,
+                            fallbackDayName = liveSession.fallbackDayName,
+                            initialPersistedSession = liveSession,
                             onExitSession = {
-                                liveDayId = null
-                                livePlanId = null
+                                vm.clearActiveLiveSession()
                             }
                         )
                     } else {
@@ -180,10 +177,12 @@ class MainActivity : ComponentActivity() {
                                     BottomNavTab.HOME -> HomeWorkoutsScreen(
                                         viewModel = vm,
                                         onStartLiveWorkout = { plan, day, _ ->
-                                            livePlanId = plan?.id
-                                            livePlanName = plan?.name ?: "Entrenamiento Libre"
-                                            liveFallbackDayName = day.name
-                                            liveDayId = day.id
+                                            vm.startOrResumeLiveWorkout(
+                                                planId = plan?.id,
+                                                planName = plan?.name ?: "Entrenamiento Libre",
+                                                dayId = day.id,
+                                                fallbackDayName = day.name
+                                            )
                                         },
                                         onNavigateToExplore = { currentTabName = BottomNavTab.EXPLORE.name },
                                         onNavigateToSettings = { currentTabName = BottomNavTab.SETTINGS.name }

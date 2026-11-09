@@ -2,10 +2,12 @@ package com.gymwp.free.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 data class ImportedRoutineSummary(
     val planId: Long,
@@ -114,6 +116,28 @@ object WorkoutRoutinePortManager {
             }
 
             root.toString(2)
+        }
+    }
+
+    suspend fun exportRoutineToShareableFileUri(
+        context: Context,
+        dao: GymWpDao,
+        planId: Long
+    ): Result<Pair<Uri, String>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val plan = dao.getWorkoutPlan(planId)
+                ?: throw IllegalArgumentException("No se encontró la rutina seleccionada.")
+            val jsonText = exportRoutineToJson(dao, planId).getOrThrow()
+            val cleanBase = plan.name.replace(Regex("[^a-zA-Z0-9_-]"), "_").trim('_').ifBlank { "Rutina" }
+            val fileName = "Rutina_${cleanBase}.json"
+            val outFile = File(context.cacheDir, fileName)
+            outFile.writeText(jsonText, Charsets.UTF_8)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                outFile
+            )
+            uri to fileName
         }
     }
 

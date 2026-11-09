@@ -1,6 +1,6 @@
 {
-  "versionCode": 209,
-  "versionName": "2.9.0",
+  "versionCode": 210,
+  "versionName": "2.10.0",
   "apkUrl": "https://raw.githubusercontent.com/naxoest/GymWP-Free/main/v1.apk",
-  "releaseNotes": "• Notificaciones automáticas de entrenamiento: recibe un aviso en la barra de notificaciones de tu teléfono cuando hoy coincida con un día de entrenamiento programado en tu rutina, sin necesidad de abrir la aplicación.\n• Exportar e Importar Rutina completa: comparte o guarda tus rutinas completas con todos sus días, horarios, ejercicios, series, cargas y ejercicios parche en formato archivo o código.\n• Eliminación completa de la opción de cambiar colores a los días para mantener una interfaz uniforme y limpia.\n• Guía en el README renovada en lenguaje claro y sencillo."
+  "releaseNotes": "• Rutinas minimizadas al entrar a Entrenar: ahora los días se muestran cerrados por defecto y tú abres el día que quieras entrenar.\n• Autoguardado continuo del entrenamiento en curso: si sales de la aplicación por un rato, tu entrenamiento se mantiene abierto conservando las series marcadas, pesos y tiempo.\n• Edición de entrenamientos finalizados: ahora puedes editar cualquier sesión del historial si olvidaste marcar series, ajustar pesos o agregar algún ejercicio.\n• Ordenar manteniendo presionado: mantén apretado un ejercicio y arrástralo al lugar que prefieras sin botones adicionales.\n• Compartir e importar rutinas directamente como archivo (.json).\n• 17 sonidos de notificación seleccionables y compatibilidad de audio reforzada para distintos modelos Android (incluyendo Samsung y Motorola)."
 }

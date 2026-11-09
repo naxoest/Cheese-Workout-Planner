@@ -112,7 +112,7 @@ object AppUpdateManager {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setSmallIcon(com.gymwp.free.R.drawable.ic_stat_notification)
                 .setContentTitle("¡Nueva versión de Cheese WP (v${remote.versionName})!")
                 .setContentText(remote.releaseNotes.ifBlank { "Toca para actualizar Cheese WP sin perder tus datos." })
                 .setStyle(NotificationCompat.BigTextStyle().bigText(remote.releaseNotes))
@@ -126,48 +126,11 @@ object AppUpdateManager {
     }
 
     fun postRestFinishedNotification(context: Context, dayName: String) {
-        try {
-            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(
-                    REST_CHANNEL_ID,
-                    "Cronómetro de Descanso (Cheese WP)",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Avisa cuando finaliza el tiempo de descanso entre series"
-                    enableVibration(true)
-                }
-                nm.createNotificationChannel(channel)
-            }
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                1,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val notification = NotificationCompat.Builder(context, REST_CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("¡Descanso terminado!")
-                .setContentText("Es hora de tu siguiente serie en \"$dayName\"")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .build()
-            nm.notify(REST_NOTIFICATION_ID, notification)
-        } catch (_: Exception) {
-        }
+        WorkoutReminderManager.postRestFinishedNotification(context, dayName)
     }
 
     fun cancelRestNotification(context: Context) {
-        try {
-            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.cancel(REST_NOTIFICATION_ID)
-        } catch (_: Exception) {
-        }
+        WorkoutReminderManager.cancelRestNotification(context)
     }
 
     suspend fun downloadAndTriggerInstall(

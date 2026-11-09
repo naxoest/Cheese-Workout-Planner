@@ -1,7 +1,6 @@
 package com.gymwp.free.ui.screens
 
 import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -9,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,7 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import com.gymwp.free.data.*
 import com.gymwp.free.domain.MuscleCatalog
 import com.gymwp.free.domain.OverloadSuggestion
@@ -87,9 +93,9 @@ fun HomeWorkoutsScreen(
     var pendingExportPlanId by remember { mutableStateOf<Long?>(null) }
     var showAddDayDialogForPlan by remember { mutableStateOf<Long?>(null) }
     var editingDayTarget by remember { mutableStateOf<WorkoutDayEntity?>(null) }
-    val collapsedDayIds = remember { mutableStateListOf<Long>() }
+    val haptic = LocalHapticFeedback.current
+    val expandedDayIds = remember { mutableStateListOf<Long>() }
     var showAddExerciseForDay by remember { mutableStateOf<Long?>(null) }
-    var reorderingDayId by remember { mutableStateOf<Long?>(null) }
     var addingAlternativeForWEx by remember { mutableStateOf<Pair<WorkoutExerciseEntity, CatalogExercise?>?>(null) }
     var replacingWorkoutExercise by remember { mutableStateOf<Pair<WorkoutExerciseEntity, String>?>(null) }
     var editingWorkoutExercise by remember { mutableStateOf<WorkoutExerciseEntity?>(null) }
@@ -464,7 +470,7 @@ fun HomeWorkoutsScreen(
                     }
                 }
 
-                // Modern Routine Day Showcase Cards
+                // Modern Routine Day Showcase Cards (minimized by default until opened by user)
                 itemsIndexed(daysForActivePlan, key = { _, d -> d.id }) { dayIdx, day ->
                     val dayExercises = remember(allExercises, day.id) {
                         allExercises.filter { it.workoutDayId == day.id }.sortedBy { it.orderIndex }
@@ -472,8 +478,22 @@ fun HomeWorkoutsScreen(
                     val totalSets = dayExercises.sumOf { it.setsCount }
                     val (minDur, maxDur) = WorkoutMetricsCalculator.estimateDurationWindowMinutes(totalSets, dayExercises.size)
                     val estKcal = WorkoutMetricsCalculator.calculateEstimatedCalories(totalSets, profile?.weightKg ?: 75f)
-                    val isCollapsed = collapsedDayIds.contains(day.id)
-                    val isReorderingThisDay = !isCollapsed && reorderingDayId == day.id && dayExercises.size > 1
+                    val isCollapsed = !expandedDayIds.contains(day.id)
+
+                    // Local drag-and-drop state for holding & dragging an exercise to reorder
+                    val localExercises = remember(day.id) { mutableStateListOf<WorkoutExerciseEntity>() }
+                    var draggingExerciseId by remember(day.id) { mutableStateOf<Long?>(null) }
+                    var dragOffsetY by remember(day.id) { mutableFloatStateOf(0f) }
+                    val itemHeightsPx = remember(day.id) { mutableStateMapOf<Long, Int>() }
+
+                    LaunchedEffect(dayExercises, draggingExerciseId) {
+                        if (draggingExerciseId == null) {
+                            localExercises.clear()
+                            localExercises.addAll(dayExercises)
+                        }
+                    }
+
+                    val displayedExercises = if (localExercises.size == dayExercises.size) localExercises else dayExercises
 
                     val targetedMuscles = remember(dayExercises, allCatalog) {
                         val counts = linkedMapOf<Int, Int>()
@@ -530,16 +550,20 @@ fun HomeWorkoutsScreen(
                             .fillMaxWidth()
                             .border(
                                 width = 1.dp,
-                                color = GymBorder,
+                                color = if (!isCollapsed) GymOrange.copy(alpha = 0.45f) else GymBorder,
                                 shape = RoundedCornerShape(22.dp)
                             )
                     ) {
                         Column {
-                            // 1. Clean Neutral Day Header
+                            // 1. Clean Neutral Day Header (Tap to open/minimize routine)
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(GymSurfaceElevated)
+                                    .clickable {
+                                        if (isCollapsed) expandedDayIds.add(day.id)
+                                        else expandedDayIds.remove(day.id)
+                                    }
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 Row(
@@ -605,35 +629,6 @@ fun HomeWorkoutsScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        if (dayExercises.size > 1 && !isCollapsed) {
-                                            Surface(
-                                                onClick = {
-                                                    reorderingDayId = if (isReorderingThisDay) null else day.id
-                                                },
-                                                shape = RoundedCornerShape(9.dp),
-                                                color = if (isReorderingThisDay) GymOrange else GymCardBg
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = if (isReorderingThisDay) Icons.Default.Check else Icons.Default.SwapVert,
-                                                        contentDescription = if (isReorderingThisDay) "Terminar orden" else "Ordenar ejercicios",
-                                                        tint = if (isReorderingThisDay) GymOnPrimary else GymTextSecondary,
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                    Text(
-                                                        text = if (isReorderingThisDay) "Listo" else "Ordenar",
-                                                        color = if (isReorderingThisDay) GymOnPrimary else GymTextSecondary,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        fontSize = 11.sp
-                                                    )
-                                                }
-                                            }
-                                        }
-
                                         Box(
                                             modifier = Modifier
                                                 .size(30.dp)
@@ -670,20 +665,17 @@ fun HomeWorkoutsScreen(
                                             modifier = Modifier
                                                 .size(30.dp)
                                                 .clip(CircleShape)
-                                                .background(GymCardBg)
+                                                .background(if (!isCollapsed) GymOrange.copy(alpha = 0.2f) else GymCardBg)
                                                 .clickable {
-                                                    if (isCollapsed) collapsedDayIds.remove(day.id)
-                                                    else {
-                                                        if (reorderingDayId == day.id) reorderingDayId = null
-                                                        collapsedDayIds.add(day.id)
-                                                    }
+                                                    if (isCollapsed) expandedDayIds.add(day.id)
+                                                    else expandedDayIds.remove(day.id)
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = if (isCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                                                contentDescription = if (isCollapsed) "Ver ejercicios" else "Contraer día",
-                                                tint = GymTextSecondary,
+                                                contentDescription = if (isCollapsed) "Abrir entrenamiento" else "Minimizar entrenamiento",
+                                                tint = if (!isCollapsed) GymOrange else GymTextSecondary,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -697,8 +689,7 @@ fun HomeWorkoutsScreen(
                                     color = GymTextPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 18.sp,
-                                    lineHeight = 22.sp,
-                                    modifier = Modifier.clickable { editingDayTarget = day }
+                                    lineHeight = 22.sp
                                 )
 
                                 Spacer(Modifier.height(8.dp))
@@ -721,6 +712,10 @@ fun HomeWorkoutsScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(GymCardBg.copy(alpha = 0.5f))
+                                        .clickable {
+                                            if (isCollapsed) expandedDayIds.add(day.id)
+                                            else expandedDayIds.remove(day.id)
+                                        }
                                         .padding(horizontal = 12.dp, vertical = 7.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -755,38 +750,62 @@ fun HomeWorkoutsScreen(
                                             }
                                         }
                                     }
+                                    if (isCollapsed) {
+                                        Text(
+                                            text = "Abrir ▾",
+                                            color = GymOrange,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    }
+                                }
+                            } else if (isCollapsed) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { expandedDayIds.add(day.id) }
+                                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Abrir entrenamiento ▾",
+                                        color = GymOrange,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
                                 }
                             }
 
-                            // 3. Exercises inside this Day (when expanded)
-                            Column(Modifier.padding(12.dp)) {
-                                if (!isCollapsed) {
-                                    if (isReorderingThisDay) {
+                            // 3. Exercises & Action Footer inside this Day (only shown when user opens the day!)
+                            if (!isCollapsed) {
+                                Column(Modifier.padding(12.dp)) {
+                                    if (displayedExercises.size > 1) {
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(bottom = 8.dp)
-                                                .background(GymOrange.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
+                                                .background(GymSurfaceElevated.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
                                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             Icon(
-                                                Icons.Default.SwapVert,
+                                                Icons.Default.DragIndicator,
                                                 contentDescription = null,
                                                 tint = GymOrange,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Text(
-                                                text = "Usa ↑ / ↓ para cambiar el orden y toca Listo al terminar.",
-                                                color = GymTextPrimary,
+                                                text = "Mantén presionado un ejercicio y arrástralo para cambiar su orden.",
+                                                color = GymTextSecondary,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                         }
                                     }
 
-                                    if (dayExercises.isEmpty()) {
+                                    if (displayedExercises.isEmpty()) {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -803,223 +822,246 @@ fun HomeWorkoutsScreen(
                                         }
                                     }
 
-                                    dayExercises.forEachIndexed { idx, wEx ->
-                                        val catEx = remember(allCatalog, wEx.exerciseId) {
-                                            viewModel.getCatalogExercise(wEx.exerciseId)
-                                        }
-                                        val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
-                                        val exPrimaryMuscle = remember(catEx?.muscles) {
-                                            if (catEx == null) ""
-                                            else (0..15)
-                                                .filter { it < catEx.muscles.length && catEx.muscles[it] == '3' }
-                                                .joinToString(" • ") { MuscleCatalog.getName(it).substringBefore(" (") }
-                                        }
+                                    displayedExercises.forEachIndexed { idx, wEx ->
+                                        key(wEx.id) {
+                                            val isDraggingThis = draggingExerciseId == wEx.id
+                                            val catEx = remember(allCatalog, wEx.exerciseId) {
+                                                viewModel.getCatalogExercise(wEx.exerciseId)
+                                            }
+                                            val exName = catEx?.name ?: wEx.customExerciseName.ifBlank { "Ejercicio #${wEx.exerciseId}" }
+                                            val exPrimaryMuscle = remember(catEx?.muscles) {
+                                                if (catEx == null) ""
+                                                else (0..15)
+                                                    .filter { it < catEx.muscles.length && catEx.muscles[it] == '3' }
+                                                    .joinToString(" • ") { MuscleCatalog.getName(it).substringBefore(" (") }
+                                            }
 
-                                        if (wEx.isBiSet && idx > 0) {
+                                            if (wEx.isBiSet && idx > 0) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 2.dp),
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(GymCardBg)
+                                                            .border(1.dp, GymBorder, RoundedCornerShape(8.dp))
+                                                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "SUPERSERIE CON EL ANTERIOR",
+                                                            color = GymTextSecondary,
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            val repsTokens = remember(wEx.repsPerSetCsv) {
+                                                wEx.repsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                            }
+                                            val loadsTokens = remember(wEx.loadsPerSetCsv) {
+                                                wEx.loadsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                            }
+                                            val unitSuffix = when (wEx.unitType) {
+                                                2 -> "seg"
+                                                3 -> "min"
+                                                else -> "reps"
+                                            }
+                                            val formattedSeriesText = if (repsTokens.distinct().size == 1 && repsTokens.isNotEmpty()) {
+                                                "${wEx.setsCount} × ${repsTokens.first()} $unitSuffix"
+                                            } else {
+                                                "${wEx.setsCount} series • ${repsTokens.joinToString("-")} $unitSuffix"
+                                            }
+                                            val formattedLoadsText = if (loadsTokens.distinct().size == 1 && loadsTokens.isNotEmpty()) {
+                                                "${loadsTokens.first()} kg"
+                                            } else {
+                                                "${loadsTokens.joinToString("-")} kg"
+                                            }
+
+                                            val overloadSuggestion = remember(allFinishedEx, wEx.exerciseId, wEx.unitType) {
+                                                ProgressiveOverloadAdvisor.computeSuggestion(
+                                                    unitType = wEx.unitType,
+                                                    historyForExercise = allFinishedEx.filter { it.exerciseId == wEx.exerciseId }
+                                                )
+                                            }
+                                            val isOverloadApplied = remember(overloadSuggestion, loadsTokens, repsTokens) {
+                                                overloadSuggestion != null && ProgressiveOverloadAdvisor.isAlreadyApplied(
+                                                    overloadSuggestion,
+                                                    loadsTokens,
+                                                    repsTokens
+                                                )
+                                            }
+
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(vertical = 2.dp),
-                                                horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .background(GymCardBg)
-                                                        .border(1.dp, GymBorder, RoundedCornerShape(8.dp))
-                                                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "SUPERSERIE CON EL ANTERIOR",
-                                                        color = GymTextSecondary,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        val repsTokens = remember(wEx.repsPerSetCsv) {
-                                            wEx.repsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                                        }
-                                        val loadsTokens = remember(wEx.loadsPerSetCsv) {
-                                            wEx.loadsPerSetCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                                        }
-                                        val unitSuffix = when (wEx.unitType) {
-                                            2 -> "seg"
-                                            3 -> "min"
-                                            else -> "reps"
-                                        }
-                                        val formattedSeriesText = if (repsTokens.distinct().size == 1 && repsTokens.isNotEmpty()) {
-                                            "${wEx.setsCount} × ${repsTokens.first()} $unitSuffix"
-                                        } else {
-                                            "${wEx.setsCount} series • ${repsTokens.joinToString("-")} $unitSuffix"
-                                        }
-                                        val formattedLoadsText = if (loadsTokens.distinct().size == 1 && loadsTokens.isNotEmpty()) {
-                                            "${loadsTokens.first()} kg"
-                                        } else {
-                                            "${loadsTokens.joinToString("-")} kg"
-                                        }
-
-                                        val overloadSuggestion = remember(allFinishedEx, wEx.exerciseId, wEx.unitType) {
-                                            ProgressiveOverloadAdvisor.computeSuggestion(
-                                                unitType = wEx.unitType,
-                                                historyForExercise = allFinishedEx.filter { it.exerciseId == wEx.exerciseId }
-                                            )
-                                        }
-                                        val isOverloadApplied = remember(overloadSuggestion, loadsTokens, repsTokens) {
-                                            overloadSuggestion != null && ProgressiveOverloadAdvisor.isAlreadyApplied(
-                                                overloadSuggestion,
-                                                loadsTokens,
-                                                repsTokens
-                                            )
-                                        }
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 5.dp)
-                                                .clip(RoundedCornerShape(16.dp))
-                                                .background(GymSurfaceElevated)
-                                                .border(
-                                                    width = 1.dp,
-                                                    color = GymBorder,
-                                                    shape = RoundedCornerShape(16.dp)
-                                                )
-                                                .let { mod ->
-                                                    if (!isReorderingThisDay) mod.clickable { editingWorkoutExercise = wEx } else mod
-                                                }
-                                        ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(10.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    // Step Number Badge (01, 02...)
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(26.dp)
-                                                            .clip(CircleShape)
-                                                            .background(GymCardBg),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text(
-                                                            text = "%02d".format(idx + 1),
-                                                            color = GymTextSecondary,
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 11.sp
-                                                        )
+                                                    .padding(vertical = 5.dp)
+                                                    .zIndex(if (isDraggingThis) 10f else 0f)
+                                                    .onGloballyPositioned { coords ->
+                                                        itemHeightsPx[wEx.id] = coords.size.height
                                                     }
-                                                    Spacer(Modifier.width(8.dp))
-
-                                                    AnimatedExerciseGif(
-                                                        gifAssetPath = catEx?.gifAssetPath.orEmpty(),
-                                                        contentDescription = exName,
-                                                        modifier = Modifier
-                                                            .size(56.dp)
-                                                            .clickable {
-                                                                if (catEx != null) inspectingCatalogExercise = catEx
-                                                                else if (!isReorderingThisDay) editingWorkoutExercise = wEx
-                                                            }
+                                                    .graphicsLayer {
+                                                        translationY = if (isDraggingThis) dragOffsetY else 0f
+                                                        scaleX = if (isDraggingThis) 1.02f else 1f
+                                                        scaleY = if (isDraggingThis) 1.02f else 1f
+                                                        shadowElevation = if (isDraggingThis) 16f else 0f
+                                                    }
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(if (isDraggingThis) GymCardBg else GymSurfaceElevated)
+                                                    .border(
+                                                        width = if (isDraggingThis) 2.dp else 1.dp,
+                                                        color = if (isDraggingThis) GymOrange else GymBorder,
+                                                        shape = RoundedCornerShape(16.dp)
                                                     )
-                                                    Spacer(Modifier.width(10.dp))
-
-                                                    Column(Modifier.weight(1f)) {
-                                                        Text(
-                                                            text = exName,
-                                                            color = GymTextPrimary,
-                                                            fontWeight = FontWeight.ExtraBold,
-                                                            fontSize = 14.sp,
-                                                            lineHeight = 18.sp
-                                                        )
-                                                        if (exPrimaryMuscle.isNotBlank()) {
+                                                    .clickable {
+                                                        if (draggingExerciseId == null) {
+                                                            editingWorkoutExercise = wEx
+                                                        }
+                                                    }
+                                                    .let { mod ->
+                                                        if (displayedExercises.size > 1) {
+                                                            mod.pointerInput(day.id, wEx.id, displayedExercises.size) {
+                                                                detectDragGesturesAfterLongPress(
+                                                                    onDragStart = {
+                                                                        if (localExercises.size != dayExercises.size) {
+                                                                            localExercises.clear()
+                                                                            localExercises.addAll(dayExercises)
+                                                                        }
+                                                                        draggingExerciseId = wEx.id
+                                                                        dragOffsetY = 0f
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                    },
+                                                                    onDragCancel = {
+                                                                        val finalIds = localExercises.map { it.id }
+                                                                        draggingExerciseId = null
+                                                                        dragOffsetY = 0f
+                                                                        if (finalIds.isNotEmpty()) {
+                                                                            viewModel.reorderWorkoutExercises(day.id, finalIds)
+                                                                        }
+                                                                    },
+                                                                    onDragEnd = {
+                                                                        val finalIds = localExercises.map { it.id }
+                                                                        draggingExerciseId = null
+                                                                        dragOffsetY = 0f
+                                                                        if (finalIds.isNotEmpty()) {
+                                                                            viewModel.reorderWorkoutExercises(day.id, finalIds)
+                                                                        }
+                                                                    },
+                                                                    onDrag = { change, dragAmount ->
+                                                                        change.consume()
+                                                                        dragOffsetY += dragAmount.y
+                                                                        val currentIndex = localExercises.indexOfFirst { it.id == wEx.id }
+                                                                        if (currentIndex != -1) {
+                                                                            val currentHeight = (itemHeightsPx[wEx.id] ?: 220).coerceAtLeast(100)
+                                                                            val stepThreshold = currentHeight * 0.6f
+                                                                            if (dragOffsetY > stepThreshold && currentIndex < localExercises.lastIndex) {
+                                                                                val nextItem = localExercises[currentIndex + 1]
+                                                                                val nextHeight = (itemHeightsPx[nextItem.id] ?: currentHeight).coerceAtLeast(100)
+                                                                                val removed = localExercises.removeAt(currentIndex)
+                                                                                localExercises.add(currentIndex + 1, removed)
+                                                                                dragOffsetY -= nextHeight
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                            } else if (dragOffsetY < -stepThreshold && currentIndex > 0) {
+                                                                                val prevItem = localExercises[currentIndex - 1]
+                                                                                val prevHeight = (itemHeightsPx[prevItem.id] ?: currentHeight).coerceAtLeast(100)
+                                                                                val removed = localExercises.removeAt(currentIndex)
+                                                                                localExercises.add(currentIndex - 1, removed)
+                                                                                dragOffsetY += prevHeight
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                )
+                                                            }
+                                                        } else mod
+                                                    }
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(10.dp)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        // Step Number Badge (01, 02...)
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(26.dp)
+                                                                .clip(CircleShape)
+                                                                .background(if (isDraggingThis) GymOrange else GymCardBg),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
                                                             Text(
-                                                                text = exPrimaryMuscle,
-                                                                color = GymTextSecondary,
-                                                                fontSize = 11.sp,
-                                                                fontWeight = FontWeight.SemiBold
+                                                                text = "%02d".format(idx + 1),
+                                                                color = if (isDraggingThis) GymOnPrimary else GymTextSecondary,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 11.sp
                                                             )
                                                         }
-                                                        Spacer(Modifier.height(4.dp))
-                                                        // Structured Metric Badges
-                                                        Row(
-                                                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                                            verticalAlignment = Alignment.CenterVertically
-                                                        ) {
-                                                            DayExerciseMetricBadge(
-                                                                text = formattedSeriesText,
-                                                                bgColor = GymCardBg,
-                                                                textColor = GymTextPrimary
+                                                        Spacer(Modifier.width(8.dp))
+
+                                                        AnimatedExerciseGif(
+                                                            gifAssetPath = catEx?.gifAssetPath.orEmpty(),
+                                                            contentDescription = exName,
+                                                            modifier = Modifier
+                                                                .size(56.dp)
+                                                                .clickable {
+                                                                    if (catEx != null) inspectingCatalogExercise = catEx
+                                                                    else editingWorkoutExercise = wEx
+                                                                }
+                                                        )
+                                                        Spacer(Modifier.width(10.dp))
+
+                                                        Column(Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = exName,
+                                                                color = GymTextPrimary,
+                                                                fontWeight = FontWeight.ExtraBold,
+                                                                fontSize = 14.sp,
+                                                                lineHeight = 18.sp
                                                             )
-                                                            if (wEx.unitType == 0) {
+                                                            if (exPrimaryMuscle.isNotBlank()) {
+                                                                Text(
+                                                                    text = exPrimaryMuscle,
+                                                                    color = GymTextSecondary,
+                                                                    fontSize = 11.sp,
+                                                                    fontWeight = FontWeight.SemiBold
+                                                                )
+                                                            }
+                                                            Spacer(Modifier.height(4.dp))
+                                                            // Structured Metric Badges
+                                                            Row(
+                                                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
                                                                 DayExerciseMetricBadge(
-                                                                    text = formattedLoadsText,
+                                                                    text = formattedSeriesText,
                                                                     bgColor = GymCardBg,
                                                                     textColor = GymTextPrimary
                                                                 )
+                                                                if (wEx.unitType == 0) {
+                                                                    DayExerciseMetricBadge(
+                                                                        text = formattedLoadsText,
+                                                                        bgColor = GymCardBg,
+                                                                        textColor = GymTextPrimary
+                                                                    )
+                                                                }
+                                                                DayExerciseMetricBadge(
+                                                                    text = "${wEx.restSeconds}s",
+                                                                    bgColor = GymCardBg,
+                                                                    textColor = GymTextSecondary
+                                                                )
                                                             }
-                                                            DayExerciseMetricBadge(
-                                                                text = "${wEx.restSeconds}s",
-                                                                bgColor = GymCardBg,
-                                                                textColor = GymTextSecondary
-                                                            )
                                                         }
-                                                    }
 
-                                                    if (isReorderingThisDay) {
-                                                        val canUp = idx > 0
-                                                        val canDown = idx < dayExercises.lastIndex
-                                                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .size(34.dp)
-                                                                    .clip(RoundedCornerShape(10.dp))
-                                                                    .background(GymCardBg)
-                                                                    .let { m ->
-                                                                        if (canUp) {
-                                                                            m.clickable {
-                                                                                viewModel.moveWorkoutExercise(day.id, wEx.id, moveUp = true)
-                                                                            }
-                                                                        } else m
-                                                                    },
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Icon(
-                                                                    Icons.Default.KeyboardArrowUp,
-                                                                    contentDescription = "Subir ejercicio",
-                                                                    tint = if (canUp) GymTextPrimary else GymTextSecondary.copy(alpha = 0.35f),
-                                                                    modifier = Modifier.size(22.dp)
-                                                                )
-                                                            }
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .size(34.dp)
-                                                                    .clip(RoundedCornerShape(10.dp))
-                                                                    .background(GymCardBg)
-                                                                    .let { m ->
-                                                                        if (canDown) {
-                                                                            m.clickable {
-                                                                                viewModel.moveWorkoutExercise(day.id, wEx.id, moveUp = false)
-                                                                            }
-                                                                        } else m
-                                                                    },
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Icon(
-                                                                    Icons.Default.KeyboardArrowDown,
-                                                                    contentDescription = "Bajar ejercicio",
-                                                                    tint = if (canDown) GymTextPrimary else GymTextSecondary.copy(alpha = 0.35f),
-                                                                    modifier = Modifier.size(22.dp)
-                                                                )
-                                                            }
-                                                        }
-                                                    } else {
                                                         Column(
                                                             horizontalAlignment = Alignment.CenterHorizontally,
                                                             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -1072,10 +1114,8 @@ fun HomeWorkoutsScreen(
                                                             }
                                                         }
                                                     }
-                                                }
 
-                                                // Parches (Secundario / Terciario / Opcional) — Full Width without clipping!
-                                                if (!isReorderingThisDay) {
+                                                    // Parches (Secundario / Terciario / Opcional) — Full Width without clipping!
                                                     val alternatives = remember(wEx.notes) {
                                                         WorkoutExerciseAlternativesCodec.decodeAlternatives(wEx.notes)
                                                     }
@@ -1167,62 +1207,62 @@ fun HomeWorkoutsScreen(
                                                             )
                                                         }
                                                     }
-                                                }
 
-                                                if (!isReorderingThisDay && overloadSuggestion != null) {
-                                                    Spacer(Modifier.height(7.dp))
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clip(RoundedCornerShape(10.dp))
-                                                            .background(
-                                                                if (isOverloadApplied) FatigueGreen.copy(alpha = 0.13f)
-                                                                else GymOrange.copy(alpha = 0.12f)
-                                                            )
-                                                            .padding(horizontal = 9.dp, vertical = 6.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.SpaceBetween
-                                                    ) {
+                                                    if (overloadSuggestion != null) {
+                                                        Spacer(Modifier.height(7.dp))
                                                         Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            modifier = Modifier.weight(1f)
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.TrendingUp,
-                                                                contentDescription = null,
-                                                                tint = if (isOverloadApplied) FatigueGreen else GymOrange,
-                                                                modifier = Modifier.size(15.dp)
-                                                            )
-                                                            Spacer(Modifier.width(5.dp))
-                                                            Text(
-                                                                text = overloadSuggestion.summaryText,
-                                                                color = GymTextPrimary,
-                                                                fontSize = 11.sp,
-                                                                fontWeight = FontWeight.SemiBold,
-                                                                lineHeight = 14.sp
-                                                            )
-                                                        }
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Box(
                                                             modifier = Modifier
-                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .fillMaxWidth()
+                                                                .clip(RoundedCornerShape(10.dp))
                                                                 .background(
-                                                                    if (isOverloadApplied) FatigueGreen.copy(alpha = 0.22f)
-                                                                    else GymOrange
+                                                                    if (isOverloadApplied) FatigueGreen.copy(alpha = 0.13f)
+                                                                    else GymOrange.copy(alpha = 0.12f)
                                                                 )
-                                                                .clickable {
-                                                                    if (!isOverloadApplied) {
-                                                                        viewModel.applyOverloadSuggestionToWorkoutExercise(wEx, overloadSuggestion)
-                                                                    }
-                                                                }
-                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                                .padding(horizontal = 9.dp, vertical = 6.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.SpaceBetween
                                                         ) {
-                                                            Text(
-                                                                text = if (isOverloadApplied) "Meta activa" else overloadSuggestion.buttonLabel,
-                                                                color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
-                                                                fontWeight = FontWeight.ExtraBold,
-                                                                fontSize = 11.sp
-                                                            )
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.weight(1f)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.TrendingUp,
+                                                                    contentDescription = null,
+                                                                    tint = if (isOverloadApplied) FatigueGreen else GymOrange,
+                                                                    modifier = Modifier.size(15.dp)
+                                                                )
+                                                                Spacer(Modifier.width(5.dp))
+                                                                Text(
+                                                                    text = overloadSuggestion.summaryText,
+                                                                    color = GymTextPrimary,
+                                                                    fontSize = 11.sp,
+                                                                    fontWeight = FontWeight.SemiBold,
+                                                                    lineHeight = 14.sp
+                                                                )
+                                                            }
+                                                            Spacer(Modifier.width(6.dp))
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .clip(RoundedCornerShape(8.dp))
+                                                                    .background(
+                                                                        if (isOverloadApplied) FatigueGreen.copy(alpha = 0.22f)
+                                                                        else GymOrange
+                                                                    )
+                                                                    .clickable {
+                                                                        if (!isOverloadApplied) {
+                                                                            viewModel.applyOverloadSuggestionToWorkoutExercise(wEx, overloadSuggestion)
+                                                                        }
+                                                                    }
+                                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = if (isOverloadApplied) "Meta activa" else overloadSuggestion.buttonLabel,
+                                                                    color = if (isOverloadApplied) FatigueGreen else GymOnPrimary,
+                                                                    fontWeight = FontWeight.ExtraBold,
+                                                                    fontSize = 11.sp
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1231,40 +1271,39 @@ fun HomeWorkoutsScreen(
                                     }
 
                                     Spacer(Modifier.height(10.dp))
-                                }
 
-                                // 4. Prominent Action Footer
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedButton(
-                                        onClick = {
-                                            collapsedDayIds.remove(day.id)
-                                            showAddExerciseForDay = day.id
-                                        },
-                                        shape = RoundedCornerShape(13.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                                    // 4. Prominent Action Footer (shown when day is open)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = GymOrange, modifier = Modifier.size(17.dp))
-                                        Spacer(Modifier.width(5.dp))
-                                        Text("Ejercicio", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    }
+                                        OutlinedButton(
+                                            onClick = {
+                                                if (!expandedDayIds.contains(day.id)) expandedDayIds.add(day.id)
+                                                showAddExerciseForDay = day.id
+                                            },
+                                            shape = RoundedCornerShape(13.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                                        ) {
+                                            Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = GymOrange, modifier = Modifier.size(17.dp))
+                                            Spacer(Modifier.width(5.dp))
+                                            Text("Ejercicio", color = GymOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        }
 
-                                    Button(
-                                        onClick = {
-                                            reorderingDayId = null
-                                            onStartLiveWorkout(activePlan, day, dayExercises)
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
-                                        shape = RoundedCornerShape(13.dp),
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Iniciar Entrenamiento", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                                        Button(
+                                            onClick = {
+                                                onStartLiveWorkout(activePlan, day, displayedExercises)
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary),
+                                            shape = RoundedCornerShape(13.dp),
+                                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Iniciar Entrenamiento", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                                        }
                                     }
                                 }
                             }
@@ -1414,17 +1453,19 @@ fun HomeWorkoutsScreen(
                     }
                     OutlinedButton(
                         onClick = {
-                            viewModel.exportRoutineToJson(targetPlan.id) { res ->
-                                res.onSuccess { jsonText ->
+                            viewModel.exportRoutineToShareableFileUri(targetPlan.id) { res ->
+                                res.onSuccess { (fileUri, fileName) ->
                                     showExportRoutineDialog = null
                                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
+                                        type = "application/json"
                                         putExtra(Intent.EXTRA_SUBJECT, "Rutina Cheese WP - ${targetPlan.name}")
-                                        putExtra(Intent.EXTRA_TEXT, jsonText)
+                                        putExtra(Intent.EXTRA_STREAM, fileUri)
+                                        clipData = ClipData.newRawUri(fileName, fileUri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    context.startActivity(Intent.createChooser(sendIntent, "Compartir rutina"))
+                                    context.startActivity(Intent.createChooser(sendIntent, "Compartir archivo de rutina (.json)"))
                                 }.onFailure { err ->
-                                    routinePortMessage = "Error al exportar: ${err.message}"
+                                    routinePortMessage = "Error al compartir rutina: ${err.message}"
                                 }
                             }
                         },
@@ -1433,27 +1474,7 @@ fun HomeWorkoutsScreen(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, tint = GymTextPrimary, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Compartir rutina", color = GymTextPrimary, fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.exportRoutineToJson(targetPlan.id) { res ->
-                                res.onSuccess { jsonText ->
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                                    clipboard?.setPrimaryClip(ClipData.newPlainText("Rutina Cheese WP", jsonText))
-                                    showExportRoutineDialog = null
-                                    routinePortMessage = "Código de la rutina \"${targetPlan.name}\" copiado al portapapeles."
-                                }.onFailure { err ->
-                                    routinePortMessage = "Error al copiar rutina: ${err.message}"
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = GymTextPrimary, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Copiar código al portapapeles", color = GymTextPrimary, fontWeight = FontWeight.SemiBold)
+                        Text("Compartir rutina (.json)", color = GymTextPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             },
@@ -1469,8 +1490,6 @@ fun HomeWorkoutsScreen(
 
     // Dialog: Import Routine (contains all days & exercises)
     if (showImportRoutineDialog) {
-        var pastedRoutineJson by remember { mutableStateOf("") }
-        var importErrorText by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { showImportRoutineDialog = false },
             title = {
@@ -1483,7 +1502,7 @@ fun HomeWorkoutsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Importa una rutina completa con todos sus días de entrenamiento, programación semanal, ejercicios, series y cargas.",
+                        text = "Selecciona el archivo (.json) de la rutina para importar todos sus días de entrenamiento, programación semanal, ejercicios, series y cargas.",
                         color = GymTextSecondary,
                         fontSize = 12.sp
                     )
@@ -1499,78 +1518,9 @@ fun HomeWorkoutsScreen(
                         Spacer(Modifier.width(6.dp))
                         Text("Seleccionar archivo (.json)", fontWeight = FontWeight.Bold)
                     }
-
-                    HorizontalDivider(color = GymBorder)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "O pega el código de la rutina:",
-                            color = GymTextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        TextButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                                val clipText = clipboard?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
-                                if (clipText.isNotBlank()) {
-                                    pastedRoutineJson = clipText
-                                    importErrorText = null
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text("Pegar", color = GymOrange, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = pastedRoutineJson,
-                        onValueChange = {
-                            pastedRoutineJson = it
-                            importErrorText = null
-                        },
-                        label = { Text("Código JSON de la rutina") },
-                        maxLines = 5,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    importErrorText?.let { err ->
-                        Text(
-                            text = err,
-                            color = FatigueRed,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
                 }
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (pastedRoutineJson.isBlank()) {
-                            importErrorText = "Selecciona un archivo .json o pega el código de la rutina."
-                        } else {
-                            viewModel.importRoutineFromJson(pastedRoutineJson) { res ->
-                                res.onSuccess { summary ->
-                                    selectedPlanId = summary.planId
-                                    showImportRoutineDialog = false
-                                    routinePortMessage = "Rutina \"${summary.planName}\" importada (${summary.daysCount} días, ${summary.exercisesCount} ejercicios)."
-                                }.onFailure { err ->
-                                    importErrorText = "Formato inválido: ${err.message}"
-                                }
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = GymOrange, contentColor = GymOnPrimary)
-                ) {
-                    Text("Importar código", fontWeight = FontWeight.Bold)
-                }
-            },
+            confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showImportRoutineDialog = false }) {
                     Text("Cancelar", color = GymTextSecondary)
